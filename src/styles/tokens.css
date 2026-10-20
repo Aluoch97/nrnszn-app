@@ -1,0 +1,66 @@
+/* NuRenaissance design tokens — every route pulls from here so the widgets read as one product. */
+:root {
+  --gold-100: #fbecc4;
+  --gold-300: #f2cf6b;
+  --gold-500: #e2b23a;
+  --gold-700: #9a7417;
+
+  --purple-300: #8c6ad6;
+  --purple-500: #5b34b0;
+  --purple-700: #3a1d7a;
+  --purple-900: #1f0f45;
+
+  --ink: #1a1220;
+  --ink-soft: #4a3d52;
+  --paper: #fffaf0;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --radius-sm: 10px;
+  --radius-md: 18px;
+  --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 160ms;
+  --dur-med: 320ms;
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--gold-300);
+  -webkit-font-smoothing: antialiased;
+}
+
+img { max-width: 100%; display: block; }
+
+a { color: inherit; }
+
+:focus-visible {
+  outline: 3px solid var(--purple-500);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

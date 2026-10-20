@@ -1,0 +1,154 @@
+---
+import Base from '../layouts/Base.astro';
+import Icon from '../components/Icon.astro';
+import VideoCard from '../components/VideoCard.astro';
+import { brand, playlists, hubLinks, socials, footerLinks } from '../data/portal.js';
+import { getLatestVideos, API_URL } from '../lib/api.js';
+
+// Fetched at build time so the page (and link previews) ship with real videos.
+// The script below refreshes them in the browser so they stay current between builds.
+const latest = await getLatestVideos();
+const isExternal = (href: string) => /^https?:/.test(href);
+---
+<Base
+  title="NuRenaissance — Portal"
+  description="Latest interviews and music videos from NuRenaissance Media, plus services, the Nashville directory, and Certified."
+>
+  <main class="portal">
+    <header class="head">
+      <img class="mark" src="/icons/icon.svg" alt="" width="72" height="72" />
+      <h1 class="word">{brand.name}</h1>
+      <p class="tag">{brand.tagline}</p>
+    </header>
+
+    <section class="videos" aria-label="Latest videos">
+      <VideoCard slot="interview" label={playlists.interview.label} playlistId={playlists.interview.id} video={latest.interview} />
+      <VideoCard slot="music" label={playlists.music.label} playlistId={playlists.music.id} video={latest.music} />
+    </section>
+
+    <nav class="hub" aria-label="NuRenaissance">
+      {hubLinks.map((l) => (
+        <a class="hub-link" href={l.href} {...(isExternal(l.href) ? { target: '_blank', rel: 'noopener' } : {})}>
+          <span class="hub-icon"><Icon name={l.icon} size={26} /></span>
+          <span>{l.label}</span>
+        </a>
+      ))}
+    </nav>
+
+    <ul class="socials" aria-label="Social links">
+      {socials.map((s) => (
+        <li>
+          <a href={s.href} target="_blank" rel="noopener" aria-label={s.label}>
+            <Icon name={s.icon} size={20} />
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    <footer class="foot">
+      {footerLinks.map((f, i) => (
+        <>
+          {i > 0 && <span aria-hidden="true">·</span>}
+          <a href={f.href} target="_blank" rel="noopener">{f.label}</a>
+        </>
+      ))}
+      <span class="copy">© {new Date().getFullYear()} NuRenaissance Media</span>
+    </footer>
+  </main>
+
+  <script define:vars={{ API_URL }}>
+    if (API_URL) {
+      const url = new URL(API_URL);
+      url.searchParams.set('action', 'latestVideos');
+      fetch(url)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (!data || !data.ok) return;
+          for (const slot of ['interview', 'music']) {
+            const v = data[slot];
+            const card = document.querySelector(`[data-video-slot="${slot}"]`);
+            if (!v || !card) continue;
+            card.href = `https://www.youtube.com/watch?v=${v.id}&list=${card.dataset.playlist}`;
+            card.querySelector('[data-title]').textContent = v.title;
+            const src = `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`;
+            let img = card.querySelector('[data-thumb]');
+            if (!img) {
+              img = document.createElement('img');
+              img.alt = '';
+              img.dataset.thumb = '';
+              card.querySelector('[data-thumb-empty]')?.replaceWith(img);
+            }
+            if (img.src !== src) img.src = src;
+          }
+        })
+        .catch(() => {});
+    }
+  </script>
+</Base>
+
+<style>
+  .portal {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: max(var(--space-6), env(safe-area-inset-top)) var(--space-4) var(--space-6);
+    display: grid;
+    gap: var(--space-5);
+    animation: rise var(--dur-med) var(--ease-out) both;
+  }
+
+  .head { text-align: center; display: grid; justify-items: center; gap: var(--space-2); }
+  .mark { width: 72px; height: 72px; }
+  .word {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(30px, 9vw, 38px);
+    letter-spacing: -0.01em;
+    color: var(--purple-900);
+  }
+  .tag { margin: 0; color: var(--ink-soft); font-size: 15px; }
+
+  .videos { display: grid; gap: var(--space-4); }
+
+  .hub { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+  .hub-link {
+    display: grid; justify-items: center; gap: var(--space-2);
+    padding: var(--space-4) var(--space-2);
+    background: var(--paper);
+    border: 2px solid var(--purple-700);
+    border-radius: var(--radius-md);
+    color: var(--purple-900);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background var(--dur-fast), color var(--dur-fast), transform var(--dur-fast) var(--ease-out);
+  }
+  .hub-link:hover { background: var(--purple-700); color: var(--paper); transform: translateY(-2px); }
+  .hub-icon { display: grid; place-items: center; }
+
+  .socials {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3);
+  }
+  .socials a {
+    width: 44px; height: 44px;
+    display: grid; place-items: center;
+    border-radius: var(--radius-pill);
+    background: var(--purple-900);
+    color: var(--gold-300);
+    transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-out);
+  }
+  .socials a:hover { background: var(--purple-500); transform: translateY(-2px); }
+
+  .foot {
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+    gap: var(--space-2); font-size: 13px; color: var(--ink-soft);
+  }
+  .foot a { color: var(--purple-900); font-weight: 500; }
+  .copy { flex-basis: 100%; text-align: center; margin-top: var(--space-1); }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+</style>

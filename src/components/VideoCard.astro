@@ -1,0 +1,68 @@
+---
+import Icon from './Icon.astro';
+import { playlistUrl } from '../data/portal.js';
+
+interface Props {
+  slot: 'interview' | 'music';
+  label: string;
+  playlistId: string;
+  video: { id: string; title: string; publishedAt?: string } | null;
+}
+const { slot, label, playlistId, video } = Astro.props;
+const href = video
+  ? `https://www.youtube.com/watch?v=${video.id}&list=${playlistId}`
+  : playlistUrl(playlistId);
+const thumb = video ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg` : null;
+const title = video?.title ?? 'Watch the playlist on YouTube';
+---
+<a class="card" href={href} target="_blank" rel="noopener" data-video-slot={slot} data-playlist={playlistId}>
+  <div class="thumb">
+    {thumb
+      ? <img src={thumb} alt="" loading="lazy" width="480" height="360" data-thumb />
+      : <div class="thumb-empty" data-thumb-empty></div>}
+    <span class="play"><Icon name="play" size={26} /></span>
+  </div>
+  <div class="meta">
+    <span class="label">{label}</span>
+    <span class="title" data-title>{title}</span>
+  </div>
+</a>
+
+<style>
+  .card {
+    display: block;
+    text-decoration: none;
+    background: var(--purple-700);
+    color: var(--paper);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast);
+  }
+  .card:hover { transform: translateY(-2px); background: var(--purple-500); }
+  .card:active { transform: translateY(0) scale(0.99); }
+
+  .thumb { position: relative; aspect-ratio: 16 / 9; background: var(--purple-900); overflow: hidden; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb-empty {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg, var(--purple-900) 0 14px, var(--purple-700) 14px 28px);
+  }
+  .play {
+    position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+    width: 56px; height: 56px; border-radius: var(--radius-pill);
+    background: var(--gold-300); color: var(--purple-900);
+    display: grid; place-items: center; padding-left: 3px;
+    transition: scale var(--dur-fast) var(--ease-out);
+  }
+  .card:hover .play { scale: 1.08; }
+
+  .meta { display: grid; gap: var(--space-1); padding: var(--space-3) var(--space-4) var(--space-4); }
+  .label {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--gold-300);
+  }
+  .title {
+    font-size: 16px; font-weight: 500; line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+</style>

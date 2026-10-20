@@ -1,0 +1,32 @@
+---
+import { siInstagram, siTiktok, siYoutube, siFacebook, siBandcamp } from 'simple-icons';
+
+interface Props { name: string; size?: number; }
+const { name, size = 22 } = Astro.props;
+
+const brands: Record<string, string> = {
+  instagram: siInstagram.path,
+  tiktok: siTiktok.path,
+  youtube: siYoutube.path,
+  facebook: siFacebook.path,
+  bandcamp: siBandcamp.path,
+};
+
+// Outline glyphs for NuRenaissance's own sections (24px grid, stroke-based).
+const outline: Record<string, string> = {
+  web: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/>',
+  services: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/>',
+  directory: '<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7.5 17c.9-2 2.6-3 4.5-3s3.6 1 4.5 3"/>',
+  certified: '<path d="M12 3l2.6 2.2 3.4-.3.6 3.4 2.8 1.9-1.6 3 .9 3.3-3.2 1.2-1.5 3.1-3-1.5-3 1.5-1.5-3.1-3.2-1.2.9-3.3-1.6-3 2.8-1.9.6-3.4 3.4.3z"/><path d="M9 12l2 2 4-4"/>',
+  play: '<path d="M8 5.5v13l11-6.5z"/>',
+};
+---
+{brands[name] ? (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d={brands[name]} />
+  </svg>
+) : (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+    set:html={outline[name] ?? ''} />
+)}
