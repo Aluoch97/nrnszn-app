@@ -1244,7 +1244,7 @@ const SCRIPT_URL = SERVICES_API_URL;
           statusEl.textContent = "Sent — check your inbox.";
           statusEl.style.display = 'block';
         } else {
-          errorEl.textContent = "Couldn't send that — try again in a moment.";
+          errorEl.textContent = res.error || "Couldn't send that — try again in a moment.";
           errorEl.style.display = 'block';
         }
       }).catch(function () {
