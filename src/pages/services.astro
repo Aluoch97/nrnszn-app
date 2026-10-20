@@ -1,0 +1,1479 @@
+---
+import Base from '../layouts/Base.astro';
+import { SERVICES_API_URL } from '../data/services.js';
+
+// Ported from the Wix "Service Select Screen" embed. The pricing, booking
+// and intake logic below is unchanged; only the styling and page layout
+// were adapted to the app. Everything is rendered in the browser from the
+// Services sheet, so prices update without a rebuild.
+const SCRIPT_URL = SERVICES_API_URL;
+---
+<Base
+  title="Services — NuRenaissance"
+  description="Video production, photography, web design, livestream, graphic design and artist admin services in Nashville. Live pricing and booking."
+>
+  <main class="services-page">
+    <a class="back" href="/portal">&larr; Portal</a>
+
+    <noscript>
+      <div class="nrn-noscript">
+        <h2>NuRenaissance Media</h2>
+        <p>Video production, photography, web design, livestream, graphic design, and artist admin services in Nashville. This page needs JavaScript enabled to show live pricing and booking. Reach out directly at nrnszn.com or via our social links to get a quote.</p>
+      </div>
+    </noscript>
+
+    <div id="nrn-select">
+      <img class="nrn-logo" src="/icons/logo.webp" alt="" width="96" height="96" />
+      <h1 class="nrn-brand-name">Services</h1>
+      <div class="nrn-form-sub">Pick what you need below. Prices update as you go.</div>
+
+      <div id="nrn-viewport">
+        <div id="nrn-page-services" class="nrn-page">
+          <button id="nrn-help-toggle" class="nrn-link-btn" type="button">&#10067; Not sure what you need?</button>
+          <div id="nrn-quiz" hidden aria-live="polite"></div>
+
+          <h4 class="nrn-step-label">&#127919; 01 · Choose services</h4>
+          <div class="nrn-help-text">Tap a service to select it. You can pick more than one — tap it again to remove it.</div>
+          <div id="nrn-grid">
+            <div class="nrn-loading">Loading services&hellip;</div>
+          </div>
+          <div id="nrn-bundle" aria-live="polite"></div>
+          <div id="nrn-loadout" aria-live="polite"></div>
+        </div>
+
+        <div id="nrn-page-about" class="nrn-page" hidden>
+          <div id="nrn-intake" aria-live="polite"></div>
+        </div>
+
+        <div id="nrn-page-actions" class="nrn-page" hidden>
+          <div id="nrn-actions" aria-live="polite"></div>
+        </div>
+
+        <div id="nrn-page-flow" class="nrn-page" hidden>
+          <div id="nrn-booking" aria-live="polite"></div>
+          <div id="nrn-estimate" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script is:inline define:vars={{ SCRIPT_URL }}>
+(function () {
+  var STORAGE_KEY = 'nrn_service_selection_v4'; // bumped when the video edit tiers changed: saved selections store tier positions, which shifted
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // User-typed text (name, phone, free-text notes, etc.) gets re-inserted
+  // into innerHTML when a form re-renders. Escape it so a stray quote or
+  // "</textarea>" in someone's input can't break the markup or inject content.
+  function escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // POST with a JSON body instead of GET query params, so name/email/
+  // phone/notes don't end up in browser history or request logs.
+  // Content-Type is text/plain on purpose: Apps Script can't answer a CORS
+  // preflight, and application/json would trigger one.
+  function postAction(payload) {
+    return fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  var PAGE_IDS = ['nrn-page-services', 'nrn-page-about', 'nrn-page-actions', 'nrn-page-flow'];
+  function showPage(activeId) {
+    PAGE_IDS.forEach(function (id) {
+      document.getElementById(id).hidden = (id !== activeId);
+    });
+    // Full page now (not a fixed-height Wix embed), so scroll the window.
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  var services = [];
+  var bundles = [];
+  var selected = {}; // { serviceId: config }
+  var suggestedId = null;
+  var chosenSlot = null;
+  var leadName = '';
+  var leadEmail = '';
+  var leadPhone = '';
+  var leadLocation = '';
+  var leadDetails = '';
+  var leadRole = null;
+  var leadSubmitted = false;
+
+  loadStoredSelection();
+
+  fetch(SCRIPT_URL + '?action=data')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      services = data.services || [];
+      bundles = data.bundles || [];
+      try {
+        pruneStaleSelections();
+        renderGrid();
+        renderLoadout();
+        renderBundleSuggestion();
+      } catch (renderErr) {
+        // Data loaded fine but a saved selection broke rendering. Wipe the
+        // bad state and retry once with a clean slate.
+        console.error('NuRenaissance service select render failed, resetting selection', renderErr);
+        selected = {};
+        saveSelection();
+        renderGrid();
+        renderLoadout();
+        renderBundleSuggestion();
+      }
+    })
+    .catch(function (err) {
+      console.error('NuRenaissance service select load failed', err);
+      document.getElementById('nrn-grid').innerHTML =
+        '<div class="nrn-load-error">Couldn’t load services right now. Refresh the page to try again.</div>';
+    });
+
+  function loadStoredSelection() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) selected = JSON.parse(raw) || {};
+    } catch (err) { selected = {}; }
+  }
+
+  function saveSelection() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(selected)); } catch (err) {}
+  }
+
+  function pruneStaleSelections() {
+    Object.keys(selected).forEach(function (id) {
+      var s = services.find(function (x) { return x.id === id; });
+      if (!s) { delete selected[id]; return; }
+      // A saved selection from an older version can have a different shape
+      // than the current pricing model expects. Reset rather than crash.
+      if (!isValidConfigShape(s, selected[id])) {
+        selected[id] = defaultConfig(s);
+      }
+    });
+  }
+
+  function isValidConfigShape(s, cfg) {
+    if (!cfg || typeof cfg !== 'object') return false;
+    if (s.pricingModel === 'package') return Array.isArray(cfg.tierIndices) && cfg.tierIndices.length > 0;
+    if (s.pricingModel === 'hourly') return typeof cfg.hours === 'number';
+    if (s.pricingModel === 'hourly_plus_edit') return typeof cfg.hours === 'number' && typeof cfg.tierIndex === 'number';
+    if (s.pricingModel === 'per_page') return typeof cfg.pages === 'number';
+    return true;
+  }
+
+  // Add-on pricing straight from the signed service agreements — not
+  // tracked in the Sheet, hardcoded here. Update these if a contract's
+  // terms change.
+  var REVISION_FEE = { video: 75, web: 50, 'graphic-design': 50 };
+  var VIDEO_LOCATION_FEE = 50;          // per additional location beyond the primary
+  var VIDEO_WHITE_LABEL_PCT = 0.25;     // 25% of production+edit to remove branding
+  var GRAPHIC_RUSH_FEE = 40;            // 48-hour rush delivery for Graphic design
+  // Photography rates are hardcoded here (like STANDARD_DEPOSIT) so an old
+  // value left in the Sheet can never override them.
+  var PHOTO_ON_LOCATION_RATE = 100;     // per hour
+  var PHOTO_STUDIO_RATE = 150;          // per hour
+  var PHOTO_RUSH_FEE = 75;              // 48-hour turnaround on photos
+  // Standard deposit across every session/booking-based service — Video
+  // (including music videos), Photography, Livestream, Web design, and
+  // Interview. Graphic Design has no deposit (full fee upfront) and Admin's
+  // package tiers define their own payment terms.
+  var STANDARD_DEPOSIT = 50;
+  var PHOTO_EXTRA_PHOTO_SINGLE = 10;
+  var PHOTO_EXTRA_PHOTO_BUNDLE_SIZE = 5;
+  var PHOTO_EXTRA_PHOTO_BUNDLE_PRICE = 40;
+  var INTERVIEW_TALENT_FEE = 75;
+  var INTERVIEW_FACILITY_FEE = 60;
+  var INTERVIEW_LOCATION_FEE = 50;
+  var INTERVIEW_REVISION_FEE = 75;
+  // Video shoot pricing (every video type except Raise the Bar): $500 covers
+  // the first 2 hours, then $100 for each additional hour. Edit is added on
+  // top. Hardcoded so the old per-hour rates in the Sheet can't override it.
+  var VIDEO_BASE_SHOOT = 500;
+  var VIDEO_BASE_HOURS = 2;
+  var VIDEO_EXTRA_HOUR_RATE = 100;
+  var RAISE_THE_BAR_PRICE = 100;   // one mic performance series
+  var RAISE_THE_BAR_DEPOSIT = 50;  // $50 to book, remaining $50 due at the shoot
+  var PHOTOGRAPHY_EXAMPLE_URL = 'https://www.nrnszn.com/gallery';
+  var VIDEO_TYPE_EXAMPLES = {
+    music: 'https://www.youtube.com/playlist?list=PLVprhlbgSo1sfS02MFZbi3t7pCJkoy9rd',
+    interview: 'https://www.youtube.com/playlist?list=PLVprhlbgSo1vN-wkuvFDjabBQ85XURyTd',
+    podcast: 'https://www.youtube.com/@nrnszn/podcasts',
+    recap: 'https://www.youtube.com/playlist?list=PLVprhlbgSo1s5YSOxWfYGTLEDvkKjCboz',
+    raisethebar: 'https://youtube.com/playlist?list=PLC2-QbyYIV7c&si=Yy9vhWvvACvWjzjZ'
+    // promo intentionally has none — no link given for it
+  };
+  function renderVideoExampleLink(videoType) {
+    var url = VIDEO_TYPE_EXAMPLES[videoType];
+    if (!url) return '';
+    return '<span class="nrn-help-text" style="margin:0 0 8px;"><a class="nrn-inline-link" href="' + url + '" target="_blank" rel="noopener noreferrer">🎥 See examples</a></span>';
+  }
+  var ADMIN_DIGITAL_FOUNDATION_REVISION_FEE = 25;
+
+  // Bulk-photo pricing: bundles of 5 at $40, remainder at $10 each.
+  function extraPhotoCost(n) {
+    n = Math.max(0, n || 0);
+    var bundles = Math.floor(n / PHOTO_EXTRA_PHOTO_BUNDLE_SIZE);
+    var remainder = n % PHOTO_EXTRA_PHOTO_BUNDLE_SIZE;
+    return bundles * PHOTO_EXTRA_PHOTO_BUNDLE_PRICE + remainder * PHOTO_EXTRA_PHOTO_SINGLE;
+  }
+
+  var VIDEO_TYPES = [
+    { value: 'music', label: '🎵 Music video' },
+    { value: 'podcast', label: '🎙️ Podcast' },
+    { value: 'recap', label: '📅 Event recap' },
+    { value: 'promo', label: '📣 Promo' },
+    { value: 'interview', label: '🎙 Interview' },
+    { value: 'raisethebar', label: '🎤 Raise the Bar' }
+  ];
+
+  // Edit-length pricing for EVERY video type, Interview included. Hardcoded
+  // so old tier rows left in the Sheet can't override it.
+  var VIDEO_EDIT_TIERS = [
+    { name: 'Up to 5 min', price: 300 },
+    { name: 'Over 5 min', price: 600 }
+  ];
+
+  // Shoot cost = $500 base (first 2 hours) + $100 per extra hour.
+  function videoShootCost(hours, breakdown) {
+    var extra = Math.max(0, hours - VIDEO_BASE_HOURS);
+    var extraCost = Math.round(extra * VIDEO_EXTRA_HOUR_RATE * 100) / 100;
+    breakdown.push('🎬 Shoot, first ' + VIDEO_BASE_HOURS + ' hrs: $' + VIDEO_BASE_SHOOT);
+    if (extra > 0) breakdown.push('🕒 ' + extra + ' extra hr(s) @ $' + VIDEO_EXTRA_HOUR_RATE + '/hr: $' + extraCost);
+    return VIDEO_BASE_SHOOT + extraCost;
+  }
+
+  function photoFacilityRate(s) {
+    return PHOTO_STUDIO_RATE;
+  }
+
+  // The "starting at" teaser comes from the Sheet via Code.gs, which still
+  // reflects old photography/video rates, so those two are computed here.
+  function displayStartingPrice(s) {
+    if (s.id === 'photography') return PHOTO_ON_LOCATION_RATE * s.minHours + STANDARD_DEPOSIT;
+    if (s.id === 'video') {
+      var cheapest = Infinity;
+      VIDEO_TYPES.forEach(function (v) {
+        if (v.value === 'raisethebar') return;
+        var cfg = defaultConfig(s);
+        cfg.videoType = v.value; cfg.tierIndex = 0; cfg.interviewTier = 0; cfg.studio = 'standard';
+        cheapest = Math.min(cheapest, computePrice(s, cfg).total);
+      });
+      return cheapest;
+    }
+    return s.startingPrice;
+  }
+
+  function defaultConfig(s) {
+    if (s.pricingModel === 'package') return { tierIndices: [0], consultHours: 1, dfRevisions: 0, revisions: 0, rushDelivery: false };
+    if (s.pricingModel === 'hourly') {
+      if (s.id === 'photography') return { hours: s.minHours, studio: 'standard', extraPhotos: 0, rushDelivery: false };
+      return { hours: s.minHours };
+    }
+    if (s.pricingModel === 'hourly_plus_edit') return { hours: VIDEO_BASE_HOURS, studio: 'standard', videoType: 'promo', tierIndex: 0, interviewTier: 0, revisions: 0, extraLocations: 0, whiteLabel: false, talent: false, facility: false, interviewRevisions: 0, interviewLocations: 0 };
+    if (s.pricingModel === 'per_page') return { pages: 1, revisions: 0 };
+    return {};
+  }
+
+  // ---------------- Pricing ----------------
+
+  function computePrice(s, cfg) {
+    if (s.pricingModel === 'package') {
+      var indices = (cfg.tierIndices && cfg.tierIndices.length) ? cfg.tierIndices : [0];
+      var total = 0, depositSum = 0, allCredited = true, breakdown = [], labels = [];
+      indices.forEach(function (i) {
+        var t = s.tiers[i];
+        if (!t) return;
+        // Creative Consultation is billed per hour, not flat, despite
+        // living in the same flat-tier list as everything else.
+        var isHourlyTier = t.name === 'Creative consultation';
+        var hours = cfg.consultHours || 1;
+        var linePrice = isHourlyTier ? t.price * hours : t.price;
+        total += linePrice + t.deposit;
+        depositSum += t.deposit;
+        if (t.deposit > 0 && !t.depositCredited) allCredited = false;
+        breakdown.push('🎯 ' + t.name + (isHourlyTier ? ' (' + hours + ' hrs @ $' + t.price + '/hr)' : '') + ': $' + linePrice);
+        labels.push(t.name);
+
+        // Digital Foundation extra revisions ($25/round beyond the 2 free).
+        if (t.name === 'Digital Foundation' && cfg.dfRevisions > 0) {
+          var dfFee = cfg.dfRevisions * ADMIN_DIGITAL_FOUNDATION_REVISION_FEE;
+          total += dfFee;
+          breakdown.push('🔁 ' + cfg.dfRevisions + ' extra revision round(s): $' + dfFee);
+        }
+      });
+
+      // Graphic Design: extra revisions beyond the 2 free, once per order.
+      if (s.id === 'graphic-design' && cfg.revisions > 0) {
+        var gdFee = cfg.revisions * REVISION_FEE['graphic-design'];
+        total += gdFee;
+        breakdown.push('🔁 ' + cfg.revisions + ' extra revision round(s): $' + gdFee);
+      }
+      if (s.id === 'graphic-design' && cfg.rushDelivery) {
+        total += GRAPHIC_RUSH_FEE;
+        breakdown.push('⚡ Rush delivery (48hr): $' + GRAPHIC_RUSH_FEE);
+      }
+
+      if (depositSum > 0) breakdown.push('💳 Deposit: $' + depositSum);
+      return {
+        total: total,
+        deposit: depositSum,
+        depositCredited: allCredited,
+        breakdown: breakdown,
+        label: labels.join(' + ')
+      };
+    }
+    if (s.pricingModel === 'hourly') {
+      var rate = s.id === 'photography' ? (cfg.studio === 'facility' ? PHOTO_STUDIO_RATE : PHOTO_ON_LOCATION_RATE) : s.hourlyRate;
+      var prod = rate * cfg.hours;
+      var whereLabel = (s.id === 'photography' && cfg.studio === 'facility') ? ' (in-studio)' : (s.id === 'photography' ? ' (on-location)' : '');
+      var hTotal = prod;
+      var hBreakdown = ['🕒 ' + cfg.hours + ' hrs @ $' + rate + '/hr' + whereLabel + ': $' + prod];
+      if (s.id === 'photography') {
+        if (cfg.extraPhotos > 0) {
+          var photoFee = extraPhotoCost(cfg.extraPhotos);
+          hTotal += photoFee;
+          hBreakdown.push('🖼️ ' + cfg.extraPhotos + ' extra edited photo(s): $' + photoFee);
+        }
+        if (cfg.rushDelivery) {
+          hTotal += PHOTO_RUSH_FEE;
+          hBreakdown.push('⚡ Rush delivery (48hr): $' + PHOTO_RUSH_FEE);
+        }
+      }
+      hTotal += STANDARD_DEPOSIT;
+      hBreakdown.push('💳 Deposit: $' + STANDARD_DEPOSIT);
+      return {
+        total: hTotal,
+        deposit: STANDARD_DEPOSIT,
+        depositCredited: true,
+        breakdown: hBreakdown,
+        label: cfg.hours + ' hrs'
+      };
+    }
+    if (s.pricingModel === 'hourly_plus_edit') {
+      if (cfg.videoType === 'interview') {
+        var it = VIDEO_EDIT_TIERS[cfg.interviewTier || 0] || VIDEO_EDIT_TIERS[0];
+        var itBreakdown = ['🎙 Interview shoot: $' + VIDEO_BASE_SHOOT, '✂️ Edit, ' + it.name + ': $' + it.price];
+        var itTotal = VIDEO_BASE_SHOOT + it.price;
+        if (cfg.talent) { itTotal += INTERVIEW_TALENT_FEE; itBreakdown.push('🎤 On-screen talent: $' + INTERVIEW_TALENT_FEE); }
+        if (cfg.facility) { itTotal += INTERVIEW_FACILITY_FEE; itBreakdown.push('🏠 Production facility: $' + INTERVIEW_FACILITY_FEE); }
+        if (cfg.interviewLocations > 0) {
+          var itLocFee = cfg.interviewLocations * INTERVIEW_LOCATION_FEE;
+          itTotal += itLocFee;
+          itBreakdown.push('📍 ' + cfg.interviewLocations + ' extra location(s): $' + itLocFee);
+        }
+        if (cfg.interviewRevisions > 0) {
+          var itRevFee = cfg.interviewRevisions * INTERVIEW_REVISION_FEE;
+          itTotal += itRevFee;
+          itBreakdown.push('🔁 ' + cfg.interviewRevisions + ' extra revision round(s): $' + itRevFee);
+        }
+        itTotal += STANDARD_DEPOSIT;
+        itBreakdown.push('💳 Deposit: $' + STANDARD_DEPOSIT);
+        return { total: itTotal, deposit: STANDARD_DEPOSIT, depositCredited: true, breakdown: itBreakdown, label: 'Interview: ' + it.name };
+      }
+      if (cfg.videoType === 'raisethebar') {
+        return {
+          total: RAISE_THE_BAR_PRICE,
+          deposit: RAISE_THE_BAR_DEPOSIT,
+          depositCredited: true,
+          breakdown: ['🎤 Raise the Bar performance: $' + RAISE_THE_BAR_PRICE, '💳 Deposit: $' + RAISE_THE_BAR_DEPOSIT],
+          label: 'Raise the Bar'
+        };
+      }
+      var editTier = VIDEO_EDIT_TIERS[cfg.tierIndex] || VIDEO_EDIT_TIERS[0];
+      var deposit = STANDARD_DEPOSIT;
+      var depositCredited = true;
+      var videoTypeLabel = (VIDEO_TYPES.find(function (v) { return v.value === cfg.videoType; }) || VIDEO_TYPES[3]).label;
+      var vBreakdown = [videoTypeLabel];
+      var shootCost = videoShootCost(cfg.hours, vBreakdown);
+      var vTotal = shootCost + editTier.price;
+      vBreakdown.push('✂️ Edit, ' + editTier.name + ': $' + editTier.price);
+      if (cfg.extraLocations > 0) {
+        var vLocFee = cfg.extraLocations * VIDEO_LOCATION_FEE;
+        vTotal += vLocFee;
+        vBreakdown.push('📍 ' + cfg.extraLocations + ' extra location(s): $' + vLocFee + ' (+$5/mi beyond 25mi, billed separately)');
+      }
+      if (cfg.revisions > 0) {
+        var vRevFee = cfg.revisions * REVISION_FEE.video;
+        vTotal += vRevFee;
+        vBreakdown.push('🔁 ' + cfg.revisions + ' extra revision round(s): $' + vRevFee);
+      }
+      if (cfg.whiteLabel) {
+        var wlFee = Math.round((shootCost + editTier.price) * VIDEO_WHITE_LABEL_PCT);
+        vTotal += wlFee;
+        vBreakdown.push('🏷️ White-label (remove branding): $' + wlFee);
+      }
+      vTotal += deposit;
+      vBreakdown.push('💳 Deposit: $' + deposit);
+      return {
+        total: vTotal,
+        deposit: deposit,
+        depositCredited: depositCredited,
+        breakdown: vBreakdown,
+        label: editTier.name
+      };
+    }
+    if (s.pricingModel === 'per_page') {
+      var subtotal = s.pageRate * cfg.pages;
+      var wTotal = subtotal;
+      var wBreakdown = ['📄 ' + cfg.pages + ' page(s) @ $' + s.pageRate + '/page: $' + subtotal];
+      if (cfg.revisions > 0) {
+        var wRevFee = cfg.revisions * REVISION_FEE.web;
+        wTotal += wRevFee;
+        wBreakdown.push('🔁 ' + cfg.revisions + ' extra revision round(s): $' + wRevFee);
+      }
+      wTotal += STANDARD_DEPOSIT;
+      wBreakdown.push('💳 Deposit: $' + STANDARD_DEPOSIT);
+      return {
+        total: wTotal,
+        deposit: STANDARD_DEPOSIT,
+        depositCredited: true,
+        breakdown: wBreakdown,
+        label: cfg.pages + ' page(s)'
+      };
+    }
+    if (s.pricingModel === 'quote_only') {
+      return {
+        total: 0,
+        deposit: 0,
+        depositCredited: false,
+        breakdown: ['💬 Every project is scoped individually — book a free consultation and we’ll figure out the right approach and price together.'],
+        label: 'Custom quote'
+      };
+    }
+    return { total: 0, deposit: 0, depositCredited: false, breakdown: [], label: '' };
+  }
+
+  // ---------------- "Not sure what you need?" quiz ----------------
+
+  var quizQuestions = [
+    {
+      key: 'q1',
+      text: "What's this for?",
+      options: [
+        { label: '🎵 Music or artist release', value: 'music' },
+        { label: '🏢 Brand, event, or org', value: 'brand' },
+        { label: '🔁 Ongoing support', value: 'ongoing' }
+      ]
+    },
+    {
+      key: 'q2',
+      text: 'What do you need?',
+      options: [
+        { label: '🎥 Video', value: 'video' },
+        { label: '📷 Photos', value: 'photography' },
+        { label: '🎨 Flyers or graphics', value: 'graphic-design' },
+        { label: '💻 A website', value: 'web' },
+        { label: '📡 A livestream', value: 'live' }
+      ]
+    }
+  ];
+  var quizAnswers = {};
+
+  document.getElementById('nrn-help-toggle').addEventListener('click', function () {
+    var panel = document.getElementById('nrn-quiz');
+    panel.hidden = !panel.hidden;
+    if (!panel.hidden) { quizAnswers = {}; renderQuizStep(0); }
+  });
+
+  function renderQuizStep(stepIndex) {
+    var panel = document.getElementById('nrn-quiz');
+    var q = quizQuestions[stepIndex];
+    if (!q) { finishQuiz(); return; }
+    panel.innerHTML = '<h4>' + q.text + '</h4>' +
+      '<div class="nrn-help-text">Tap the option that fits best.</div>' +
+      q.options.map(function (opt) {
+        return '<button type="button" class="nrn-quiz-opt" data-value="' + opt.value + '">' + opt.label + '</button>';
+      }).join('');
+    Array.prototype.forEach.call(panel.querySelectorAll('.nrn-quiz-opt'), function (btn) {
+      btn.addEventListener('click', function () {
+        quizAnswers[q.key] = btn.dataset.value;
+        if (q.key === 'q1' && btn.dataset.value === 'ongoing') { finishQuiz(); return; }
+        renderQuizStep(stepIndex + 1);
+      });
+    });
+  }
+
+  function finishQuiz() {
+    var panel = document.getElementById('nrn-quiz');
+    suggestedId = quizAnswers.q1 === 'ongoing' ? 'admin' : (quizAnswers.q2 || null);
+    panel.hidden = true;
+    renderGrid();
+    var card = document.querySelector('.nrn-card[data-id="' + suggestedId + '"]');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // ---------------- Service grid ----------------
+
+  var SERVICE_ICONS = {
+    video: '🎥',
+    camera: '📷',
+    pen: '🎨',
+    code: '💻',
+    broadcast: '📡',
+    briefcase: '📋',
+    mic: '🎤'
+  };
+
+  function renderGrid() {
+    var grid = document.getElementById('nrn-grid');
+    grid.innerHTML = services.map(function (s) {
+      var isSelected = selected.hasOwnProperty(s.id);
+      var isSuggested = suggestedId === s.id;
+      var emoji = SERVICE_ICONS[s.icon] || '⭐';
+      var priceLabel = s.pricingModel === 'quote_only' ? 'Custom quote' : ('$' + displayStartingPrice(s) + '+');
+
+      return '' +
+        '<div class="nrn-card' + (isSelected ? ' selected' : '') + (isSuggested ? ' suggested' : '') +
+          '" data-id="' + s.id + '" role="button" tabindex="0" aria-pressed="' + isSelected + '" aria-label="' + s.name + ', ' + (s.pricingModel === 'quote_only' ? 'custom quote' : 'starting at $' + displayStartingPrice(s)) + (s.description ? '. ' + s.description : '') + '">' +
+          (s.mostBooked ? '<span class="nrn-badge">🔥 Most booked</span>' : '') +
+          (isSuggested ? '<span class="nrn-badge nrn-suggest-badge">⭐ For you</span>' : '') +
+          '<span class="nrn-card-row">' +
+            '<span class="nrn-check" aria-hidden="true">' + (isSelected ? '✅' : '⬜') + '</span>' +
+            '<span class="nrn-icon" aria-hidden="true">' + emoji + '</span>' +
+            '<span class="nrn-card-main">' +
+              '<span class="nrn-name">' + s.name + '</span>' +
+              '<span class="nrn-price">' + priceLabel + '</span>' +
+            '</span>' +
+          '</span>' +
+          (s.description ? '<span class="nrn-card-desc" aria-hidden="true">' + s.description + '</span>' : '') +
+          (isSelected ? renderConfig(s, selected[s.id]) : '') +
+        '</div>';
+    }).join('');
+
+    Array.prototype.forEach.call(grid.querySelectorAll('.nrn-card'), function (card) {
+      card.addEventListener('click', function (evt) {
+        if (evt.target.closest('.nrn-config')) return;
+        toggleService(card.dataset.id);
+      });
+      card.addEventListener('keydown', function (evt) {
+        if (evt.target !== card) return; // let nested controls handle their own keys
+        if (evt.key === 'Enter' || evt.key === ' ') {
+          evt.preventDefault();
+          toggleService(card.dataset.id);
+        }
+      });
+    });
+
+    services.forEach(function (s) {
+      if (!selected.hasOwnProperty(s.id)) return;
+      wireConfigControls(s);
+    });
+  }
+
+  function renderConfig(s, cfg) {
+    var price = computePrice(s, cfg);
+    var html = '<span class="nrn-config">';
+
+    if (s.pricingModel === 'package') {
+      html += '<span class="nrn-config-row"><span class="nrn-help-text" style="margin:0 0 8px;">You can select more than one.</span><span class="nrn-tiers-stack">' +
+        s.tiers.map(function (t, i) {
+          var isOn = cfg.tierIndices.indexOf(i) !== -1;
+          return '<button type="button" class="nrn-tier' + (isOn ? ' active' : '') +
+            '" data-service="' + s.id + '" data-field="tierToggle" data-value="' + i + '" aria-pressed="' + isOn + '">' +
+            (isOn ? '✅ ' : '⬜ ') + t.name + (t.description ? '<span class="nrn-tier-sub">' + t.description + '</span>' : '') + '</button>';
+        }).join('') + '</span></span>';
+
+      var selectedTiers = cfg.tierIndices.map(function (i) { return s.tiers[i]; }).filter(Boolean);
+      var hasConsult = selectedTiers.some(function (t) { return t.name === 'Creative consultation'; });
+      var hasDigitalFoundation = selectedTiers.some(function (t) { return t.name === 'Digital Foundation'; });
+
+      if (hasConsult) {
+        html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-consulthours-' + s.id + '">🕒 Consultation hours</label>' +
+          '<input type="number" id="nrn-consulthours-' + s.id + '" min="0.5" step="0.5" class="nrn-hours-input" data-service="' + s.id + '" data-field="consultHours" value="' + cfg.consultHours + '" /></span>';
+      }
+      if (hasDigitalFoundation) {
+        html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-dfrevisions-' + s.id + '">🔁 Extra revision rounds beyond the 2 free ($25/round)</label>' +
+          '<input type="number" id="nrn-dfrevisions-' + s.id + '" min="0" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="dfRevisions" value="' + cfg.dfRevisions + '" /></span>';
+      }
+      if (s.id === 'graphic-design') {
+        html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-revisions-' + s.id + '">🔁 Extra revision rounds beyond the 2 free ($50/round)</label>' +
+          '<input type="number" id="nrn-revisions-' + s.id + '" min="0" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="revisions" value="' + cfg.revisions + '" /></span>';
+        html += '<span class="nrn-config-row"><span class="nrn-config-label">➕ Add-ons</span>' +
+          '<span class="nrn-toggle-row">' +
+            '<button type="button" class="nrn-toggle' + (cfg.rushDelivery ? ' active' : '') + '" data-service="' + s.id + '" data-field="rushDelivery" data-value="toggle" aria-pressed="' + !!cfg.rushDelivery + '">⚡ Rush delivery, 48hr (+$' + GRAPHIC_RUSH_FEE + ')</button>' +
+          '</span></span>';
+      }
+    }
+
+    if (s.pricingModel === 'hourly_plus_edit') {
+      html += '<span class="nrn-config-row"><span class="nrn-config-label">🎬 What kind of video?</span><span class="nrn-tiers">' +
+        VIDEO_TYPES.map(function (v) {
+          var isActive = cfg.videoType === v.value;
+          return '<button type="button" class="nrn-tier' + (isActive ? ' active' : '') +
+            '" data-service="' + s.id + '" data-field="videoType" data-value="' + v.value + '" aria-pressed="' + isActive + '">' + v.label + '</button>';
+        }).join('') + '</span></span>';
+
+      if (cfg.videoType === 'interview') {
+        html += renderVideoExampleLink(cfg.videoType);
+        html += '<span class="nrn-config-row"><span class="nrn-config-label">✂️ Edit length</span><span class="nrn-tiers-stack">' +
+          VIDEO_EDIT_TIERS.map(function (t, i) {
+            var isActive = (cfg.interviewTier || 0) === i;
+            return '<button type="button" class="nrn-tier' + (isActive ? ' active' : '') +
+              '" data-service="' + s.id + '" data-field="interviewTier" data-value="' + i + '" aria-pressed="' + isActive + '">' + t.name + '</button>';
+          }).join('') + '</span></span>';
+
+        html += '<span class="nrn-help-text" style="margin:0 0 8px;">By default, questions are asked by someone off-screen — they’re never shown on camera. Add on-screen talent below if you want a professional interviewer to appear on camera with you instead.</span>';
+        html += '<span class="nrn-config-row"><span class="nrn-config-label">➕ Add-ons</span>' +
+          '<span class="nrn-toggle-row">' +
+            '<button type="button" class="nrn-toggle' + (cfg.talent ? ' active' : '') + '" data-service="' + s.id + '" data-field="talent" data-value="toggle" aria-pressed="' + !!cfg.talent + '">🎤 On-screen talent — interviewer appears on camera (+$' + INTERVIEW_TALENT_FEE + ')</button>' +
+            '<button type="button" class="nrn-toggle' + (cfg.facility ? ' active' : '') + '" data-service="' + s.id + '" data-field="facility" data-value="toggle" aria-pressed="' + !!cfg.facility + '">🏠 Production facility (+$' + INTERVIEW_FACILITY_FEE + ')</button>' +
+          '</span></span>';
+        html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-ivlocations-' + s.id + '">📍 Extra locations beyond primary ($' + INTERVIEW_LOCATION_FEE + ' each, within 20mi)</label>' +
+          '<input type="number" id="nrn-ivlocations-' + s.id + '" min="0" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="interviewLocations" value="' + cfg.interviewLocations + '" /></span>';
+        html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-ivrevisions-' + s.id + '">🔁 Extra revision rounds beyond the 2 free ($' + INTERVIEW_REVISION_FEE + '/round)</label>' +
+          '<input type="number" id="nrn-ivrevisions-' + s.id + '" min="0" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="interviewRevisions" value="' + cfg.interviewRevisions + '" /></span>';
+      } else if (cfg.videoType === 'raisethebar') {
+        html += renderVideoExampleLink(cfg.videoType);
+      } else {
+        html += renderVideoExampleLink(cfg.videoType);
+        html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-hours-' + s.id + '">🕒 Shoot hours ($' + VIDEO_BASE_SHOOT + ' covers the first ' + VIDEO_BASE_HOURS + ', then $' + VIDEO_EXTRA_HOUR_RATE + '/hr)</label>' +
+          '<input type="number" id="nrn-hours-' + s.id + '" min="' + VIDEO_BASE_HOURS + '" step="0.5" class="nrn-hours-input" data-service="' + s.id + '" data-field="hours" value="' + cfg.hours + '" /></span>';
+        html += '<span class="nrn-config-row"><span class="nrn-config-label">✂️ Edit length</span><span class="nrn-tiers">' +
+          VIDEO_EDIT_TIERS.map(function (t, i) {
+            return '<button type="button" class="nrn-tier' + (i === cfg.tierIndex ? ' active' : '') +
+              '" data-service="' + s.id + '" data-field="tierIndex" data-value="' + i + '" aria-pressed="' + (i === cfg.tierIndex) + '">' +
+              t.name + '</button>';
+          }).join('') + '</span></span>';
+        html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-vidlocations-' + s.id + '">📍 Extra locations beyond primary ($' + VIDEO_LOCATION_FEE + ' each)</label>' +
+          '<input type="number" id="nrn-vidlocations-' + s.id + '" min="0" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="extraLocations" value="' + cfg.extraLocations + '" /></span>';
+        html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-vidrevisions-' + s.id + '">🔁 Extra revision rounds beyond the 2 free ($' + REVISION_FEE.video + '/round)</label>' +
+          '<input type="number" id="nrn-vidrevisions-' + s.id + '" min="0" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="revisions" value="' + cfg.revisions + '" /></span>';
+        html += '<span class="nrn-config-row"><span class="nrn-config-label">➕ Add-ons</span>' +
+          '<span class="nrn-toggle-row">' +
+            '<button type="button" class="nrn-toggle' + (cfg.whiteLabel ? ' active' : '') + '" data-service="' + s.id + '" data-field="whiteLabel" data-value="toggle" aria-pressed="' + !!cfg.whiteLabel + '">🏷️ White-label, remove branding (+' + Math.round(VIDEO_WHITE_LABEL_PCT * 100) + '%)</button>' +
+          '</span></span>';
+      }
+    }
+
+    if (s.pricingModel === 'hourly') {
+      if (s.id === 'photography') {
+        html += '<span class="nrn-help-text" style="margin:0 0 8px;"><a class="nrn-inline-link" href="' + PHOTOGRAPHY_EXAMPLE_URL + '" target="_blank" rel="noopener noreferrer">🎥 See examples</a></span>';
+        html += '<span class="nrn-config-row"><span class="nrn-config-label">📍 Where</span>' +
+          '<span class="nrn-toggle-row">' +
+            '<button type="button" class="nrn-toggle' + (cfg.studio !== 'facility' ? ' active' : '') + '" data-service="' + s.id + '" data-field="studio" data-value="standard" aria-pressed="' + (cfg.studio !== 'facility') + '">📍 On-location $' + PHOTO_ON_LOCATION_RATE + '/hr</button>' +
+            '<button type="button" class="nrn-toggle' + (cfg.studio === 'facility' ? ' active' : '') + '" data-service="' + s.id + '" data-field="studio" data-value="facility" aria-pressed="' + (cfg.studio === 'facility') + '">🏠 In-studio $' + photoFacilityRate(s) + '/hr</button>' +
+          '</span></span>';
+      }
+      html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-hours-' + s.id + '">🕒 Hours</label>' +
+        '<input type="number" id="nrn-hours-' + s.id + '" min="' + s.minHours + '" step="0.5" class="nrn-hours-input" data-service="' + s.id + '" data-field="hours" value="' + cfg.hours + '" /></span>';
+      if (s.id === 'photography') {
+        html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-extraphotos-' + s.id + '">🖼️ Extra edited photos ($' + PHOTO_EXTRA_PHOTO_SINGLE + '/ea, or ' + PHOTO_EXTRA_PHOTO_BUNDLE_SIZE + ' for $' + PHOTO_EXTRA_PHOTO_BUNDLE_PRICE + ')</label>' +
+          '<input type="number" id="nrn-extraphotos-' + s.id + '" min="0" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="extraPhotos" value="' + cfg.extraPhotos + '" /></span>';
+        html += '<span class="nrn-config-row"><span class="nrn-config-label">➕ Add-ons</span>' +
+          '<span class="nrn-toggle-row">' +
+            '<button type="button" class="nrn-toggle' + (cfg.rushDelivery ? ' active' : '') + '" data-service="' + s.id + '" data-field="rushDelivery" data-value="toggle" aria-pressed="' + !!cfg.rushDelivery + '">⚡ Rush delivery, 48hr (+$' + PHOTO_RUSH_FEE + ')</button>' +
+          '</span></span>';
+      }
+    }
+
+    if (s.pricingModel === 'per_page') {
+      html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-pages-' + s.id + '">📄 Pages</label>' +
+        '<input type="number" id="nrn-pages-' + s.id + '" min="1" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="pages" value="' + cfg.pages + '" /></span>';
+      html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-webrevisions-' + s.id + '">🔁 Extra revision rounds beyond the 2 free ($' + REVISION_FEE.web + '/round)</label>' +
+        '<input type="number" id="nrn-webrevisions-' + s.id + '" min="0" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="revisions" value="' + cfg.revisions + '" /></span>';
+    }
+
+    html += '<span class="nrn-breakdown">' + price.breakdown.join('<br>') + '</span>';
+    if (s.pricingModel !== 'quote_only') {
+      html += '<span class="nrn-config-total">Total: $' + price.total + '</span>';
+      if (s.pricingModel === 'hourly_plus_edit' && cfg.videoType !== 'raisethebar') {
+        html += '<span class="nrn-help-text" style="margin:8px 0 0;">📌 Shoots start at $' + VIDEO_BASE_SHOOT + ' for ' + VIDEO_BASE_HOURS + ' hours, then $' + VIDEO_EXTRA_HOUR_RATE + '/hr, plus edit. Final price may vary based on decisions made in your consultation.</span>';
+      }
+      if (price.deposit > 0) {
+        html += '<span class="nrn-deposit-note">💳 Deposit ' + (price.depositCredited ? 'credited toward this total' : 'in addition to the total above') + ', non-refundable</span>';
+      }
+    }
+    html += '</span>';
+    return html;
+  }
+
+  function wireConfigControls(s) {
+    var card = document.querySelector('.nrn-card[data-id="' + s.id + '"]');
+    if (!card) return;
+    Array.prototype.forEach.call(card.querySelectorAll('.nrn-tier, .nrn-toggle'), function (btn) {
+      btn.addEventListener('click', function (evt) {
+        evt.stopPropagation();
+        var field = btn.dataset.field;
+        var value = btn.dataset.value;
+        var cfg = selected[s.id];
+        if (field === 'tierIndex') cfg.tierIndex = Number(value);
+        else if (field === 'interviewTier') cfg.interviewTier = Number(value);
+        else if (field === 'tierToggle') {
+          var idx = Number(value);
+          var pos = cfg.tierIndices.indexOf(idx);
+          if (pos !== -1) {
+            // Keep at least one tier selected — a package with nothing
+            // picked has no meaningful price.
+            if (cfg.tierIndices.length > 1) cfg.tierIndices.splice(pos, 1);
+          } else {
+            cfg.tierIndices.push(idx);
+          }
+        }
+        else if (field === 'videoType') {
+          cfg.videoType = value;
+          // Event recaps always happen at the event — no in-studio option.
+          if (value === 'recap') cfg.studio = 'standard';
+        }
+        else if (field === 'studio') cfg.studio = value;
+        else if (field === 'talent' || field === 'facility' || field === 'whiteLabel' || field === 'rushDelivery') cfg[field] = !cfg[field];
+        saveSelection();
+        renderGrid();
+        renderLoadout();
+        // Re-rendering replaces this button's DOM node; restore focus.
+        focusConfigControl(s.id, field, value);
+      });
+    });
+    Array.prototype.forEach.call(card.querySelectorAll('.nrn-hours-input'), function (input) {
+      input.addEventListener('click', function (evt) { evt.stopPropagation(); });
+      input.addEventListener('change', function () {
+        var field = input.dataset.field;
+        var cfg = selected[s.id];
+        var num = Math.max(Number(input.min) || 0, Number(input.value) || 0);
+        cfg[field] = num;
+        saveSelection();
+        renderGrid();
+        renderLoadout();
+        focusConfigControl(s.id, field, null, input.id);
+      });
+    });
+  }
+
+  // Restores keyboard focus to the equivalent control after a full grid
+  // re-render, since innerHTML replacement destroys the original node.
+  function focusConfigControl(serviceId, field, value, inputId) {
+    var target = inputId
+      ? document.getElementById(inputId)
+      : document.querySelector('.nrn-card[data-id="' + serviceId + '"] [data-field="' + field + '"][data-value="' + value + '"]');
+    if (target) target.focus();
+  }
+
+  function toggleService(id) {
+    var s = services.find(function (x) { return x.id === id; });
+    if (!s) return;
+    if (selected.hasOwnProperty(id)) {
+      delete selected[id];
+    } else {
+      selected[id] = defaultConfig(s);
+      fetch(SCRIPT_URL + '?action=click&id=' + encodeURIComponent(id)).catch(function () {});
+    }
+    saveSelection();
+    renderGrid();
+    renderLoadout();
+    renderBundleSuggestion();
+    var card = document.querySelector('.nrn-card[data-id="' + id + '"]');
+    if (card) card.focus();
+  }
+
+  // ---------------- Bundle suggestion ----------------
+
+  function renderBundleSuggestion() {
+    var box = document.getElementById('nrn-bundle');
+    var selectedIds = Object.keys(selected);
+    var match = bundles.find(function (b) {
+      return b.requiredServiceIds.length > 0 &&
+        b.requiredServiceIds.every(function (id) { return selectedIds.indexOf(id) !== -1; });
+    });
+    if (match) {
+      box.style.display = 'block';
+      box.innerHTML = 'That combo qualifies for <strong>' + match.name + '</strong> &mdash; ' + match.description + ' ($' + match.price + ')';
+    } else {
+      box.style.display = 'none';
+    }
+  }
+
+  // ---------------- Loadout, booking, and estimate ----------------
+
+  function selectionSummary() {
+    return Object.keys(selected).map(function (id) {
+      var s = services.find(function (x) { return x.id === id; });
+      var price = computePrice(s, selected[id]);
+      return s.name + ' (' + price.label + ', $' + price.total + ')';
+    }).join(', ');
+  }
+
+  function selectionTotal() {
+    return Object.keys(selected).reduce(function (sum, id) {
+      var s = services.find(function (x) { return x.id === id; });
+      return sum + computePrice(s, selected[id]).total;
+    }, 0);
+  }
+
+  function renderLoadout() {
+    var panel = document.getElementById('nrn-loadout');
+    var estimateBox = document.getElementById('nrn-estimate');
+    var ids = Object.keys(selected);
+    if (ids.length === 0) { panel.style.display = 'none'; estimateBox.innerHTML = ''; return; }
+    panel.style.display = 'block';
+
+    var total = selectionTotal();
+    var rows = ids.map(function (id) {
+      var s = services.find(function (x) { return x.id === id; });
+      var price = computePrice(s, selected[id]);
+      var priceDisplay = s.pricingModel === 'quote_only' ? 'Custom quote' : ('$' + price.total);
+      var leftLabel = s.pricingModel === 'quote_only' ? s.name : (s.name + ' &mdash; ' + price.label);
+      return '<div class="nrn-loadout-row"><span>' + leftLabel + '</span><span>' + priceDisplay + '</span></div>';
+    }).join('');
+
+    panel.innerHTML =
+      '<h4>🧾 02 · Your selections</h4>' +
+      '<div class="nrn-help-text">Here’s what you’ve picked so far. Looks good? Hit Continue below.</div>' + rows +
+      '<div id="nrn-total"><span>💰 Total</span><span>$' + total + '</span></div>' +
+      '<div id="nrn-total-note">Includes deposits. Final invoice may vary — see your service agreement.</div>' +
+      '<button id="nrn-continue" type="button">Continue</button>';
+
+    document.getElementById('nrn-continue').addEventListener('click', function () {
+      if (leadSubmitted) { showPage('nrn-page-actions'); renderActions(); }
+      else { showPage('nrn-page-about'); renderIntakeStep(); }
+    });
+  }
+
+  // ---------------- Intake: who they are + a few demographic questions ----------------
+
+  var heardAboutOptions = ['Instagram', 'TikTok', 'Google search', 'Referral from someone', 'Saw us at an event or show', 'Other'];
+  var timelineOptions = ['ASAP', 'Within 2 weeks', 'Within a month', '1–3 months', 'Just exploring'];
+
+  function optionsHtml(list) {
+    return list.map(function (opt) { return '<option value="' + opt + '">' + opt + '</option>'; }).join('');
+  }
+
+  function renderIntakeStep() {
+    document.getElementById('nrn-actions').innerHTML = '';
+    var box = document.getElementById('nrn-intake');
+    box.innerHTML =
+      '<div class="nrn-intake-panel">' +
+        '<button type="button" class="nrn-link-btn nrn-back-btn" id="nrn-back-to-services">&larr; Back</button>' +
+        '<h4>👤 03 · About you</h4>' +
+        '<div class="nrn-help-text">Just a few quick questions so we know who we’re working with. Takes about 30 seconds.</div>' +
+        '<label for="nrn-intake-name" class="nrn-sr-only">Name</label>' +
+        '<input type="text" id="nrn-intake-name" class="nrn-intake-field" placeholder="Your name" autocomplete="name" value="' + escapeHtml(leadName) + '" />' +
+        '<label for="nrn-intake-email" class="nrn-sr-only">Email</label>' +
+        '<input type="email" id="nrn-intake-email" class="nrn-intake-field" placeholder="name@email.com" autocomplete="email" value="' + escapeHtml(leadEmail) + '" />' +
+        '<label class="nrn-config-label" for="nrn-intake-phone" style="margin-top:14px;">📞 Phone (optional)</label>' +
+        '<input type="tel" id="nrn-intake-phone" class="nrn-intake-field" placeholder="(615) 555-0123" autocomplete="tel" value="' + escapeHtml(leadPhone) + '" />' +
+        '<div class="nrn-config-row"><span class="nrn-config-label">Who are you?</span>' +
+          '<span class="nrn-toggle-row">' +
+            '<button type="button" class="nrn-toggle" id="nrn-role-artist" data-value="Artist" aria-pressed="false">🎤 Artist</button>' +
+            '<button type="button" class="nrn-toggle" id="nrn-role-business" data-value="Small business" aria-pressed="false">🏢 Small business</button>' +
+          '</span></div>' +
+        '<label class="nrn-config-label" for="nrn-intake-location" style="margin-top:14px;">📍 Location or city (optional)</label>' +
+        '<input type="text" id="nrn-intake-location" class="nrn-intake-field" placeholder="Nashville, TN" value="' + escapeHtml(leadLocation) + '" />' +
+        '<label class="nrn-config-label" for="nrn-heard-about" style="margin-top:14px;">📱 How did you hear about us?</label>' +
+        '<select id="nrn-heard-about" class="nrn-intake-field">' + optionsHtml(heardAboutOptions) + '</select>' +
+        '<label class="nrn-config-label" for="nrn-timeline" style="margin-top:14px;">📅 When do you need this?</label>' +
+        '<select id="nrn-timeline" class="nrn-intake-field">' + optionsHtml(timelineOptions) + '</select>' +
+        '<label class="nrn-config-label" for="nrn-intake-details" style="margin-top:14px;">📝 Anything else? (optional)</label>' +
+        '<textarea id="nrn-intake-details" class="nrn-intake-field nrn-intake-textarea" placeholder="Event date, vision, specific requests...">' + escapeHtml(leadDetails) + '</textarea>' +
+        '<div class="nrn-help-text" style="margin-top:14px;">What you enter here is used to prepare your quote and coordinate your booking. See our <a class="nrn-inline-link" href="https://www.nrnszn.com/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy</a> for details.</div>' +
+        '<button id="nrn-intake-submit" type="button">Continue</button>' +
+        '<div id="nrn-intake-error" role="alert"></div>' +
+      '</div>';
+
+    var roleButtons = [document.getElementById('nrn-role-artist'), document.getElementById('nrn-role-business')];
+    roleButtons.forEach(function (btn) {
+      if (btn.dataset.value === leadRole) { btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true'); }
+      btn.addEventListener('click', function () {
+        leadRole = btn.dataset.value;
+        roleButtons.forEach(function (b) { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
+        btn.classList.add('active');
+        btn.setAttribute('aria-pressed', 'true');
+      });
+    });
+
+    document.getElementById('nrn-back-to-services').addEventListener('click', function () {
+      showPage('nrn-page-services');
+    });
+    document.getElementById('nrn-intake-submit').addEventListener('click', submitIntake);
+  }
+
+  function submitIntake() {
+    var errorEl = document.getElementById('nrn-intake-error');
+    var name = document.getElementById('nrn-intake-name').value.trim();
+    var email = document.getElementById('nrn-intake-email').value.trim();
+    var validEmail = EMAIL_RE.test(email);
+
+    if (!name || !validEmail || !leadRole) {
+      errorEl.textContent = !name ? 'Enter your name first.' : (!validEmail ? 'Enter a valid email address first.' : 'Pick artist or small business.');
+      errorEl.style.display = 'block';
+      return;
+    }
+    errorEl.style.display = 'none';
+
+    leadName = name;
+    leadEmail = email;
+    leadPhone = document.getElementById('nrn-intake-phone').value.trim();
+    leadLocation = document.getElementById('nrn-intake-location').value.trim();
+    leadDetails = document.getElementById('nrn-intake-details').value.trim();
+    var heardAbout = document.getElementById('nrn-heard-about').value;
+    var timeline = document.getElementById('nrn-timeline').value;
+
+    var summary = selectionSummary();
+    var total = selectionTotal();
+    postAction({
+      action: 'lead',
+      name: leadName,
+      email: leadEmail,
+      phone: leadPhone,
+      location: leadLocation,
+      role: leadRole,
+      heardAbout: heardAbout,
+      timeline: timeline,
+      details: leadDetails,
+      summary: summary,
+      total: total
+    }).catch(function () {});
+
+    leadSubmitted = true;
+    document.getElementById('nrn-intake').innerHTML = '';
+    showPage('nrn-page-actions');
+    renderActions();
+  }
+
+  function renderActions() {
+    var box = document.getElementById('nrn-actions');
+    box.innerHTML =
+      '<button type="button" class="nrn-link-btn nrn-back-btn" id="nrn-back-to-about">&larr; Back</button>' +
+      '<h4 class="nrn-step-label">&#128197; 04 · Book or get a quote</h4>' +
+      '<div class="nrn-help-text">Ready to talk? Book a time below. Just want pricing first? Get an estimate emailed to you instead.</div>' +
+      '<button id="nrn-cta" type="button">&#128197; Book a consultation</button>' +
+      '<button id="nrn-cta-estimate" type="button">&#9993;&#65039; Email me an estimate</button>';
+
+    document.getElementById('nrn-back-to-about').addEventListener('click', function () {
+      showPage(leadSubmitted ? 'nrn-page-services' : 'nrn-page-about');
+    });
+
+    document.getElementById('nrn-cta').addEventListener('click', function () {
+      chosenSlot = null;
+      document.getElementById('nrn-estimate').innerHTML = '';
+      showPage('nrn-page-flow');
+      renderBookingPanel();
+    });
+
+    document.getElementById('nrn-cta-estimate').addEventListener('click', function () {
+      document.getElementById('nrn-booking').innerHTML = '';
+      showPage('nrn-page-flow');
+      renderEstimateForm();
+    });
+  }
+
+  // ---------------- Direct Google Calendar booking ----------------
+
+  var bookingDate = null;
+  var bookingSlots = [];
+
+  function toLocalDateStr(d) {
+    // Avoid the UTC-shift bug in toISOString(): late at night in a
+    // behind-UTC timezone, toISOString() can render as tomorrow's date.
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
+
+  var WEEKDAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  var MONTH_LABELS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  var calendarViewYear, calendarViewMonth; // the month currently displayed in the popover
+  var calendarOpen = false;
+
+  function renderBookingPanel() {
+    bookingDate = null;
+    bookingSlots = [];
+    chosenSlot = null;
+    calendarOpen = false;
+    var today = new Date();
+    calendarViewYear = today.getFullYear();
+    calendarViewMonth = today.getMonth();
+    // Near the end of the month only a few days would be selectable, so
+    // open on next month instead.
+    var daysLeftInMonth = new Date(calendarViewYear, calendarViewMonth + 1, 0).getDate() - today.getDate() + 1;
+    if (daysLeftInMonth <= 4) {
+      calendarViewMonth++;
+      if (calendarViewMonth > 11) { calendarViewMonth = 0; calendarViewYear++; }
+    }
+    renderDateStep();
+  }
+
+  function renderDateStep() {
+    var box = document.getElementById('nrn-booking');
+    var todayStr = toLocalDateStr(new Date());
+    var maxDateObj = new Date();
+    maxDateObj.setDate(maxDateObj.getDate() + 30);
+    var maxDateStr = toLocalDateStr(maxDateObj);
+
+    var buttonLabel = bookingDate
+      ? new Date(bookingDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+      : 'Choose a date';
+
+    box.innerHTML =
+      '<div class="nrn-booking-panel">' +
+        '<button type="button" class="nrn-link-btn nrn-back-btn" id="nrn-back-to-actions">&larr; Back</button>' +
+        '<h4>🕒 05 · Pick a time</h4>' +
+        '<div class="nrn-help-text">Choose a date below to see open times that day.</div>' +
+        '<button type="button" id="nrn-book-date-btn" aria-haspopup="true" aria-expanded="' + calendarOpen + '">📅 ' + buttonLabel + '</button>' +
+        '<div id="nrn-calendar-popover" hidden></div>' +
+        '<div id="nrn-slots" class="nrn-slots"></div>' +
+      '</div>';
+
+    document.getElementById('nrn-back-to-actions').addEventListener('click', function () {
+      showPage('nrn-page-actions');
+    });
+    document.getElementById('nrn-book-date-btn').addEventListener('click', function () {
+      calendarOpen = !calendarOpen;
+      if (calendarOpen) renderCalendar(todayStr, maxDateStr);
+      document.getElementById('nrn-calendar-popover').hidden = !calendarOpen;
+      document.getElementById('nrn-book-date-btn').setAttribute('aria-expanded', calendarOpen);
+    });
+
+    if (calendarOpen) renderCalendar(todayStr, maxDateStr);
+  }
+
+  function renderCalendar(minDateStr, maxDateStr) {
+    var pop = document.getElementById('nrn-calendar-popover');
+    pop.hidden = false;
+
+    var firstOfMonth = new Date(calendarViewYear, calendarViewMonth, 1);
+    var daysInMonth = new Date(calendarViewYear, calendarViewMonth + 1, 0).getDate();
+    var startWeekday = firstOfMonth.getDay();
+
+    var minMonth = new Date(minDateStr + 'T00:00:00');
+    var maxMonth = new Date(maxDateStr + 'T00:00:00');
+    var atMinMonth = calendarViewYear === minMonth.getFullYear() && calendarViewMonth === minMonth.getMonth();
+    var atMaxMonth = calendarViewYear === maxMonth.getFullYear() && calendarViewMonth === maxMonth.getMonth();
+
+    var cells = '';
+    for (var i = 0; i < startWeekday; i++) {
+      cells += '<span class="nrn-cal-day nrn-cal-blank"></span>';
+    }
+    for (var d = 1; d <= daysInMonth; d++) {
+      var cellDate = new Date(calendarViewYear, calendarViewMonth, d);
+      var cellStr = toLocalDateStr(cellDate);
+      var inRange = cellStr >= minDateStr && cellStr <= maxDateStr;
+      var isSelected = bookingDate === cellStr;
+      var isToday = cellStr === toLocalDateStr(new Date());
+      if (inRange) {
+        cells += '<button type="button" class="nrn-cal-day' + (isSelected ? ' active' : '') + (isToday ? ' nrn-cal-today' : '') +
+          '" data-date="' + cellStr + '" aria-pressed="' + isSelected + '">' + d + '</button>';
+      } else {
+        cells += '<span class="nrn-cal-day nrn-cal-disabled">' + d + '</span>';
+      }
+    }
+
+    pop.innerHTML =
+      '<div class="nrn-cal-header">' +
+        '<button type="button" id="nrn-cal-prev" aria-label="Previous month"' + (atMinMonth ? ' disabled' : '') + '>&larr;</button>' +
+        '<span class="nrn-cal-month-label">' + MONTH_LABELS[calendarViewMonth] + ' ' + calendarViewYear + '</span>' +
+        '<button type="button" id="nrn-cal-next" aria-label="Next month"' + (atMaxMonth ? ' disabled' : '') + '>&rarr;</button>' +
+      '</div>' +
+      '<div class="nrn-cal-grid nrn-cal-weekdays">' + WEEKDAY_LABELS.map(function (w) { return '<span>' + w + '</span>'; }).join('') + '</div>' +
+      '<div class="nrn-cal-grid">' + cells + '</div>';
+
+    document.getElementById('nrn-cal-prev').addEventListener('click', function () {
+      calendarViewMonth--;
+      if (calendarViewMonth < 0) { calendarViewMonth = 11; calendarViewYear--; }
+      renderCalendar(minDateStr, maxDateStr);
+    });
+    document.getElementById('nrn-cal-next').addEventListener('click', function () {
+      calendarViewMonth++;
+      if (calendarViewMonth > 11) { calendarViewMonth = 0; calendarViewYear++; }
+      renderCalendar(minDateStr, maxDateStr);
+    });
+    Array.prototype.forEach.call(pop.querySelectorAll('.nrn-cal-day[data-date]'), function (btn) {
+      btn.addEventListener('click', function () {
+        calendarOpen = false;
+        loadSlots(btn.dataset.date);
+      });
+    });
+  }
+
+  function loadSlots(dateStr) {
+    bookingDate = dateStr;
+    var slotsBox = document.getElementById('nrn-slots');
+    slotsBox.innerHTML = '<span class="nrn-muted">Loading times...</span>';
+
+    fetch(SCRIPT_URL + '?action=availability&date=' + encodeURIComponent(dateStr))
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        bookingSlots = res.slots || [];
+        renderSlotsStep();
+      })
+      .catch(function () {
+        slotsBox.innerHTML = '<span class="nrn-error-inline">Could not load times — try again.</span>';
+      });
+  }
+
+  function renderSlotsStep() {
+    var box = document.getElementById('nrn-booking');
+    var slotsHtml;
+    if (bookingSlots.length === 0) {
+      slotsHtml = '<span class="nrn-muted">No open times that day — try another date.</span>';
+    } else {
+      slotsHtml = '<div class="nrn-slots">' + bookingSlots.map(function (s) {
+        return '<button type="button" class="nrn-slot' + (chosenSlot && chosenSlot.time === s.time ? ' active' : '') +
+          '" data-time="' + s.time + '" data-label="' + s.label + '">' + s.label + '</button>';
+      }).join('') + '</div>';
+    }
+
+    box.innerHTML =
+      '<div class="nrn-booking-panel">' +
+        '<button type="button" class="nrn-link-btn nrn-back-btn" id="nrn-back-to-date">&larr; Back to date</button>' +
+        '<h4>🕒 05 · Times on ' + bookingDate + '</h4>' +
+        '<div class="nrn-help-text">Tap a time that works for you.</div>' +
+        slotsHtml +
+      '</div>';
+
+    document.getElementById('nrn-back-to-date').addEventListener('click', renderDateStep);
+    Array.prototype.forEach.call(box.querySelectorAll('.nrn-slot'), function (btn) {
+      btn.addEventListener('click', function () {
+        chosenSlot = { date: bookingDate, time: btn.dataset.time, label: btn.dataset.label };
+        renderFormStep();
+      });
+    });
+  }
+
+  function renderFormStep() {
+    var box = document.getElementById('nrn-booking');
+    box.innerHTML =
+      '<div class="nrn-booking-panel">' +
+        '<button type="button" class="nrn-link-btn nrn-back-btn" id="nrn-back-to-slots">&larr; Back to times</button>' +
+        '<h4>✅ 05 · Confirm ' + chosenSlot.label + '</h4>' +
+        '<div class="nrn-help-text">Enter your name and email to lock in this time.</div>' +
+        '<label for="nrn-book-name" class="nrn-sr-only">Name</label>' +
+        '<input type="text" id="nrn-book-name" class="nrn-book-field" placeholder="Your name" autocomplete="name" value="' + escapeHtml(leadName) + '" />' +
+        '<label for="nrn-book-email" class="nrn-sr-only">Email</label>' +
+        '<input type="email" id="nrn-book-email" class="nrn-book-field" placeholder="name@email.com" autocomplete="email" value="' + escapeHtml(leadEmail) + '" />' +
+        '<button id="nrn-book-submit" type="button">Confirm ' + chosenSlot.label + '</button>' +
+        '<div id="nrn-book-error" role="alert"></div>' +
+        '<div id="nrn-book-status"></div>' +
+      '</div>';
+
+    document.getElementById('nrn-back-to-slots').addEventListener('click', renderSlotsStep);
+    document.getElementById('nrn-book-submit').addEventListener('click', submitBooking);
+  }
+
+  function submitBooking() {
+    var nameInput = document.getElementById('nrn-book-name');
+    var emailInput = document.getElementById('nrn-book-email');
+    var errorEl = document.getElementById('nrn-book-error');
+    var name = nameInput.value.trim();
+    var email = emailInput.value.trim();
+    var validEmail = EMAIL_RE.test(email);
+
+    if (!name || !validEmail) {
+      errorEl.textContent = !name ? 'Enter your name first.' : 'Enter a valid email address first.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    errorEl.style.display = 'none';
+
+    var summary = selectionSummary();
+    var total = selectionTotal();
+    var submitBtn = document.getElementById('nrn-book-submit');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Booking...';
+
+    postAction({
+      action: 'book',
+      date: chosenSlot.date,
+      time: chosenSlot.time,
+      name: name,
+      email: email,
+      summary: summary,
+      total: total
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      if (res.success) {
+        document.getElementById('nrn-booking').innerHTML =
+          '<div class="nrn-booking-panel"><div id="nrn-book-status">Booked for ' + escapeHtml(res.time) +
+          '. Check your email for the Google Meet link.</div></div>';
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm ' + chosenSlot.label;
+        errorEl.textContent = res.error || "Couldn't book that — try another time.";
+        errorEl.style.display = 'block';
+      }
+    }).catch(function () {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Confirm ' + chosenSlot.label;
+      errorEl.textContent = "Couldn't book that — try again.";
+      errorEl.style.display = 'block';
+    });
+  }
+
+  function renderEstimateForm() {
+    var box = document.getElementById('nrn-estimate');
+    box.innerHTML =
+      '<button type="button" class="nrn-link-btn nrn-back-btn" id="nrn-back-to-actions-2">&larr; Back</button>' +
+      '<div class="nrn-help-text">Enter your email and we’ll send the total right away.</div>' +
+      '<div id="nrn-estimate-form">' +
+        '<label for="nrn-estimate-email" class="nrn-sr-only">Email address</label>' +
+        '<input type="email" id="nrn-estimate-email" placeholder="name@email.com" autocomplete="email" value="' + escapeHtml(leadEmail) + '" />' +
+        '<button id="nrn-estimate-submit" type="button">Send</button>' +
+      '</div>' +
+      '<div id="nrn-estimate-error" role="alert"></div>' +
+      '<div id="nrn-estimate-status"></div>';
+    document.getElementById('nrn-back-to-actions-2').addEventListener('click', function () {
+      showPage('nrn-page-actions');
+    });
+
+    document.getElementById('nrn-estimate-submit').addEventListener('click', function () {
+      var input = document.getElementById('nrn-estimate-email');
+      var errorEl = document.getElementById('nrn-estimate-error');
+      var statusEl = document.getElementById('nrn-estimate-status');
+      var email = input.value.trim();
+      var validEmail = EMAIL_RE.test(email);
+
+      if (!validEmail) {
+        errorEl.textContent = 'Enter a valid email address first.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      errorEl.style.display = 'none';
+
+      var summary = selectionSummary();
+      var total = selectionTotal();
+
+      postAction({ action: 'estimate', email: email, summary: summary, total: total })
+        .then(function (r) { return r.json(); }).then(function (res) {
+        if (res.success) {
+          statusEl.textContent = "Sent — check your inbox.";
+          statusEl.style.display = 'block';
+        } else {
+          errorEl.textContent = "Couldn't send that — try again in a moment.";
+          errorEl.style.display = 'block';
+        }
+      }).catch(function () {
+        errorEl.textContent = "Couldn't send that — try again in a moment.";
+        errorEl.style.display = 'block';
+      });
+    });
+  }
+})();
+  </script>
+</Base>
+
+<style is:global>
+  /* Global (not scoped) because most of this markup is built by the script
+     at runtime. Every selector is namespaced under #nrn-select / .nrn-. */
+  .services-page {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: max(var(--space-5), env(safe-area-inset-top)) var(--space-4) var(--space-6);
+  }
+  .services-page .back {
+    display: inline-block;
+    color: var(--purple-700);
+    font-weight: 600;
+    font-size: 15px;
+    text-decoration: none;
+    margin-bottom: var(--space-3);
+  }
+  .services-page .back:hover { text-decoration: underline; }
+  .nrn-noscript { background: var(--paper); border: 2px solid var(--purple-500); border-radius: var(--radius-md); padding: var(--space-5); }
+  .nrn-noscript h2 { margin: 0 0 8px; font-family: var(--font-display); color: var(--purple-900); }
+
+  #nrn-select, #nrn-select *, #nrn-select *::before, #nrn-select *::after {
+    box-sizing: border-box;
+    overflow-wrap: break-word;
+  }
+  #nrn-select {
+    --nrn-line: #e3d4f7;
+    --nrn-soft: #faf6ff;
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+  #nrn-select button { font-family: inherit; }
+  .nrn-page[hidden] { display: none; }
+  .nrn-sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+
+  .nrn-logo { display: block; width: 96px; height: 96px; margin: 0 auto 6px; }
+  .nrn-brand-name {
+    margin: 0; text-align: center;
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(30px, 9vw, 38px); letter-spacing: -0.01em; line-height: 1.15;
+    color: var(--purple-900);
+  }
+  .nrn-form-sub { text-align: center; color: var(--ink-soft); font-size: 15px; margin: 6px 0 var(--space-5); }
+  .nrn-help-text { display: block; color: var(--ink-soft); font-size: 15px; line-height: 1.5; margin: 0 0 14px; }
+  .nrn-step-label {
+    font-family: var(--font-display); font-size: 20px; font-weight: 700;
+    color: var(--purple-900); margin: 24px 0 8px;
+  }
+  .nrn-step-label:first-of-type { margin-top: 0; }
+  .nrn-inline-link { color: var(--purple-500); font-weight: 600; }
+  .nrn-muted { font-size: 14px; color: var(--ink-soft); }
+  .nrn-error-inline { font-size: 14px; color: #b42318; }
+
+  .nrn-link-btn {
+    display: block; width: 100%; text-align: center; background: none; border: none;
+    color: var(--purple-500); font-size: 15px; font-weight: 600; cursor: pointer;
+    padding: 6px 0 18px; text-decoration: underline; text-underline-offset: 3px;
+  }
+  .nrn-link-btn:hover { color: var(--purple-700); }
+  .nrn-back-btn { text-align: left; padding: 0 0 10px; text-decoration: none; }
+  #nrn-select :focus-visible { outline: 3px solid var(--purple-300); outline-offset: 2px; }
+
+  #nrn-quiz { background: var(--paper); border: 2px solid var(--purple-300); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px; }
+  #nrn-quiz h4 { font-family: var(--font-display); font-size: 18px; margin: 0 0 8px; color: var(--purple-900); }
+  .nrn-quiz-opt {
+    display: block; width: 100%; text-align: left;
+    background: var(--nrn-soft); color: var(--ink);
+    border: 1.5px solid var(--nrn-line); border-radius: var(--radius-sm);
+    padding: 13px 14px; margin-bottom: 10px; cursor: pointer; font-size: 16px; min-height: 44px;
+  }
+  .nrn-quiz-opt:hover { border-color: var(--purple-500); color: var(--purple-700); }
+
+  #nrn-grid { display: flex; flex-direction: column; gap: 14px; }
+  .nrn-loading { color: var(--ink-soft); padding: 10px 0; }
+  .nrn-load-error { color: #b42318; line-height: 1.5; padding: 10px 0; }
+  .nrn-card {
+    position: relative; cursor: pointer; display: block; width: 100%; text-align: left;
+    background: var(--paper);
+    border: 2px solid var(--nrn-line);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    color: var(--ink);
+    transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+  }
+  .nrn-card:hover { border-color: var(--purple-300); }
+  .nrn-card.selected { border-color: var(--purple-500); box-shadow: 0 6px 20px rgba(133, 32, 204, 0.14); }
+  .nrn-card.suggested { border-color: var(--gold-500); }
+  .nrn-card-row { display: flex; align-items: center; gap: 12px; }
+  .nrn-check { font-size: 18px; flex-shrink: 0; }
+  .nrn-card-main { flex: 1; display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
+  .nrn-card .nrn-name { font-weight: 600; font-size: 16px; color: var(--purple-900); }
+  .nrn-card .nrn-price { font-size: 16px; font-weight: 700; color: var(--purple-500); white-space: nowrap; }
+  .nrn-card .nrn-icon { font-size: 28px; flex-shrink: 0; line-height: 1; }
+  .nrn-card-desc { display: block; font-size: 15px; color: var(--ink-soft); line-height: 1.5; margin-top: 8px; }
+  .nrn-badge {
+    position: absolute; top: -12px; right: 12px;
+    background: var(--gold-500); color: var(--purple-900);
+    font-weight: 700; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: var(--radius-pill);
+  }
+  .nrn-badge.nrn-suggest-badge { right: auto; left: 12px; background: var(--purple-500); color: var(--paper); }
+
+  .nrn-config { display: block; margin-top: 14px; padding-top: 14px; border-top: 1.5px solid var(--nrn-line); cursor: default; }
+  .nrn-config-row { display: block; margin-top: 12px; }
+  .nrn-config-label { font-weight: 600; font-size: 15px; color: var(--purple-900); display: block; margin-bottom: 6px; }
+  .nrn-tiers, .nrn-tiers-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .nrn-tier, .nrn-toggle {
+    width: 100%; max-width: 100%; text-align: left;
+    font-size: 15px; padding: 10px 12px; min-height: 44px; cursor: pointer;
+    border-radius: var(--radius-sm); border: 1.5px solid var(--nrn-line);
+    background: var(--nrn-soft); color: var(--ink);
+    transition: border-color var(--dur-fast), background var(--dur-fast);
+  }
+  .nrn-tier:hover, .nrn-toggle:hover { border-color: var(--purple-300); }
+  .nrn-tier.active, .nrn-toggle.active {
+    background: var(--purple-500); border-color: var(--purple-500); color: var(--paper); font-weight: 600;
+  }
+  .nrn-tier-sub { display: block; font-size: 0.85em; font-weight: 400; margin-top: 2px; opacity: 0.85; }
+  .nrn-toggle-row { display: flex; flex-direction: column; gap: 8px; }
+  .nrn-hours-input, .nrn-intake-field, .nrn-book-field, #nrn-estimate-email, #nrn-book-date-btn {
+    width: 100%; padding: 12px; min-height: 44px;
+    border-radius: var(--radius-sm); border: 1.5px solid var(--nrn-line);
+    background: var(--paper); color: var(--ink);
+    font-family: var(--font-body); font-size: 16px;
+  }
+  .nrn-hours-input:focus, .nrn-intake-field:focus, .nrn-book-field:focus, #nrn-estimate-email:focus {
+    outline: none; border-color: var(--purple-500);
+  }
+  .nrn-intake-field, .nrn-book-field { margin-top: 10px; }
+  .nrn-intake-textarea { min-height: 90px; resize: vertical; line-height: 1.5; }
+  .nrn-breakdown { display: block; margin-top: 12px; font-size: 15px; color: var(--ink-soft); line-height: 1.7; }
+  .nrn-config-total { display: block; margin-top: 10px; font-weight: 700; font-size: 18px; color: var(--purple-900); }
+  .nrn-deposit-note { display: block; font-size: 14px; color: var(--purple-700); margin-top: 6px; line-height: 1.5; }
+
+  #nrn-bundle {
+    display: none; margin-top: 18px;
+    background: var(--gold-100); border: 2px solid var(--gold-500); border-radius: var(--radius-md);
+    padding: 14px 16px; font-size: 15px; line-height: 1.6; color: var(--purple-900);
+  }
+  #nrn-bundle::before { content: '\2605 '; color: var(--gold-700); }
+
+  #nrn-loadout { margin-top: 20px; display: none; }
+  #nrn-loadout, .nrn-booking-panel, .nrn-intake-panel {
+    background: var(--paper); border: 2px solid var(--nrn-line); border-radius: var(--radius-md); padding: 18px;
+  }
+  .nrn-booking-panel, .nrn-intake-panel { margin-top: 4px; }
+  #nrn-loadout h4, .nrn-booking-panel h4, .nrn-intake-panel h4 {
+    font-family: var(--font-display); font-size: 20px; font-weight: 700; margin: 0 0 8px; color: var(--purple-900);
+  }
+  .nrn-loadout-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; font-size: 15px; padding: 8px 0; border-bottom: 1px solid var(--nrn-line); }
+  .nrn-loadout-row > span { min-width: 0; }
+  #nrn-total {
+    display: flex; justify-content: space-between; align-items: center;
+    font-weight: 700; font-size: 20px; color: var(--purple-900);
+    margin-top: 14px; padding-top: 14px; border-top: 2px solid var(--nrn-line);
+  }
+  #nrn-total-note { font-size: 14px; color: var(--ink-soft); margin-top: 8px; line-height: 1.5; }
+
+  #nrn-cta, #nrn-cta-estimate, #nrn-book-submit, #nrn-continue, #nrn-intake-submit {
+    margin-top: 14px; width: 100%; min-height: 52px; padding: 14px; cursor: pointer;
+    border-radius: var(--radius-pill); font-weight: 600; font-size: 16px;
+    transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-out);
+  }
+  #nrn-cta, #nrn-book-submit, #nrn-continue, #nrn-intake-submit {
+    background: var(--purple-500); color: var(--paper); border: 2px solid var(--purple-500);
+  }
+  #nrn-cta:hover, #nrn-book-submit:hover, #nrn-continue:hover, #nrn-intake-submit:hover { background: var(--purple-700); border-color: var(--purple-700); }
+  #nrn-cta:active, #nrn-book-submit:active, #nrn-continue:active, #nrn-intake-submit:active { transform: scale(0.98); }
+  #nrn-book-submit:disabled { opacity: 0.6; cursor: default; }
+  #nrn-cta-estimate { background: var(--paper); color: var(--purple-700); border: 2px solid var(--purple-500); }
+  #nrn-cta-estimate:hover { background: var(--nrn-soft); }
+
+  select.nrn-intake-field { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--purple-500) 50%), linear-gradient(135deg, var(--purple-500) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 32px; }
+  #nrn-intake-error, #nrn-book-error, #nrn-estimate-error { color: #b42318; font-size: 15px; margin-top: 10px; display: none; line-height: 1.5; }
+  #nrn-actions { margin-top: 4px; }
+
+  #nrn-booking { margin-top: 4px; }
+  #nrn-book-date-btn { text-align: left; cursor: pointer; margin-top: 4px; }
+  #nrn-book-date-btn:hover, #nrn-book-date-btn[aria-expanded="true"] { border-color: var(--purple-500); }
+  #nrn-calendar-popover { margin-top: 10px; padding: 14px; border: 1.5px solid var(--nrn-line); border-radius: var(--radius-sm); background: var(--nrn-soft); }
+  .nrn-cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .nrn-cal-header button { background: var(--paper); border: 1.5px solid var(--nrn-line); border-radius: var(--radius-sm); color: var(--purple-700); font-size: 16px; min-width: 44px; min-height: 44px; cursor: pointer; }
+  .nrn-cal-header button:disabled { opacity: 0.35; cursor: default; }
+  .nrn-cal-header button:not(:disabled):hover { border-color: var(--purple-500); }
+  .nrn-cal-month-label { font-weight: 700; color: var(--purple-900); }
+  .nrn-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .nrn-cal-weekdays { margin-bottom: 4px; }
+  .nrn-cal-weekdays span { text-align: center; font-size: 13px; color: var(--ink-soft); font-weight: 600; }
+  .nrn-cal-day { display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: var(--radius-sm); border: 1.5px solid transparent; background: none; color: var(--ink); font-size: 15px; cursor: pointer; }
+  button.nrn-cal-day { background: var(--paper); }
+  button.nrn-cal-day:hover { border-color: var(--purple-300); }
+  .nrn-cal-day.active { background: var(--purple-500); color: var(--paper); font-weight: 700; }
+  .nrn-cal-day.nrn-cal-today:not(.active) { border-color: var(--gold-500); font-weight: 700; }
+  .nrn-cal-day.nrn-cal-disabled { color: #b9aec4; cursor: default; }
+  .nrn-cal-blank { visibility: hidden; }
+  .nrn-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-top: 14px; }
+  .nrn-slot { background: var(--nrn-soft); color: var(--ink); border: 1.5px solid var(--nrn-line); border-radius: var(--radius-sm); padding: 12px; font-size: 15px; cursor: pointer; min-height: 44px; }
+  .nrn-slot:hover { border-color: var(--purple-500); }
+  .nrn-slot.active { background: var(--purple-500); color: var(--paper); border-color: var(--purple-500); font-weight: 600; }
+  #nrn-book-status { font-weight: 600; font-size: 16px; margin-top: 12px; color: var(--purple-700); line-height: 1.6; }
+
+  #nrn-estimate { margin-top: 4px; }
+  #nrn-estimate-form { display: flex; gap: 10px; margin-top: 10px; }
+  #nrn-estimate-email { flex: 1; min-width: 0; }
+  #nrn-estimate-submit {
+    background: var(--purple-500); color: var(--paper); border: none; border-radius: var(--radius-sm);
+    padding: 0 18px; font-weight: 600; font-size: 16px; cursor: pointer; min-height: 44px;
+  }
+  #nrn-estimate-submit:hover { background: var(--purple-700); }
+  #nrn-estimate-status { font-weight: 600; margin-top: 10px; color: var(--purple-700); display: none; }
+
+  @media (max-width: 380px) {
+    #nrn-estimate-form { flex-direction: column; }
+    #nrn-estimate-submit { width: 100%; }
+  }
+</style>
