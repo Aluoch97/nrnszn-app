@@ -1,6 +1,6 @@
 // Minimal offline support: pages are network-first (always fresh when online),
 // static assets are cache-first. Bump VERSION to force everyone onto new assets.
-const VERSION = 'nrn-v1';
+const VERSION = 'nrn-v2';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(['/portal'])).then(() => self.skipWaiting()));

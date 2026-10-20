@@ -11,7 +11,7 @@ The interactive side of nrnszn.com, served at **app.nrnszn.com**. It's built wit
 | `src/styles/tokens.css` | Shared colors, fonts and spacing for every route. |
 | `src/lib/api.js` | The only file that talks to Apps Script. |
 | `apps-script/` | Backend code to paste into Apps Script. |
-| `public/icons/` | App icons. These are placeholders, so swap in your real logo. |
+| `public/icons/` | Logo, app icons and link-preview image, all made from the NuRenaissance cloud logo. |
 
 ## One-time setup
 

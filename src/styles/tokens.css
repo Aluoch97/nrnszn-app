@@ -1,18 +1,20 @@
 /* NuRenaissance design tokens — every route pulls from here so the widgets read as one product. */
 :root {
-  --gold-100: #fbecc4;
-  --gold-300: #f2cf6b;
-  --gold-500: #e2b23a;
-  --gold-700: #9a7417;
+  /* Colors taken from the logo: cloud violet, its shading, the outline, and the crown. */
+  --gold-100: #fbf0d4;
+  --gold-300: #e8bb52;
+  --gold-500: #e2af39;
+  --gold-700: #9a6f12;
 
-  --purple-300: #8c6ad6;
-  --purple-500: #5b34b0;
-  --purple-700: #3a1d7a;
-  --purple-900: #1f0f45;
+  --purple-100: #f5eefc;
+  --purple-300: #b07ff0;
+  --purple-500: #8520cc;
+  --purple-700: #5c1090;
+  --purple-900: #281136;
 
-  --ink: #1a1220;
-  --ink-soft: #4a3d52;
-  --paper: #fffaf0;
+  --ink: #281136;
+  --ink-soft: #5b4a68;
+  --paper: #ffffff;
 
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -42,7 +44,7 @@ html, body { margin: 0; }
 body {
   font-family: var(--font-body);
   color: var(--ink);
-  background: var(--gold-300);
+  background: var(--purple-100);
   -webkit-font-smoothing: antialiased;
 }
 
