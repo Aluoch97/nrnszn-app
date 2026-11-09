@@ -1,16 +1,10 @@
 ---
 import Site from '../layouts/Site.astro';
 
-// NuCrew members' own pages (their Wix pages aren't being rebuilt).
-const crew = [
-  { name: 'Nicólas Soul', role: 'Co-founder', href: 'https://www.soulnicolas.com/' },
-  { name: 'whyshiki', role: 'Co-founder', href: 'https://www.instagram.com/whyshiki/' },
-  { name: 'Amoré Dear', role: 'NuCrew', href: 'https://www.instagram.com/raeissa97' },
-];
 ---
 <Site
   title="Contact | NuRenaissance"
-  description="Partner with NuRenaissance Media, read the FAQs, meet the NuCrew and get in touch."
+  description="Partner with NuRenaissance Media, read the FAQs and get in touch."
 >
   <div class="page">
     <section class="partner" aria-labelledby="partner-h">
@@ -54,19 +48,6 @@ const crew = [
       </div>
     </section>
 
-    <section aria-labelledby="crew-h">
-      <h2 id="crew-h" class="title">NuCrew</h2>
-      <ul class="crew">
-        {crew.map((c) => (
-          <li>
-            <a href={c.href} target="_blank" rel="noopener">
-              <span class="crew-name">{c.name}</span>
-              <span class="crew-role">{c.role} <span aria-hidden="true">↗</span></span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </section>
 
     <section aria-labelledby="connect-h">
       <h2 id="connect-h" class="title">Connect</h2>
@@ -111,15 +92,10 @@ const crew = [
   details strong { color: #f3f0fa; }
   details a { color: var(--gold-300); }
 
-  .crew { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3); }
-  .crew a {
     display: grid; gap: 4px; padding: var(--space-4); text-decoration: none;
     border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238;
     transition: border-color var(--dur-fast), transform var(--dur-fast) var(--ease-out);
   }
-  .crew a:hover { border-color: var(--gold-500); transform: translateY(-2px); }
-  .crew-name { font-family: var(--font-poster); font-weight: 800; font-size: 24px; text-transform: uppercase; color: var(--gold-300); line-height: 1.05; }
-  .crew-role { font-size: 13px; color: #a99fc6; }
 
   .connect { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
   .cbtn {
