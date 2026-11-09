@@ -1,6 +1,6 @@
 // Minimal offline support: pages are network-first (always fresh when online),
 // static assets are cache-first. Bump VERSION to force everyone onto new assets.
-const VERSION = 'nrn-v5';
+const VERSION = 'nrn-v6';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(['/portal'])).then(() => self.skipWaiting()));
@@ -18,6 +18,8 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   const url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+  // Videos stream in pieces (range requests); let the browser handle them directly.
+  if (url.pathname.startsWith('/media/') || req.headers.has('range')) return;
 
   if (req.mode === 'navigate') {
     e.respondWith(

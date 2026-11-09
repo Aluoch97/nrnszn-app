@@ -1,188 +1,148 @@
 ---
+// Home: mirrors the NuPortal page from the Wix site. The archway video plays
+// behind the welcome, then the latest interview and music video (from the
+// same playlists and backend as /portal), then the main links.
 import Site from '../layouts/Site.astro';
+import VideoCard from '../components/VideoCard.astro';
+import { playlists, playlistUrl } from '../data/portal.js';
+import { getLatestVideos, API_URL } from '../lib/api.js';
 
-const press = [
-  {
-    title: 'NuRenaissance – REDD & bluu',
-    excerpt: 'Featuring impeccable bars, breathless in some cases, spoken-word style in others, the album manages to be artistically free yet focused.',
-    source: 'Stereo Stickman · Rebecca Cullen',
-    href: 'https://stereostickman.com/music/nurenaissance-redd-bluu/',
-    img: '/img/press-redd-bluu.webp',
-  },
-  {
-    title: 'NuRenaissance – REDD & bluu',
-    excerpt: 'Most artists strive to tell a story with their work, but the collective that is NuRenaissance has taken it to the next level with their latest release.',
-    source: 'The Ark of Music',
-    href: 'https://thearkofmusic.com/nurenaissance-redd-bluu/',
-    img: '/img/press-redd-bluu.webp',
-  },
-  {
-    title: 'Decide to go with REDD or bluu in the NuRenaissance',
-    excerpt: 'For their new project REDD & bluu, the beliefs and thoughts of NuRenaissance are laid out there for all to take in within the music.',
-    source: 'Indie Band Guru · Keith Pro · Aug 4, 2020',
-    href: 'https://indiebandguru.com/nurenaissance-redd-bluu/',
-    img: '/img/press-redd-bluu.webp',
-  },
-  {
-    title: "PHOTOS: NuRenaissance Media's Certified Lounge Podcast",
-    excerpt: 'Inspired performances and insightful, forward-thinking conversations are on their way to you!',
-    source: 'Underground Music Collective · Gerard Longo',
-    href: 'https://umcworldwide.com/author/gerardlongo/',
-    img: '/img/press-umc.webp',
-  },
+const latest = await getLatestVideos();
+const links = [
+  { label: 'I have a service request', href: '/services' },
+  { label: 'Find open mics & shows in Nashville', href: '/directory' },
+  { label: 'Renaissance Certified', href: '/play' },
 ];
 ---
 <Site
   title="NuRenaissance | Independent media company in Nashville"
-  description="An independent media company providing video, photo, livestream, and artist services in Nashville, Tennessee."
+  description="Welcome to the NuRenaissance. Stream the newest visuals, experience Renaissance Certified, and book your next creative session with NuRenaissance Media in Nashville."
 >
   <section class="hero">
-    <img class="hero-bg" src="/img/home-hero.webp" srcset="/img/home-hero-640.webp 640w, /img/home-hero.webp 1280w" sizes="100vw" alt="" width="1280" height="720" fetchpriority="high" />
+    <video class="hero-bg" autoplay muted loop playsinline preload="metadata" aria-hidden="true"
+      poster="/img/portal-poster-640.webp" width="1280" height="720">
+      <source src="/media/portal-480.mp4" type="video/mp4" media="(max-width: 760px)" />
+      <source src="/media/portal-720.mp4" type="video/mp4" />
+    </video>
     <div class="hero-inner">
       <img class="hero-mascot" src="/img/mascot.webp" alt="" width="132" height="132" />
-      <h1 class="sr-only">NuRenaissance</h1>
-      <p class="tagline">An independent media company providing video, photo, livestream, and artist services.</p>
-      <div class="actions">
-        <a class="btn" href="/gallery"><span class="btn-label">Gallery</span><span class="btn-sub">Photos from events and interviews</span></a>
-        <a class="btn btn-main" href="/services">
-          <img src="/img/mascot.webp" alt="" width="40" height="40" />
-          <span class="btn-label">Work with us</span>
-        </a>
-        <a class="btn" href="/cinema"><span class="btn-label">NuCinema</span><span class="btn-sub">Watch shows and movies</span></a>
+      <h1 class="hero-title">NuPortal</h1>
+      <p class="hero-text">Welcome to the NuRenaissance. Stream the newest visuals, experience Renaissance Certified, and book your next creative session with us.</p>
+    </div>
+  </section>
+
+  <div class="page">
+    <section class="videos" aria-label="Latest videos">
+      <div class="vid">
+        <h2 class="band-title">Latest interview</h2>
+        <VideoCard slot="interview" label="Watch on YouTube" playlistId={playlists.interview.id} video={latest.interview} />
+        <a class="more" href={playlistUrl(playlists.interview.id)} target="_blank" rel="noopener">More interviews ↗</a>
       </div>
-    </div>
-  </section>
+      <div class="vid">
+        <h2 class="band-title">Latest music video</h2>
+        <VideoCard slot="music" label="Watch on YouTube" playlistId={playlists.music.id} video={latest.music} />
+        <a class="more" href={playlistUrl(playlists.music.id)} target="_blank" rel="noopener">More music videos ↗</a>
+      </div>
+    </section>
 
-  <section class="band" aria-labelledby="community-h">
-    <h2 id="community-h" class="band-title">Community</h2>
-    <div class="community">
-      <a class="community-card" href="/play">
-        <img src="/img/renaissance-certified.webp" alt="" width="181" height="161" />
-        <span class="cc-name">Renaissance Certified</span>
-        <span class="cc-sub">Nashville showcases, exclusives and the Certified Lounge</span>
-      </a>
-      <a class="community-card" href="/directory">
-        <img src="/img/nudirectory.webp" alt="" width="129" height="129" />
-        <span class="cc-name">NuDirectory</span>
-        <span class="cc-sub">The Nashville hip-hop, R&amp;B and soul scene board</span>
-      </a>
-    </div>
-  </section>
+    <section aria-labelledby="links-h">
+      <h2 id="links-h" class="band-title">Links</h2>
+      <ul class="links">
+        {links.map((l) => (<li><a class="link" href={l.href}>{l.label}<span aria-hidden="true">→</span></a></li>))}
+      </ul>
+    </section>
+  </div>
 
-  <section class="band" aria-labelledby="press-h">
-    <h2 id="press-h" class="band-title">Press</h2>
-    <ul class="press">
-      {press.map((p) => (
-        <li>
-          <a class="press-card" href={p.href} target="_blank" rel="noopener">
-            <img src={p.img} alt="" width="320" height="160" loading="lazy" />
-            <span class="press-body">
-              <span class="press-title">{p.title}</span>
-              <span class="press-excerpt">{p.excerpt}</span>
-              <span class="press-source">{p.source} <span aria-hidden="true">↗</span></span>
-            </span>
-          </a>
-        </li>
-      ))}
-    </ul>
-  </section>
+  <script define:vars={{ API_URL }}>
+    // Freshest videos: the build already has them; this updates them between builds.
+    if (API_URL) {
+      const url = new URL(API_URL);
+      url.searchParams.set('action', 'latestVideos');
+      fetch(url)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (!data || !data.ok) return;
+          for (const slot of ['interview', 'music']) {
+            const v = data[slot];
+            const card = document.querySelector(`[data-video-slot="${slot}"]`);
+            if (!v || !card) continue;
+            card.href = `https://www.youtube.com/watch?v=${v.id}&list=${card.dataset.playlist}`;
+            card.querySelector('[data-title]').textContent = v.title;
+            const src = `https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`;
+            let img = card.querySelector('[data-thumb]');
+            if (!img) {
+              img = document.createElement('img');
+              img.alt = '';
+              img.dataset.thumb = '';
+              card.querySelector('[data-thumb-empty]')?.replaceWith(img);
+            }
+            if (img.src !== src) img.src = src;
+          }
+        })
+        .catch(() => {});
+    }
+  </script>
 </Site>
+
+<script>
+  // The archway video is decoration: hold it still for anyone who asked for less motion or to save data.
+  const video = document.querySelector<HTMLVideoElement>('.hero-bg');
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator as any).connection?.saveData;
+  if (video && still) { video.removeAttribute('autoplay'); video.pause(); }
+</script>
 
 <style>
   .hero {
-    position: relative;
-    isolation: isolate;
-    min-height: min(74svh, 680px);
-    padding-bottom: var(--space-5);
-    display: grid;
-    place-items: center;
+    position: relative; isolation: isolate; overflow: hidden;
+    min-height: min(78svh, 720px);
+    display: grid; place-items: center;
     padding: var(--space-6) var(--space-4);
-    overflow: hidden;
+    background: #0e0b16 url('/img/portal-poster-640.webp') center / cover no-repeat;
   }
-  .hero-bg {
-    position: absolute; inset: 0; z-index: -2;
-    width: 100%; height: 100%; object-fit: cover;
-  }
+  .hero-bg { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; }
+  /* dimmed like the Wix portal, fading into the page below */
   .hero::after {
     content: ''; position: absolute; inset: 0; z-index: -1;
-    background:
-      linear-gradient(180deg, rgba(14, 11, 22, 0.55) 0%, rgba(31, 15, 69, 0.55) 45%, #0e0b16 100%);
+    background: linear-gradient(180deg, rgba(14, 11, 22, 0.55) 0%, rgba(14, 11, 22, 0.62) 55%, #0e0b16 100%);
   }
-  .hero-inner { width: 100%; min-width: 0; max-width: 760px; grid-template-columns: minmax(0, 1fr); text-align: center; display: grid; justify-items: center; gap: var(--space-3); }
+  .hero-inner { width: 100%; max-width: 640px; display: grid; justify-items: center; gap: var(--space-3); text-align: center; }
   .hero-mascot { width: 96px; height: 96px; filter: drop-shadow(0 0 18px rgba(155, 93, 229, 0.6)); animation: float 5s ease-in-out infinite; }
-  .tagline {
-    margin: 0; max-width: 36ch;
-    font-size: clamp(16px, 4.2vw, 19px); line-height: 1.5;
-    letter-spacing: 0.01em; color: #ece6f7;
-    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
+  .hero-title {
+    margin: 0; font-family: var(--font-poster); font-weight: 800; text-transform: uppercase;
+    font-size: clamp(48px, 16vw, 104px); line-height: 0.9; letter-spacing: 0.04em;
+    color: var(--gold-300); text-shadow: 0 4px 24px rgba(0, 0, 0, 0.7);
   }
-  .actions {
-    margin-top: var(--space-4);
-    width: 100%;
-    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3);
+  .hero-text {
+    margin: 0; max-width: 36ch; font-size: clamp(16px, 4.2vw, 19px); line-height: 1.5;
+    color: #f3f0fa; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.9);
   }
-  .btn {
-    display: grid; align-content: center; justify-items: center; gap: 2px;
-    min-height: 64px; padding: var(--space-3);
-    border-radius: 14px; text-decoration: none;
-    background: rgba(31, 15, 69, 0.82); border: 1.5px solid var(--gold-500);
-    color: var(--gold-300);
+
+  .page { max-width: 1040px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-6); display: grid; gap: var(--space-6); }
+  .band-title {
+    margin: 0 0 var(--space-3);
+    font-family: var(--font-poster); font-weight: 800; text-transform: uppercase;
+    font-size: clamp(26px, 7vw, 36px); letter-spacing: 0.04em; color: var(--pink-300);
+  }
+  .videos { display: grid; gap: var(--space-6); }
+  @media (min-width: 760px) { .videos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); } }
+  .vid { min-width: 0; display: grid; align-content: start; }
+  .more {
+    justify-self: start; margin-top: var(--space-3);
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px;
+    border-radius: var(--radius-pill); border: 1.5px solid var(--gold-500); color: var(--gold-300);
+    font-weight: 700; font-size: 15px; text-decoration: none; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .more:hover { background: #241d34; }
+  .links { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+  .link {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+    min-height: 60px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md);
+    background: var(--gold-300); color: var(--purple-900); text-decoration: none;
+    font-family: var(--font-poster); font-weight: 800; font-size: clamp(19px, 5.4vw, 24px); text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.1;
     transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast);
   }
-  .btn:hover { transform: translateY(-2px); background: rgba(58, 29, 122, 0.95); }
-  .btn-label { font-family: var(--font-poster); font-weight: 800; font-size: clamp(19px, 5.5vw, 24px); text-transform: uppercase; letter-spacing: 0.03em; line-height: 1; }
-  .btn-sub { font-size: 13px; line-height: 1.3; text-align: center; color: #d8cdf0; }
-  .btn-main {
-    grid-column: 1 / -1; order: -1;
-    grid-auto-flow: column; gap: var(--space-3);
-    background: var(--gold-300); color: var(--purple-900); border-color: var(--gold-300);
-    min-height: 68px;
-  }
-  .btn-main:hover { background: #ffe08a; }
-  .btn-main .btn-label { font-size: 28px; }
-  .btn-main img { width: 40px; height: 40px; }
-  @media (min-width: 720px) {
-    .actions { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); }
-    .btn-main { grid-column: auto; order: 0; }
-  }
-
-  .band { max-width: 1040px; margin: 0 auto; padding: var(--space-6) var(--space-4); }
-  .band-title {
-    margin: 0 0 var(--space-4);
-    font-family: var(--font-poster); font-weight: 800; text-transform: uppercase;
-    font-size: clamp(28px, 7vw, 40px); letter-spacing: 0.04em; color: var(--pink-300);
-  }
-
-  .community { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-  .community-card {
-    min-width: 0;
-    display: grid; justify-items: center; align-content: start; gap: var(--space-2);
-    padding: var(--space-5) var(--space-3); text-align: center; text-decoration: none;
-    border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238; color: #f3f0fa;
-    transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast);
-  }
-  .community-card:hover { transform: translateY(-3px); border-color: var(--gold-500); }
-  .community-card img { width: auto; height: 110px; object-fit: contain; }
-  .cc-name { font-family: var(--font-poster); font-weight: 800; font-size: clamp(17px, 5vw, 22px); overflow-wrap: anywhere; text-transform: uppercase; color: var(--gold-300); line-height: 1.05; }
-  .cc-sub { font-size: 13px; line-height: 1.45; color: #a99fc6; }
-
-  .press { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
-  @media (min-width: 720px) { .press { grid-template-columns: 1fr 1fr; } }
-  .press-card {
-    display: grid; grid-template-columns: 112px 1fr; gap: var(--space-3); align-items: start;
-    padding: var(--space-3); border-radius: var(--radius-md); text-decoration: none;
-    background: #f7f4ee; color: #1a1220;
-    transition: transform var(--dur-fast) var(--ease-out);
-  }
-  .press-card:hover { transform: translateY(-2px); }
-  .press-card img { width: 112px; height: 84px; object-fit: cover; border-radius: 8px; }
-  .press-body { display: grid; gap: 4px; min-width: 0; }
-  .press-title { font-weight: 600; font-size: 15px; line-height: 1.3; }
-  .press-excerpt {
-    font-size: 13px; line-height: 1.45; color: #4a3d52;
-    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-  }
-  .press-source { font-size: 12px; color: #6b5d78; }
+  .link:hover { background: #ffe08a; transform: translateY(-2px); }
+  .link span { font-size: 22px; }
 
   @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 </style>
