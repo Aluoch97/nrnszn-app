@@ -32,6 +32,7 @@ const pastDays = pastEvents.map((e) => e.day);
             <p class="ev-pwhen">{e.when}</p>
             <p class="ev-pwhere">{e.where}</p>
             <p class="ev-ptext">{e.text}</p>
+            {e.video && <a class="ev-plink" href={e.video} target="_blank" rel="noopener">Watch on YouTube ↗</a>}
             {e.watch && <a class="ev-plink" href={e.watch}>Watch on NuCinema →</a>}
           </div>
         </li>

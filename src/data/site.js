@@ -19,7 +19,7 @@ export const more = ['/events', '/contact', '/support'];
 
 // The apps on the Apps page. `inApp`: opens inside this site (full screen with a back bar).
 export const apps = [
-  { name: 'Certified Lounge', href: '/play', inApp: true, img: '/img/apps/certified-lounge.webp',
+  { name: 'Certified', href: '/play', inApp: true, img: '/img/apps/certified-lounge.webp',
     text: 'Renaissance Certified in one app: play along at the show, the show guide, and the eras, recaps and videos.' },
   { name: 'NuDirectory', href: '/directory', inApp: true, img: '/img/apps/nudirectory.webp',
     text: 'The Nashville scene board: shows, studios, session players, promo contacts and more, all in one place.' },
