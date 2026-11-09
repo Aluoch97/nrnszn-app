@@ -65,7 +65,9 @@ const { src, title, fitTo, measure, fill = 1, maxHeight = 950, maxWidth = 520, p
 
     const fitTo = frame.dataset.fitTo;
     const maxH = Number(frame.dataset.max) || 950;
-    const header = () => document.querySelector('.bar')?.getBoundingClientRect().height ?? 0;
+    // Space taken by the top bar, plus the tab bar on phones.
+    const header = () => (document.querySelector('.bar')?.getBoundingClientRect().height ?? 0)
+      + (document.querySelector('.tabbar')?.getBoundingClientRect().height ?? 0);
     const cap = () => Math.max(480, Math.min(maxH, window.innerHeight - header() - 24));
     const setH = (h: number) => {
       const px = Math.round(h) + 'px';

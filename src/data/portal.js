@@ -19,11 +19,11 @@ export const playlists = {
 
 export const playlistUrl = (id) => `https://www.youtube.com/playlist?list=${id}`;
 
-// Point these at app routes as each widget moves over.
+// App pages.
 export const hubLinks = [
   { label: 'Services', href: '/services', icon: 'services' },
-  { label: 'Directory', href: 'https://www.nrnszn.com/directory', icon: 'directory' },
-  { label: 'Certified', href: 'https://www.nrnszn.com/certified', icon: 'certified' },
+  { label: 'Directory', href: '/directory', icon: 'directory' },
+  { label: 'Certified', href: '/certified', icon: 'certified' },
 ];
 
 export const socials = [
@@ -36,6 +36,6 @@ export const socials = [
 ];
 
 export const footerLinks = [
-  { label: 'Contact', href: 'https://www.nrnszn.com/contact' },
+  { label: 'Contact', href: '/contact' },
   { label: 'Privacy', href: '/privacy-policy' },
 ];

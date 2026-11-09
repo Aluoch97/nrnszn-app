@@ -1,18 +1,20 @@
-// Main-site navigation. Pages that haven't moved into the app yet still point
-// at the Wix site; switch each href to its app path (e.g. '/gallery') as it moves.
-
-const WIX = 'https://www.nrnszn.com';
+// Main-site navigation.
+// Computers: every `nav` link shows in the top bar.
+// Phones: the `tabs` show as an app-style bar along the bottom, and the rest
+// of `nav` sits under the last tab, "More". Keep tabs to four (plus More).
 
 export const nav = [
-  { label: 'Home', href: '/' },
-  { label: 'Services', href: '/services' },
-  { label: 'Gallery', href: '/gallery' },
-  { label: 'Cinema', href: '/cinema' },
-  { label: 'Certified', href: '/certified' },
-  { label: 'Directory', href: 'https://directory.nrnszn.com' },
-  { label: 'Contact', href: '/contact' },
-  { label: 'Support', href: '/support' },
+  { label: 'Home', href: '/', icon: 'home' },
+  { label: 'Services', href: '/services', icon: 'services' },
+  { label: 'Gallery', href: '/gallery', icon: 'gallery' },
+  { label: 'Cinema', href: '/cinema', icon: 'cinema' },
+  { label: 'Directory', href: '/directory', icon: 'directory' },
+  { label: 'Certified', href: '/certified', icon: 'certified' },
+  { label: 'Contact', href: '/contact', icon: 'contact' },
+  { label: 'Support', href: '/support', icon: 'support' },
 ];
+
+export const tabs = ['/', '/services', '/gallery', '/directory'];
 
 export const footer = [
   { label: 'Contact', href: '/contact' },
