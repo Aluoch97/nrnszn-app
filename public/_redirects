@@ -3,3 +3,7 @@
 /whyshiki  https://www.instagram.com/whyshiki/  302
 /amoredear  https://www.instagram.com/raeissa97  302
 /services-apply  /services  301
+# Certified content lives in the Certified Lounge app now (shown at /play)
+/certified  /play?certified  301
+/certified-era-one  /play?certified  301
+/certified-era-two  /play?certified  301

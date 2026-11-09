@@ -6,8 +6,9 @@
 import Base from '../layouts/Base.astro';
 import Icon from './Icon.astro';
 
-interface Props { title: string; description: string; name: string; src: string; }
-const { title, description, name, src } = Astro.props;
+// passQuery: hand this page's ?query on to the app (e.g. /play?certified opens its Certified screen).
+interface Props { title: string; description: string; name: string; src: string; passQuery?: boolean; }
+const { title, description, name, src, passQuery = false } = Astro.props;
 ---
 <Base
   title={title}
@@ -25,12 +26,14 @@ const { title, description, name, src } = Astro.props;
         <Icon name="external" size={20} />
       </a>
     </header>
-    <iframe class="dir-frame" src={src} title={name}
+    <iframe class="dir-frame" src={src} title={name} data-pass={passQuery ? '' : undefined}
       allow="fullscreen; clipboard-write; geolocation" allowfullscreen></iframe>
   </div>
 </Base>
 
 <script>
+  const frame = document.querySelector<HTMLIFrameElement>('.dir-frame[data-pass]');
+  if (frame && location.search) frame.src = frame.src.replace(/\/?$/, '/') + location.search;
   // Back returns to the page you came from in this app; otherwise it goes Home.
   document.querySelector('[data-back]')?.addEventListener('click', (e) => {
     const ref = document.referrer && new URL(document.referrer);

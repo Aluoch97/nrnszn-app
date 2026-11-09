@@ -23,7 +23,7 @@ export const playlistUrl = (id) => `https://www.youtube.com/playlist?list=${id}`
 export const hubLinks = [
   { label: 'Services', href: '/services', icon: 'services' },
   { label: 'Directory', href: '/directory', icon: 'directory' },
-  { label: 'Certified', href: '/certified', icon: 'certified' },
+  { label: 'Certified', href: '/play', icon: 'certified' },
 ];
 
 export const socials = [

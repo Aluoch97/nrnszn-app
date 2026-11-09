@@ -11,7 +11,6 @@ export const nav = [
   { label: 'Cinema', href: '/cinema', icon: 'cinema' },
   { label: 'Directory', href: '/directory', icon: 'directory' },
   { label: 'Certified', href: '/play', icon: 'certified' },
-  { label: 'Certified eras', href: '/certified', icon: 'certified' },
   { label: 'Contact', href: '/contact', icon: 'contact' },
   { label: 'Support', href: '/support', icon: 'support' },
 ];
