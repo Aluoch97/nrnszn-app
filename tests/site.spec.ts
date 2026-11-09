@@ -74,13 +74,18 @@ for (const route of ROUTES) {
 
     test('text is readable size', async ({ page }) => {
       await open(page, route);
-      const tiny = await page.evaluate(() =>
-        [...document.querySelectorAll<HTMLElement>('body *')]
-          .filter((el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent!.trim()))
-          .filter((el) => el.offsetParent && !el.closest('.sr-only') && parseFloat(getComputedStyle(el).fontSize) < 11)
-          .slice(0, 5)
-          .map((el) => `${el.tagName.toLowerCase()} "${el.textContent!.trim().slice(0, 30)}" ${getComputedStyle(el).fontSize}`),
-      );
+      // The page itself and the site's own widgets in frames (outside sites like NuDirectory are skipped).
+      const origin = new URL(page.url()).origin;
+      const tiny: string[] = [];
+      for (const frame of page.frames().filter((f) => f.url().startsWith(origin))) {
+        tiny.push(...await frame.evaluate(() =>
+          [...document.querySelectorAll<HTMLElement>('body *')]
+            .filter((el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent!.trim()))
+            .filter((el) => el.offsetParent && !el.closest('.sr-only') && parseFloat(getComputedStyle(el).fontSize) < 11)
+            .slice(0, 5)
+            .map((el) => `${location.pathname} ${el.tagName.toLowerCase()} "${el.textContent!.trim().slice(0, 30)}" ${getComputedStyle(el).fontSize}`),
+        ).catch(() => []));
+      }
       expect(tiny, 'text smaller than 11px').toEqual([]);
     });
 

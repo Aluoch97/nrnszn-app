@@ -390,7 +390,14 @@ body{
 .cls-hidden{ display:none !important; }
 </style>
 <meta name="robots" content="noindex">
-<style>html{background:#14121B}</style>
+<style>html{background:#14121B}
+/* Readability (site rule: no text under 11px; small print 12px). */
+.cls-eyebrow-small, .cls-eyebrow-sub, .cls-footer, .cls-subreveal-label, .cls-show-pill span, .cls-switch-link { font-size: 11px; }
+.cls-chip, .cls-subreveal .cls-chip, .cls-type-text-sub, .cls-label, .cls-subscribe-note, .cls-thanks-sign, .cls-scene-link { font-size: 12px; }
+/* The survey scales its text with the screen; keep these from shrinking under 12px on narrow phones. */
+.cls-step-sub { font-size: max(0.7812rem, 12px); }
+.cls-type-text-title { font-size: max(0.875rem, 13px); }
+</style>
 </head>
 <body>
 

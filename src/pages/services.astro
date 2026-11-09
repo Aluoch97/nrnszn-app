@@ -31,7 +31,7 @@ const SCRIPT_URL = SERVICES_API_URL;
           <button id="nrn-help-toggle" class="nrn-link-btn" type="button">&#10067; Not sure what you need?</button>
           <div id="nrn-quiz" hidden aria-live="polite"></div>
 
-          <h4 class="nrn-step-label">&#127919; 01 · Choose services</h4>
+          <h2 class="nrn-step-label">&#127919; 01 · Choose services</h2>
           <div class="nrn-help-text">Tap a service to select it. You can pick more than one — tap it again to remove it.</div>
           <div id="nrn-grid">
             <div class="nrn-loading">Loading services&hellip;</div>
@@ -486,7 +486,7 @@ const SCRIPT_URL = SERVICES_API_URL;
     var panel = document.getElementById('nrn-quiz');
     var q = quizQuestions[stepIndex];
     if (!q) { finishQuiz(); return; }
-    panel.innerHTML = '<h4>' + q.text + '</h4>' +
+    panel.innerHTML = '<h2>' + q.text + '</h2>' +
       '<div class="nrn-help-text">Tap the option that fits best.</div>' +
       q.options.map(function (opt) {
         return '<button type="button" class="nrn-quiz-opt" data-value="' + opt.value + '">' + opt.label + '</button>';
@@ -822,7 +822,7 @@ const SCRIPT_URL = SERVICES_API_URL;
     }).join('');
 
     panel.innerHTML =
-      '<h4>🧾 02 · Your selections</h4>' +
+      '<h2>🧾 02 · Your selections</h2>' +
       '<div class="nrn-help-text">Here’s what you’ve picked so far. Looks good? Hit Continue below.</div>' + rows +
       '<div id="nrn-total"><span>💰 Total</span><span>$' + total + '</span></div>' +
       '<div id="nrn-total-note">Includes deposits. Final invoice may vary — see your service agreement.</div>' +
@@ -849,7 +849,7 @@ const SCRIPT_URL = SERVICES_API_URL;
     box.innerHTML =
       '<div class="nrn-intake-panel">' +
         '<button type="button" class="nrn-link-btn nrn-back-btn" id="nrn-back-to-services">&larr; Back</button>' +
-        '<h4>👤 03 · About you</h4>' +
+        '<h2>👤 03 · About you</h2>' +
         '<div class="nrn-help-text">Just a few quick questions so we know who we’re working with. Takes about 30 seconds.</div>' +
         '<label for="nrn-intake-name" class="nrn-sr-only">Name</label>' +
         '<input type="text" id="nrn-intake-name" class="nrn-intake-field" placeholder="Your name" autocomplete="name" value="' + escapeHtml(leadName) + '" />' +
@@ -939,7 +939,7 @@ const SCRIPT_URL = SERVICES_API_URL;
     var box = document.getElementById('nrn-actions');
     box.innerHTML =
       '<button type="button" class="nrn-link-btn nrn-back-btn" id="nrn-back-to-about">&larr; Back</button>' +
-      '<h4 class="nrn-step-label">&#128197; 04 · Book or get a quote</h4>' +
+      '<h2 class="nrn-step-label">&#128197; 04 · Book or get a quote</h2>' +
       '<div class="nrn-help-text">Ready to talk? Book a time below. Just want pricing first? Get an estimate emailed to you instead.</div>' +
       '<button id="nrn-cta" type="button">&#128197; Book a consultation</button>' +
       '<button id="nrn-cta-estimate" type="button">&#9993;&#65039; Email me an estimate</button>';
@@ -1013,7 +1013,7 @@ const SCRIPT_URL = SERVICES_API_URL;
     box.innerHTML =
       '<div class="nrn-booking-panel">' +
         '<button type="button" class="nrn-link-btn nrn-back-btn" id="nrn-back-to-actions">&larr; Back</button>' +
-        '<h4>🕒 05 · Pick a time</h4>' +
+        '<h2>🕒 05 · Pick a time</h2>' +
         '<div class="nrn-help-text">Choose a date below to see open times that day.</div>' +
         '<button type="button" id="nrn-book-date-btn" aria-haspopup="true" aria-expanded="' + calendarOpen + '">📅 ' + buttonLabel + '</button>' +
         '<div id="nrn-calendar-popover" hidden></div>' +
@@ -1122,7 +1122,7 @@ const SCRIPT_URL = SERVICES_API_URL;
     box.innerHTML =
       '<div class="nrn-booking-panel">' +
         '<button type="button" class="nrn-link-btn nrn-back-btn" id="nrn-back-to-date">&larr; Back to date</button>' +
-        '<h4>🕒 05 · Times on ' + bookingDate + '</h4>' +
+        '<h2>🕒 05 · Times on ' + bookingDate + '</h2>' +
         '<div class="nrn-help-text">Tap a time that works for you.</div>' +
         slotsHtml +
       '</div>';
@@ -1141,7 +1141,7 @@ const SCRIPT_URL = SERVICES_API_URL;
     box.innerHTML =
       '<div class="nrn-booking-panel">' +
         '<button type="button" class="nrn-link-btn nrn-back-btn" id="nrn-back-to-slots">&larr; Back to times</button>' +
-        '<h4>✅ 05 · Confirm ' + chosenSlot.label + '</h4>' +
+        '<h2>✅ 05 · Confirm ' + chosenSlot.label + '</h2>' +
         '<div class="nrn-help-text">Enter your name and email to lock in this time.</div>' +
         '<label for="nrn-book-name" class="nrn-sr-only">Name</label>' +
         '<input type="text" id="nrn-book-name" class="nrn-book-field" placeholder="Your name" autocomplete="name" value="' + escapeHtml(leadName) + '" />' +
@@ -1320,7 +1320,7 @@ const SCRIPT_URL = SERVICES_API_URL;
   #nrn-select :focus-visible { outline: 3px solid var(--purple-300); outline-offset: 2px; }
 
   #nrn-quiz { background: var(--paper); border: 2px solid var(--purple-300); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px; }
-  #nrn-quiz h4 { font-family: var(--font-display); font-size: 18px; margin: 0 0 8px; color: var(--purple-900); }
+  #nrn-quiz h2 { font-family: var(--font-display); font-size: 18px; margin: 0 0 8px; color: var(--purple-900); }
   .nrn-quiz-opt {
     display: block; width: 100%; text-align: left;
     background: var(--nrn-soft); color: var(--ink);
@@ -1403,7 +1403,7 @@ const SCRIPT_URL = SERVICES_API_URL;
     background: var(--paper); border: 2px solid var(--nrn-line); border-radius: var(--radius-md); padding: 18px;
   }
   .nrn-booking-panel, .nrn-intake-panel { margin-top: 4px; }
-  #nrn-loadout h4, .nrn-booking-panel h4, .nrn-intake-panel h4 {
+  #nrn-loadout h2, .nrn-booking-panel h2, .nrn-intake-panel h2 {
     font-family: var(--font-display); font-size: 20px; font-weight: 700; margin: 0 0 8px; color: var(--purple-900);
   }
   .nrn-loadout-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 8px; font-size: 15px; padding: 8px 0; border-bottom: 1px solid var(--nrn-line); }
