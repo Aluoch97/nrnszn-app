@@ -1,0 +1,83 @@
+---
+import Site from '../layouts/Site.astro';
+import YouTube from '../components/YouTube.astro';
+import { P, yt } from '../data/certified.js';
+import '../styles/certified.css';
+---
+<Site
+  title="Certified Era 1 | NuRenaissance"
+  description="Renaissance Certified Era 1 (2023–2025): issues, show recaps, exclusives, interviews, unplugged sessions and testimonials."
+>
+  <div class="cert">
+    <h1 class="cert-title">Era 1: 2023–2025</h1>
+    <p class="cert-sub">Renaissance Certified</p>
+
+    <div class="cert-grid">
+      <section class="cert-block">
+        <h2>Latest issue</h2>
+        <div class="issue"><YouTube playlist={P.issues} title="Latest Renaissance Certified issue" vertical /></div>
+        <div class="pills"><a class="pill" href={yt(P.issues)} target="_blank" rel="noopener">Past issues →</a></div>
+      </section>
+
+      <section class="cert-block">
+        <h2>Latest show recap</h2>
+        <YouTube playlist={P.recaps} title="Latest show recap" />
+        <div class="pills">
+          <a class="pill" href={yt(P.recaps)} target="_blank" rel="noopener">Recaps →</a>
+          <a class="pill" href={yt(P.performances)} target="_blank" rel="noopener">Performances →</a>
+        </div>
+      </section>
+
+      <section class="cert-block">
+        <h2>Latest exclusive</h2>
+        <YouTube playlist={P.street} title="Latest Certified exclusive" />
+        <div class="pills">
+          <a class="pill" href={yt(P.vibe)} target="_blank" rel="noopener">Vibe →</a>
+          <a class="pill" href={yt(P.heat)} target="_blank" rel="noopener">Heat →</a>
+          <a class="pill" href={yt(P.street)} target="_blank" rel="noopener">Street →</a>
+          <a class="pill" href={yt(P.lounge)} target="_blank" rel="noopener">Lounge →</a>
+        </div>
+      </section>
+
+      <section class="cert-block">
+        <h2>Fall 2025</h2>
+        <a class="gallery-card" href="/gallery">
+          <img src="/img/renaissance-certified.webp" alt="" width="181" height="161" />
+          <strong>Concert gallery</strong>
+          <span>Photos from every Renaissance Certified showcase</span>
+        </a>
+        <div class="pills"><a class="pill" href="/gallery">Concert gallery →</a></div>
+      </section>
+
+      <section class="cert-block">
+        <h2>Latest interview</h2>
+        <YouTube playlist={P.interviews} title="Latest interview" />
+        <div class="pills"><a class="pill" href={yt(P.interviews)} target="_blank" rel="noopener">More interviews →</a></div>
+      </section>
+
+      <section class="cert-block">
+        <h2>Latest unplugged</h2>
+        <YouTube playlist={P.unplugged} title="Latest Certified Unplugged" />
+        <div class="pills"><a class="pill" href={yt(P.unplugged)} target="_blank" rel="noopener">More unplugged →</a></div>
+      </section>
+
+      <section class="cert-block cert-wide">
+        <h2>Testimonials</h2>
+        <div class="testimonials">
+          {P.testimonials.map((t) => (
+            <figure>
+              <YouTube playlist={t.id} title={`${t.label} testimonials`} vertical />
+              <figcaption><a class="pill gold" href={yt(t.id)} target="_blank" rel="noopener">{t.label}</a></figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
+    </div>
+
+    <div class="back"><a class="pill ghost" href="/certified">← Back to Certified</a></div>
+  </div>
+</Site>
+
+<style>
+  .issue { max-width: 240px; margin: 0 auto; }
+</style>

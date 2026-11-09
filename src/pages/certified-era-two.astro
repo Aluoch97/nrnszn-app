@@ -1,0 +1,59 @@
+---
+import Site from '../layouts/Site.astro';
+import YouTube from '../components/YouTube.astro';
+import { P, yt, latestShowcase } from '../data/certified.js';
+import '../styles/certified.css';
+---
+<Site
+  title="Certified Lounge: Era 2 | NuRenaissance"
+  description="Certified Era 2 started October 2026 and onward: the Certified Lounge residency, recaps, interviews and trailers."
+>
+  <div class="cert">
+    <h1 class="cert-title">Certified Lounge</h1>
+    <p class="cert-sub">Era 2 · 2026 to present</p>
+    <div class="pills top"><a class="pill gold" href={latestShowcase}>Latest showcase →</a></div>
+
+    <div class="cert-grid">
+      <section class="cert-block">
+        <h2>Latest show recap</h2>
+        <YouTube playlist={P.recaps} title="Latest show recap" />
+        <div class="pills">
+          <a class="pill" href={yt(P.recaps)} target="_blank" rel="noopener">Recaps →</a>
+          <a class="pill" href={yt(P.performances)} target="_blank" rel="noopener">Performances →</a>
+        </div>
+      </section>
+
+      <section class="cert-block">
+        <h2>Fall 2025</h2>
+        <a class="gallery-card" href="/gallery">
+          <img src="/img/renaissance-certified.webp" alt="" width="181" height="161" />
+          <strong>Concert gallery</strong>
+          <span>Photos from every Certified show</span>
+        </a>
+        <div class="pills"><a class="pill" href="/gallery">Concert gallery →</a></div>
+      </section>
+
+      <section class="cert-block">
+        <h2>Latest interview</h2>
+        <YouTube playlist={P.interviews} title="Latest interview" />
+        <div class="pills"><a class="pill" href={yt(P.interviews)} target="_blank" rel="noopener">More interviews →</a></div>
+      </section>
+
+      <section class="cert-block">
+        <h2>Latest trailer</h2>
+        <a class="gallery-card" href={yt(P.promo)} target="_blank" rel="noopener">
+          <img src="/img/mascot.webp" alt="" width="132" height="132" />
+          <strong>Trailers &amp; promo</strong>
+          <span>Watch on YouTube ↗</span>
+        </a>
+        <div class="pills"><a class="pill" href={yt(P.promo)} target="_blank" rel="noopener">More promo →</a></div>
+      </section>
+    </div>
+
+    <div class="back"><a class="pill ghost" href="/certified">← Back to Certified</a></div>
+  </div>
+</Site>
+
+<style>
+  .top { margin: 0 0 var(--space-6); }
+</style>

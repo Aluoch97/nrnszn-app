@@ -4,17 +4,17 @@
 const WIX = 'https://www.nrnszn.com';
 
 export const nav = [
-  { label: 'Home', href: `${WIX}/` },
+  { label: 'Home', href: '/' },
   { label: 'Services', href: '/services-apply' },
   { label: 'Gallery', href: '/gallery' },
   { label: 'Cinema', href: '/cinema' },
-  { label: 'Certified', href: `${WIX}/certified` },
+  { label: 'Certified', href: '/certified' },
   { label: 'Directory', href: 'https://directory.nrnszn.com' },
-  { label: 'Contact', href: `${WIX}/contact` },
+  { label: 'Contact', href: '/contact' },
   { label: 'Support', href: '/support' },
 ];
 
 export const footer = [
-  { label: 'Contact', href: `${WIX}/contact` },
+  { label: 'Contact', href: '/contact' },
   { label: 'Privacy policy', href: '/privacy-policy' },
 ];

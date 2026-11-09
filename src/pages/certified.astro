@@ -1,0 +1,61 @@
+---
+import Site from '../layouts/Site.astro';
+---
+<Site
+  title="Renaissance Certified | NuRenaissance"
+  description="Renaissance Certified is Nashville's hub for hip-hop and R&B excellence: live showcases, magazines and video exclusives."
+>
+  <section class="intro">
+    <img class="logo" src="/img/renaissance-certified.webp" alt="" width="181" height="161" />
+    <h1 class="sr-only">Renaissance Certified</h1>
+    <p class="statement">
+      <span class="pink">Renaissance Certified</span>{' '}is{' '}<span class="orange">Nashville</span>’s hub for hip-hop and R&amp;B
+      excellence. We showcase <span class="orange">Tennessee</span>’s top talent through live events, magazines, and video
+      exclusives, empowering artists and audiences to create, rise, and stand together.{' '}
+      <span class="gold">Renaissance Certification</span> recognizes those who embody authentic artistry and the spirit of
+      cultural pride and community action.
+    </p>
+  </section>
+
+  <section class="eras" aria-label="Eras">
+    <a class="era era-1" href="/certified-era-one">
+      <span class="era-kicker">• Certified · Era 01</span>
+      <span class="era-dates">Spring 2024 to Fall 2025</span>
+      <span class="era-name">Renaissance Certified</span>
+      <span class="era-desc">Four showcases, a new venue each time, six artists sharing one stage before moving on.</span>
+      <span class="era-meta">6 artists / showcase · new venue each show</span>
+    </a>
+    <a class="era era-2" href="/certified-era-two">
+      <span class="era-kicker">• Certified · Era 02</span>
+      <span class="era-dates">2026 to present</span>
+      <span class="era-name">Certified Lounge</span>
+      <span class="era-desc">Fewer artists, game show style: an intimate residency, one room at a time.</span>
+      <span class="era-meta">4 artists / show · fixed residency · Nick &amp; Yonna headlining</span>
+    </a>
+  </section>
+</Site>
+
+<style>
+  .intro { max-width: 720px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-4); text-align: center; display: grid; justify-items: center; gap: var(--space-4); }
+  .logo { width: 150px; height: auto; }
+  .statement { margin: 0; font-size: clamp(18px, 4.6vw, 24px); line-height: 1.45; font-weight: 600; color: #fff; }
+  .pink { color: #ff3d8b; } .orange { color: #ff6a3d; } .gold { color: #ffcf3a; }
+
+  .eras { max-width: 900px; margin: 0 auto; padding: var(--space-4) var(--space-4) var(--space-6); display: grid; gap: var(--space-4); }
+  @media (min-width: 720px) { .eras { grid-template-columns: 1fr 1fr; } }
+  .era {
+    display: grid; gap: var(--space-2); align-content: end; min-height: 300px;
+    padding: var(--space-5); border-radius: var(--radius-md); text-decoration: none; text-align: center;
+    border: 1px solid #3a2a40;
+    transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast);
+  }
+  .era:hover { transform: translateY(-3px); border-color: var(--gold-500); }
+  .era-1 { background: radial-gradient(90% 60% at 50% 20%, rgba(236, 42, 122, 0.28), transparent 70%), #211219; }
+  .era-2 { background: radial-gradient(90% 60% at 50% 20%, rgba(226, 178, 58, 0.18), transparent 70%), #17140f; }
+  .era-kicker { font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: #ff6aa6; }
+  .era-2 .era-kicker { color: var(--gold-300); }
+  .era-dates { font-size: 13px; color: #bdb3cf; }
+  .era-name { font-family: var(--font-display); font-size: clamp(28px, 7vw, 34px); color: #f6efe6; line-height: 1.1; margin-top: var(--space-2); }
+  .era-desc { font-size: 14px; line-height: 1.5; color: #d6cddf; }
+  .era-meta { font-size: 12px; color: #a99fc6; letter-spacing: 0.04em; }
+</style>

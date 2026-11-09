@@ -2,7 +2,7 @@
   "name": "NuRenaissance",
   "short_name": "NuRenaissance",
   "description": "NuRenaissance Media — videos, services, directory and Certified.",
-  "start_url": "/portal",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f2cf6b",

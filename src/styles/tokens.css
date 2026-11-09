@@ -14,8 +14,11 @@
   --ink-soft: #4a3d52;
   --paper: #fffaf0;
 
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces Variable', 'Fraunces', Georgia, serif;
+  --font-poster: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif;
+  --pink-500: #ec2a7a;
+  --pink-300: #ff6aa6;
+  --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   --radius-sm: 10px;
   --radius-md: 18px;

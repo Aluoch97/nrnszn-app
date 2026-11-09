@@ -6,6 +6,10 @@ The interactive side of nrnszn.com, served at **app.nrnszn.com**. It's built wit
 
 | Path | What it is |
 |---|---|
+| `src/pages/index.astro` | Home page (`/`). Hero, Community and Press are edited right in this file. |
+| `src/pages/contact.astro` | Contact: sponsorship, FAQs, NuCrew, email and support. |
+| `src/pages/certified*.astro` | Certified landing page plus Era 1 and Era 2. Playlist IDs live in `src/data/certified.js`. |
+| `public/img/` | Site images taken from the Wix pages. |
 | `src/pages/portal.astro` | The Portal (link-in-bio). Live at `/portal`. |
 | `src/pages/support.astro` | Payment options page, live at `/support`. |
 | `src/pages/services-apply.astro` | Services and booking page, live at `/services-apply` (same address as on Wix; `/services` redirects there). |
