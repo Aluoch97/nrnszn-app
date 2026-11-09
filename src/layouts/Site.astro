@@ -1,0 +1,152 @@
+---
+// Shell for main-website pages: header with nav, content area, footer.
+// The Portal keeps its own standalone link-in-bio look and doesn't use this.
+import Base from './Base.astro';
+import Icon from '../components/Icon.astro';
+import { nav, footer } from '../data/site.js';
+import { socials } from '../data/portal.js';
+
+interface Props { title: string; description: string; }
+const { title, description } = Astro.props;
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isExternal = (href: string) => /^https?:/.test(href);
+---
+<Base title={title} description={description}>
+  <div class="site">
+    <a class="skip" href="#content">Skip to content</a>
+    <header class="bar">
+      <a class="brand" href="/portal" aria-label="NuRenaissance home">
+        <img src="/icons/icon.svg" alt="" width="34" height="34" />
+        <span>NuRenaissance</span>
+      </a>
+      <details class="menu">
+        <summary aria-label="Menu"><span></span><span></span><span></span></summary>
+        <nav aria-label="Main">
+          {nav.map((n) => (
+            <a href={n.href} aria-current={n.href === path ? 'page' : undefined}
+              {...(isExternal(n.href) && !n.href.includes('nrnszn.com') ? { target: '_blank', rel: 'noopener' } : {})}>
+              {n.label}
+            </a>
+          ))}
+        </nav>
+      </details>
+    </header>
+
+    <main id="content" class="content">
+      <slot />
+    </main>
+
+    <footer class="foot">
+      <ul class="socials" aria-label="Social links">
+        {socials.filter((s) => s.icon !== 'web').map((s) => (
+          <li><a href={s.href} target="_blank" rel="noopener" aria-label={s.label}><Icon name={s.icon} size={18} /></a></li>
+        ))}
+      </ul>
+      <p class="links">
+        {footer.map((f, i) => (<>{i > 0 && <span aria-hidden="true"> · </span>}<a href={f.href}>{f.label}</a></>))}
+      </p>
+      <p class="copy">© {new Date().getFullYear()} NuRenaissance Media</p>
+    </footer>
+  </div>
+</Base>
+
+<style>
+  .site {
+    --shell-bg: #0e0b16;
+    --shell-line: #2a2238;
+    --shell-text: #f3f0fa;
+    --shell-muted: #a99fc6;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    background: var(--shell-bg);
+    color: var(--shell-text);
+  }
+  .skip {
+    position: absolute; left: 12px; top: -48px; z-index: 10;
+    padding: 8px 14px; border-radius: var(--radius-sm);
+    background: var(--gold-300); color: var(--purple-900); font-weight: 600;
+  }
+  .skip:focus { top: 12px; }
+
+  .bar {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    padding-top: max(var(--space-3), env(safe-area-inset-top));
+    background: rgba(14, 11, 22, 0.92);
+    border-bottom: 1px solid var(--shell-line);
+    backdrop-filter: blur(10px);
+  }
+  .brand {
+    display: flex; align-items: center; gap: var(--space-2);
+    text-decoration: none; font-family: var(--font-display); font-weight: 700; font-size: 20px;
+    color: var(--gold-300);
+  }
+  .brand img { width: 34px; height: 34px; }
+
+  .menu { position: relative; }
+  .menu summary {
+    list-style: none; cursor: pointer;
+    width: 44px; height: 44px; border-radius: var(--radius-sm);
+    display: grid; place-content: center; gap: 5px;
+  }
+  .menu summary::-webkit-details-marker { display: none; }
+  .menu summary span { display: block; width: 22px; height: 2px; border-radius: 2px; background: var(--shell-text); transition: transform var(--dur-fast), opacity var(--dur-fast); }
+  .menu[open] summary span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .menu[open] summary span:nth-child(2) { opacity: 0; }
+  .menu[open] summary span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  .menu nav {
+    position: absolute; right: 0; top: calc(100% + 8px);
+    min-width: 200px; padding: var(--space-2);
+    display: grid; background: #1a1526; border: 1px solid var(--shell-line); border-radius: var(--radius-md);
+  }
+  .menu nav a {
+    padding: 12px 14px; border-radius: var(--radius-sm);
+    text-decoration: none; font-weight: 500; color: var(--shell-text);
+  }
+  .menu nav a:hover { background: #241d34; }
+  .menu nav a[aria-current='page'] { color: var(--gold-300); }
+
+  @media (min-width: 880px) {
+    .menu summary { display: none; }
+    .menu nav {
+      position: static; display: flex; gap: var(--space-1); padding: 0;
+      background: none; border: 0; min-width: 0;
+    }
+    .menu nav a { padding: 8px 12px; font-size: 15px; }
+  }
+
+  .content { flex: 1; width: 100%; }
+
+  .foot {
+    display: grid; justify-items: center; gap: var(--space-3);
+    padding: var(--space-6) var(--space-4) max(var(--space-6), env(safe-area-inset-bottom));
+    border-top: 1px solid var(--shell-line);
+    color: var(--shell-muted); font-size: 13px;
+  }
+  .socials { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); }
+  .socials a {
+    width: 44px; height: 44px; display: grid; place-items: center;
+    border-radius: var(--radius-pill); color: var(--gold-300); background: #1a1526;
+  }
+  .socials a:hover { background: #241d34; }
+  .links, .copy { margin: 0; }
+  .links a { color: var(--shell-text); }
+</style>
+
+<script>
+  // Desktop shows the nav inline, so keep <details> open there; close the mobile menu after a tap.
+  const menu = document.querySelector<HTMLDetailsElement>('.menu');
+  const mq = matchMedia('(min-width: 880px)');
+  const sync = () => { if (menu) menu.open = mq.matches; };
+  sync();
+  mq.addEventListener('change', sync);
+  document.addEventListener('click', (e) => {
+    if (!menu || mq.matches || !menu.open) return;
+    if (!menu.contains(e.target as Node)) menu.open = false;
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && menu && !mq.matches && menu.open) { menu.open = false; menu.querySelector('summary')?.focus(); }
+  });
+</script>

@@ -1,0 +1,14 @@
+---
+import Site from '../layouts/Site.astro';
+import WidgetFrame from '../components/WidgetFrame.astro';
+---
+<Site
+  title="Feedback Survey | NuRenaissance"
+  description="Tell us how the show or your NuRenaissance service went."
+>
+  <h1 class="sr-only">NuRenaissance feedback survey</h1>
+  <!-- The survey sizes its own card; the frame follows it (up to 950px or the screen).
+       ?type= / ?show= / ?lineup= / ?service= links still work. -->
+  <WidgetFrame src="/widgets/survey.html" title="NuRenaissance feedback survey"
+    fitTo=".cls-embed-frame" measure=".cls-root" maxHeight={950} maxWidth={420} passParams transparent />
+</Site>

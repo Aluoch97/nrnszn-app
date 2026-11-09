@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NuRenaissance — Feedback Survey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg: #14121B;
+  --card: #1E1B29;
+  --card-edge: #2A2638;
+  --gold: #E8B33D;
+  --magenta: #D6428E;
+  --magenta-btn: #DA5499;   /* lightened for AA text contrast when used as button-text background */
+  --violet: #6C4FE0;
+  --violet-text: #907BE7;   /* lightened for AA text contrast on dark card backgrounds */
+  --ink: #F5F1E8;
+  --ink-dim: #A69FC0;
+  --good: #4FD1A5;
+  --bad: #E8637D;
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--gold);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+/* Every font-size in this file is in rem, keyed off this root size — so if the space this
+   widget actually gets (a Wix embed box, most often) ends up narrower than the 360px this
+   was designed at, everything shrinks together instead of the fixed-px text staying full
+   size and looking oversized/cramped in a tighter box. Never grows past today's sizing
+   (capped at 16px, matching 360px+) — only ever shrinks for something narrower. */
+html{ font-size: clamp(12.5px, 4.44vw, 16px); }
+body{
+  background: transparent; /* the frame below carries the visual background, so it reads as one rounded floating widget on whatever page it's embedded in */
+  color: var(--ink);
+  font-family:'Work Sans', sans-serif;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Sized to fit a 360-wide space (e.g. a Wix HTML Embed box set to that width). The 950px
+   here is only a pre-JS fallback (comfortably covers the tallest measured state across
+   both flows and every optional sub-reveal open — show step 3 with the subscribe fields
+   AND the "anything else" note field both expanded, 887px, plus headroom — and matches
+   the 360x950 the Wix box itself is set to) — the script at the bottom of this file
+   immediately resizes the frame to whatever screen is actually showing, so a short screen
+   (the type picker, the thank-you screen) isn't stuck inside a needlessly tall box with
+   dead space below it, and a screen that grows (e.g. picking "Social Media" reveals a
+   platform sub-picker) grows the frame to match. overflow-y:auto + the .cls-frame-live
+   max-height clamp below are what keep this safe if a step ever needs more room than the
+   viewport actually has. */
+.cls-embed-frame{
+  position: relative;
+  width: 360px;
+  max-width: 100%;
+  height: 950px;
+  max-height: 100vh;
+  margin: 0 auto;
+  border-radius: 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  background: radial-gradient(circle at 50% -10%, #241f33 0%, var(--bg) 55%);
+  box-shadow: 0 24px 60px -20px rgba(0,0,0,0.55);
+}
+.cls-embed-frame.cls-frame-live{ transition: height .25s ease; }
+@media (prefers-reduced-motion: reduce){
+  .cls-embed-frame.cls-frame-live{ transition: none; }
+}
+.cls-root{
+  position: relative;
+  width:100%;
+  max-width: 400px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 20px 16px 28px;
+  overflow: hidden;
+}
+/* #clsForm becomes a flex column once it's the visible screen: the top chrome (eyebrow,
+   dots, context pill) and the current step's fields live in .cls-scroll-area, which is
+   allowed to shrink and scroll internally; Back/Next/error/footer never shrink, so they
+   stay visible at the bottom of whatever height the page embedding this widget actually
+   gives it — even if that's shorter than the widget would naturally need. This is what
+   keeps the Next button reachable on a mobile embed whose box ends up too short, instead
+   of relying on that box being sized exactly right. */
+#clsForm{
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+.cls-scroll-area{
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.cls-nav, .cls-error, .cls-footer{ flex-shrink: 0; }
+/* soft stage-light glow behind the header — purely decorative */
+.cls-root::before{
+  content:""; position:absolute; top:-120px; left:50%; transform:translateX(-50%);
+  width:320px; height:220px; pointer-events:none; z-index:0;
+  background: radial-gradient(ellipse at center, rgba(232,179,61,0.16) 0%, rgba(214,66,142,0.10) 45%, transparent 72%);
+  filter: blur(2px);
+}
+.cls-root > *{ position: relative; z-index: 1; }
+
+.cls-visually-hidden{
+  position:absolute !important; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+
+/* ---- top bar: eyebrow + progress dots ---- */
+.cls-topbar{ display:flex; align-items:flex-start; justify-content:space-between; margin-bottom: 14px; }
+.cls-eyebrow-small{
+  font-family:'Space Mono', monospace; font-size: 0.625rem; letter-spacing: 3px;
+  color: var(--gold); text-transform: uppercase;
+}
+.cls-eyebrow-sub{
+  font-family:'Space Mono', monospace; font-size: 0.5938rem; letter-spacing: 1.5px;
+  color: var(--ink-dim); text-transform: uppercase; margin-top: 3px;
+}
+.cls-dots{ display:flex; gap: 7px; margin-top: 3px; }
+.cls-dot{ width:6px; height:6px; border-radius:50%; background: var(--card-edge); transition: background .2s ease, box-shadow .2s ease, transform .2s ease; }
+.cls-dot.active{ background: var(--gold); transform: scale(1.4); box-shadow: 0 0 0 3px rgba(232,179,61,0.2); }
+.cls-dot.done{ background: var(--violet); }
+
+.cls-show-pill{
+  display:flex; align-items:center; gap:6px; width: fit-content;
+  font-family:'Space Mono', monospace; font-size: 0.6562rem; letter-spacing: .4px;
+  color: var(--ink); background: var(--card); border: 1px solid var(--card-edge);
+  border-radius: 999px; padding: 6px 13px; margin-bottom: 14px;
+}
+
+/* ---- survey type picker (the very first screen) ---- */
+.cls-typeselect-sub{ color: var(--ink-dim); font-size: 0.7812rem; line-height: 1.45; margin: 0 0 16px; }
+.cls-type-grid{ display:flex; flex-direction:column; gap: 12px; }
+.cls-type-card{
+  display:flex; align-items:center; gap: 12px; text-align:left; width:100%;
+  background: var(--card); border: 1px solid var(--card-edge); border-radius: 13px;
+  padding: 16px 15px; cursor:pointer; appearance:none; -webkit-appearance:none; color:inherit; font:inherit;
+  box-shadow: 0 12px 28px -16px rgba(0,0,0,0.6);
+  transition: border-color .15s ease, transform .1s ease, box-shadow .15s ease;
+}
+.cls-type-card:hover{ border-color: var(--gold); box-shadow: 0 14px 30px -14px rgba(232,179,61,0.35); }
+.cls-type-card:active{ transform: scale(0.98); }
+.cls-type-card:focus-visible{ box-shadow: var(--focus-ring); }
+.cls-type-icon{
+  flex-shrink:0; width: 44px; height: 44px; border-radius: 50%;
+  display:flex; align-items:center; justify-content:center; font-size: 1.25rem; color:#14121B;
+  background: linear-gradient(135deg, var(--gold), var(--magenta-btn));
+}
+.cls-type-card[data-flow="service"] .cls-type-icon{ background: linear-gradient(135deg, var(--violet), var(--magenta-btn)); }
+.cls-type-text-title{
+  display:block; font-family:'Space Mono', monospace; font-size: 0.8125rem; letter-spacing: .3px;
+  color: var(--ink); font-weight:700; margin-bottom: 2px;
+}
+.cls-type-text-sub{ display:block; font-size: 0.7188rem; color: var(--ink-dim); line-height:1.4; }
+
+.cls-switch-link{
+  display:inline-block; background:none; border:none; padding:0; margin-bottom: 12px; cursor:pointer;
+  font-family:'Space Mono', monospace; font-size: 0.6562rem; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--ink-dim); text-decoration: underline; text-underline-offset: 2px;
+}
+.cls-switch-link:hover{ color: var(--ink); }
+.cls-switch-link:focus-visible{ box-shadow: var(--focus-ring); border-radius: 4px; }
+
+/* ---- steps ---- */
+.cls-step{ display:none; }
+.cls-step.active{ display:block; animation: clsStepIn .28s ease both; }
+@media (prefers-reduced-motion: reduce){
+  .cls-step.active{ animation: none; }
+}
+@keyframes clsStepIn{
+  from{ opacity:0; transform: translateY(6px); }
+  to{ opacity:1; transform: translateY(0); }
+}
+.cls-step-header{ margin-bottom: 12px; }
+.cls-step-title{
+  font-family:'Bebas Neue', sans-serif; font-size: clamp(23px, 7vw, 29px); letter-spacing: .5px; line-height: 1.05;
+  font-weight: normal;
+  background: linear-gradient(90deg, var(--gold), var(--magenta) 60%, var(--violet));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  margin: 0 0 4px;
+}
+.cls-step-title:focus{ outline:none; box-shadow: var(--focus-ring); border-radius:4px; }
+.cls-step-sub{ color: var(--ink-dim); font-size: 0.7812rem; line-height: 1.45; }
+
+.cls-card{
+  background: var(--card); border: 1px solid var(--card-edge); border-radius: 13px;
+  padding: 16px 15px;
+  box-shadow: 0 12px 28px -16px rgba(0,0,0,0.6);
+}
+.cls-card + .cls-card{ margin-top: 14px; }
+.cls-card-title{
+  font-family:'Space Mono', monospace; font-size: 0.625rem; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--violet-text); margin-bottom: 13px;
+}
+.cls-field{ margin-bottom: 15px; }
+.cls-field:last-child{ margin-bottom: 0; }
+.cls-label{
+  font-family:'Space Mono', monospace; font-size: 0.6875rem; letter-spacing: .8px; text-transform: uppercase;
+  color: var(--ink-dim); display:block; margin-bottom: 8px;
+}
+.cls-required::after{ content:" *"; color: var(--magenta); }
+
+.cls-select, .cls-input, .cls-textarea{
+  width:100%; background: #14121B; border: 1px solid var(--card-edge); color: var(--ink);
+  font-family:'Work Sans', sans-serif; font-size: 0.9062rem; padding: 11px 13px; border-radius: 9px;
+  outline: none; transition: border-color .15s ease, box-shadow .15s ease;
+}
+.cls-select:focus, .cls-input:focus, .cls-textarea:focus{ border-color: var(--violet); }
+.cls-select:focus-visible, .cls-input:focus-visible, .cls-textarea:focus-visible{ box-shadow: var(--focus-ring); }
+.cls-input::placeholder, .cls-textarea::placeholder{ color: var(--ink-dim); opacity: 0.8; }
+.cls-textarea{ resize: vertical; min-height: 64px; line-height:1.45; }
+
+/* sub-reveal: a decision that hangs off a chip pick above it (e.g. social platform) —
+   deliberately styled distinct from a plain field so it reads as "part of that answer",
+   not another top-level question blending into the row above it. */
+.cls-subreveal{
+  margin-top: 10px; padding: 10px 12px 2px; display:none;
+  border-left: 2px solid var(--violet); background: rgba(108,79,224,0.09);
+  border-radius: 0 8px 8px 0;
+}
+.cls-subreveal.show{ display:block; }
+.cls-subreveal-label{
+  font-family:'Space Mono', monospace; font-size: 0.625rem; letter-spacing: .6px; text-transform: uppercase;
+  color: var(--violet-text); margin-bottom: 8px;
+}
+/* platform bubbles read as a smaller, secondary choice under the main chip row */
+.cls-subreveal .cls-chip-group{ gap: 5px; }
+.cls-subreveal .cls-chip{ padding: 5px 9px; font-size: 0.625rem; }
+
+.cls-stars{ display:flex; justify-content: space-between; gap: 5px; }
+.cls-star{
+  flex:1; background: #14121B; border: 1px solid var(--card-edge); border-radius: 9px;
+  padding: 9px 0; font-size: 1.3125rem; text-align:center; cursor:pointer;
+  font-family: inherit; appearance: none; -webkit-appearance: none;
+  transition: transform .1s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease;
+  user-select:none;
+}
+.cls-star.filled{ background: rgba(232,179,61,0.14); border-color: var(--gold); box-shadow: 0 0 14px -2px rgba(232,179,61,0.45); }
+.cls-star:active{ transform: scale(0.92); }
+.cls-star:focus-visible{ box-shadow: var(--focus-ring); }
+.cls-rating-caption{
+  text-align:center; font-family:'Space Mono', monospace; font-size: 0.6875rem; color: var(--ink-dim);
+  margin-top: 8px; min-height: 14px; transition: color .2s ease, transform .2s ease;
+}
+.cls-rating-caption.hype{ color: var(--gold); font-weight:700; transform: scale(1.06); }
+
+/* a quick, playful "pop" on tap — used for stars, chips, and toggle checkboxes */
+@keyframes clsPop{ 0%{ transform: scale(1); } 45%{ transform: scale(1.14); } 100%{ transform: scale(1); } }
+.cls-pop{ animation: clsPop .32s cubic-bezier(.34,1.56,.64,1); }
+@media (prefers-reduced-motion: reduce){ .cls-pop{ animation: none; } }
+
+.cls-chip-group{ display:flex; flex-wrap:wrap; gap: 7px; }
+.cls-chip{
+  font-family:'Space Mono', monospace; font-size: 0.7188rem; letter-spacing: .3px;
+  background:#14121B; border:1px solid var(--card-edge); color: var(--ink-dim);
+  padding: 8px 12px; border-radius: 999px; cursor:pointer; user-select:none;
+  appearance: none; -webkit-appearance: none;
+  transition: border-color .15s ease, color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.cls-chip.selected{ border-color: var(--gold); color: var(--ink); background: rgba(232,179,61,0.14); box-shadow: 0 0 10px -3px rgba(232,179,61,0.5); }
+.cls-chip:active{ transform: scale(0.96); }
+.cls-chip:focus-visible{ box-shadow: var(--focus-ring); }
+
+/* Boxed and gold-edged rather than a bare row — a plain checkbox-style row next to plain
+   text fields was easy to skim past entirely (real feedback: someone finished the survey
+   without noticing this was tappable, then wondered why they weren't asked for an email).
+   The border/tint alone signals "this one's interactive" before anyone reads a word of it,
+   and it un-ticks to a filled gold tint once tapped so the state itself stays obvious too. */
+.cls-toggle-row{
+  display:flex; align-items:flex-start; gap: 10px; cursor:pointer; width:100%;
+  background: rgba(232,179,61,0.07); border: 1px solid rgba(232,179,61,0.4); border-radius: 12px;
+  padding: 12px; text-align: left; color: inherit; font: inherit;
+  transition: border-color .15s ease, background .15s ease;
+}
+.cls-toggle-row:hover{ border-color: rgba(232,179,61,0.65); }
+.cls-toggle-row[aria-pressed="true"]{ background: rgba(232,179,61,0.13); border-color: var(--gold); }
+.cls-toggle-row:focus-visible{ box-shadow: var(--focus-ring); }
+.cls-checkbox{
+  flex-shrink:0; width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid rgba(232,179,61,0.6);
+  background:#14121B; display:flex; align-items:center; justify-content:center; margin-top:1px;
+  transition: border-color .15s ease, background .15s ease;
+}
+.cls-checkbox.checked{ background: var(--gold); border-color: var(--gold); color:#14121B; font-weight:700; font-size:0.75rem; }
+.cls-toggle-text{ font-size: 0.8125rem; color: var(--ink); line-height:1.45; }
+.cls-toggle-text b{ color: var(--gold); }
+
+.cls-subscribe-fields{ margin-top: 12px; display:none; flex-direction:column; gap: 10px; }
+.cls-subscribe-note{ margin: -2px 0 0; font-size: 0.6875rem; color: var(--ink-dim); }
+.cls-subscribe-fields.show{ display:flex; }
+
+.cls-honeypot{ position:absolute; left:-9999px; opacity:0; height:0; width:0; }
+
+/* ---- bottom nav ---- */
+.cls-nav{ display:flex; gap: 9px; margin-top: 18px; }
+.cls-nav-back{
+  flex: 0 0 auto; background: transparent; border: 1px solid var(--card-edge); color: var(--ink-dim);
+  border-radius: 999px; padding: 0 20px; font-family:'Space Mono', monospace; font-size: 0.75rem;
+  letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: border-color .15s ease, color .15s ease;
+}
+.cls-nav-back:hover{ border-color: var(--ink-dim); color: var(--ink); }
+.cls-nav-back:focus-visible{ box-shadow: var(--focus-ring); }
+.cls-nav-next{
+  position: relative; overflow: hidden;
+  flex: 1; border:none; border-radius: 999px; padding: 14px 0;
+  font-family:'Space Mono', monospace; font-size: 0.7812rem; letter-spacing: 1.5px; text-transform: uppercase;
+  font-weight:700; color: #14121B; background: linear-gradient(90deg, var(--gold), var(--magenta-btn));
+  cursor:pointer; transition: opacity .15s ease, transform .1s ease, box-shadow .15s ease;
+  box-shadow: 0 8px 22px -10px rgba(232,179,61,0.55);
+}
+.cls-nav-next:hover{ box-shadow: 0 10px 26px -8px rgba(232,179,61,0.7); }
+.cls-nav-next:active{ transform: scale(0.98); }
+.cls-nav-next:focus-visible{ box-shadow: var(--focus-ring), 0 8px 22px -10px rgba(232,179,61,0.55); }
+.cls-nav-next:disabled{ opacity: 0.55; cursor: default; box-shadow: none; }
+.cls-nav-next:disabled::after{ display:none; }
+/* a slow light sweep across the primary button — a little life on an otherwise static CTA */
+.cls-nav-next::after{
+  content:""; position:absolute; top:0; left:-60%; width:35%; height:100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.4), transparent);
+  transform: skewX(-18deg); animation: clsShine 3.4s ease-in-out infinite;
+}
+@keyframes clsShine{ 0%{ left:-60%; } 30%{ left:130%; } 100%{ left:130%; } }
+@media (prefers-reduced-motion: reduce){ .cls-nav-next::after{ animation: none; display:none; } }
+
+.cls-error{
+  color: var(--bad); font-family:'Space Mono', monospace; font-size: 0.6875rem; margin-top: 9px; text-align:center;
+  min-height: 13px;
+}
+
+.cls-footer{
+  text-align:center; margin-top: 14px; font-family:'Space Mono', monospace; font-size: 0.625rem;
+  color: var(--ink-dim); opacity: .7; letter-spacing: .5px;
+}
+
+/* ---- thank you screen ---- */
+.cls-thanks{ display:none; text-align:center; padding-top: 30px; }
+.cls-thanks.show{ display:block; animation: clsStepIn .3s ease both; }
+@media (prefers-reduced-motion: reduce){ .cls-thanks.show{ animation:none; } }
+
+.cls-thanks-badge-wrap{ position: relative; width: fit-content; margin: 0 auto 12px; }
+.cls-thanks-badge{
+  width: 56px; height: 56px; border-radius: 50%;
+  display:flex; align-items:center; justify-content:center; font-size: 1.5rem; color:#14121B; font-weight:700;
+  background: linear-gradient(135deg, var(--gold), var(--magenta-btn));
+  box-shadow: 0 0 0 4px rgba(232,179,61,0.14), 0 10px 26px -8px rgba(232,179,61,0.55);
+  animation: clsBadgeIn .4s cubic-bezier(.34,1.56,.64,1) both .05s;
+}
+@media (prefers-reduced-motion: reduce){ .cls-thanks-badge{ animation:none; } }
+@keyframes clsBadgeIn{ from{ transform: scale(0.6); opacity:0; } to{ transform: scale(1); opacity:1; } }
+
+.cls-sparkle{
+  position:absolute; font-size: 0.8125rem; color: var(--gold); opacity:0;
+  animation: clsSparkle 1.8s ease-in-out infinite;
+}
+.cls-sparkle-1{ top:-8px; left:-14px; animation-delay: .2s; }
+.cls-sparkle-2{ top:-10px; right:-14px; color: var(--magenta-btn); animation-delay: .6s; }
+.cls-sparkle-3{ bottom:-6px; left:50%; color: var(--violet-text); animation-delay: 1s; }
+@keyframes clsSparkle{
+  0%, 100%{ opacity:0; transform: scale(.5) rotate(0deg); }
+  50%{ opacity:1; transform: scale(1) rotate(25deg); }
+}
+@media (prefers-reduced-motion: reduce){ .cls-sparkle{ animation:none; opacity:.85; } }
+
+.cls-thanks-title{
+  font-family:'Bebas Neue', sans-serif; font-size: 1.875rem; letter-spacing: 1px; font-weight: normal;
+  background: linear-gradient(90deg, var(--gold), var(--magenta) 60%, var(--violet));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  margin: 4px 0 14px;
+}
+.cls-thanks-note{
+  text-align:left; background: var(--card); border: 1px solid var(--card-edge); border-radius: 13px;
+  padding: 16px 17px; margin: 0 0 20px; box-shadow: 0 12px 28px -16px rgba(0,0,0,0.6);
+}
+.cls-thanks-body{ color: var(--ink); font-size: 0.8438rem; line-height:1.65; margin: 0 0 10px; }
+.cls-thanks-sign{ color: var(--ink-dim); font-family:'Space Mono', monospace; font-size: 0.6875rem; letter-spacing: .4px; }
+.cls-thanks-links{ display:flex; flex-wrap:wrap; gap: 9px; justify-content:center; }
+.cls-scene-link{
+  display:inline-block; font-family:'Space Mono', monospace; font-size: 0.6875rem; letter-spacing: .7px;
+  text-transform: uppercase; color: var(--violet-text); border: 1px solid var(--violet); border-radius: 999px;
+  padding: 11px 18px; text-decoration:none; transition: background .15s ease, color .15s ease;
+}
+.cls-scene-link:hover, .cls-scene-link:focus-visible{ background: var(--violet); color: #14121B; }
+.cls-scene-link:focus-visible{ box-shadow: var(--focus-ring); }
+.cls-scene-link-alt{ border-color: var(--gold); color: var(--gold); }
+.cls-scene-link-alt:hover, .cls-scene-link-alt:focus-visible{ background: var(--gold); color: #14121B; }
+
+.cls-hidden{ display:none !important; }
+</style>
+<meta name="robots" content="noindex">
+<style>html{background:#14121B}</style>
+</head>
+<body>
+
+<div class="cls-embed-frame">
+<main class="cls-root" aria-labelledby="clsMainHeading">
+
+  <h1 id="clsMainHeading" class="cls-visually-hidden">NuRenaissance — Feedback Survey</h1>
+
+  <!-- FIRST SCREEN — pick which kind of feedback this is -->
+  <div id="clsTypeSelect">
+    <div class="cls-topbar">
+      <div>
+        <div class="cls-eyebrow-small">NuRenaissance</div>
+        <div class="cls-eyebrow-sub">Feedback</div>
+      </div>
+    </div>
+    <div class="cls-step-header">
+      <h2 class="cls-step-title" tabindex="-1">What Are We Rating?</h2>
+      <div class="cls-step-sub cls-typeselect-sub">Pick one to get started — takes about 30 seconds either way.</div>
+    </div>
+    <div class="cls-type-grid">
+      <button type="button" class="cls-type-card" data-flow="show">
+        <span class="cls-type-icon" aria-hidden="true">🎤</span>
+        <span>
+          <span class="cls-type-text-title">A Show</span>
+          <span class="cls-type-text-sub">Certified Lounge post-show survey</span>
+        </span>
+      </button>
+      <button type="button" class="cls-type-card" data-flow="service">
+        <span class="cls-type-icon" aria-hidden="true">🎬</span>
+        <span>
+          <span class="cls-type-text-title">A NuRenaissance Service</span>
+          <span class="cls-type-text-sub">Video, photo, livestream, web &amp; more</span>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <div id="clsForm" class="cls-hidden">
+   <div class="cls-scroll-area">
+
+    <button type="button" id="clsSwitchFlow" class="cls-switch-link cls-hidden">‹ Switch survey type</button>
+
+    <div class="cls-topbar">
+      <div>
+        <div class="cls-eyebrow-small" id="clsEyebrowMain">Certified Lounge</div>
+        <div class="cls-eyebrow-sub" id="clsEyebrowSub">A Concert Series</div>
+      </div>
+      <div class="cls-dots" id="clsDots" aria-hidden="true">
+        <span class="cls-dot" data-step="1"></span>
+        <span class="cls-dot" data-step="2"></span>
+        <span class="cls-dot" data-step="3"></span>
+      </div>
+    </div>
+    <div class="cls-visually-hidden" id="clsStepAnnounce" aria-live="polite">Step 1 of 3</div>
+
+    <div id="clsContextPill" class="cls-show-pill cls-hidden"><span id="clsContextPillIcon" aria-hidden="true">📍</span> <span id="clsContextPillText"></span></div>
+
+    <!-- ============ SHOW FLOW ============ -->
+
+    <!-- STEP 1 — how it went (the only required part) -->
+    <div class="cls-step" data-flow="show" data-step="1">
+      <div class="cls-step-header">
+        <h2 class="cls-step-title" tabindex="-1">How Was Tonight?</h2>
+        <div class="cls-step-sub">The one required part — 15 seconds.</div>
+      </div>
+
+      <div class="cls-card">
+        <div id="clsShowPickerField" class="cls-field cls-hidden">
+          <label class="cls-label cls-required" for="clsShowInput">Which show did you catch?<span class="cls-visually-hidden"> (required)</span></label>
+          <input id="clsShowInput" class="cls-input" type="text" placeholder="e.g. Solberg Studios, Aug 15" required>
+        </div>
+        <div class="cls-field" style="margin-bottom:0;">
+          <span class="cls-label cls-required" id="clsRatingLabel">Overall, how was the show?<span class="cls-visually-hidden"> (required)</span></span>
+          <div class="cls-stars" id="clsShowStars" role="radiogroup" aria-labelledby="clsRatingLabel" aria-required="true">
+            <button type="button" class="cls-star" data-val="1" aria-label="Rate 1 out of 5" role="radio" aria-checked="false" tabindex="0">🖤</button>
+            <button type="button" class="cls-star" data-val="2" aria-label="Rate 2 out of 5" role="radio" aria-checked="false" tabindex="-1">🖤</button>
+            <button type="button" class="cls-star" data-val="3" aria-label="Rate 3 out of 5" role="radio" aria-checked="false" tabindex="-1">🖤</button>
+            <button type="button" class="cls-star" data-val="4" aria-label="Rate 4 out of 5" role="radio" aria-checked="false" tabindex="-1">🖤</button>
+            <button type="button" class="cls-star" data-val="5" aria-label="Rate 5 out of 5" role="radio" aria-checked="false" tabindex="-1">🖤</button>
+          </div>
+          <div class="cls-rating-caption" id="clsRatingCaption" aria-live="polite">&nbsp;</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 — a few quick things (all optional), split off its own step so this
+         content, plus the platform sub-picker when it's open, is never sharing a screen
+         with the rating card above — that combination was what needed internal scrolling
+         on shorter phones. -->
+    <div class="cls-step" data-flow="show" data-step="2">
+      <div class="cls-step-header">
+        <h2 class="cls-step-title" tabindex="-1">A Few Quick Things</h2>
+        <div class="cls-step-sub">All optional — just a few taps.</div>
+      </div>
+
+      <div class="cls-card">
+        <div class="cls-field">
+          <span class="cls-label" id="clsAttendeeLabel">First time here, or been before?</span>
+          <div class="cls-chip-group" id="clsAttendeeType" role="group" aria-labelledby="clsAttendeeLabel">
+            <button type="button" class="cls-chip" data-value="First-time" aria-pressed="false">🆕 First time here</button>
+            <button type="button" class="cls-chip" data-value="Returning" aria-pressed="false">🔁 I've been before</button>
+          </div>
+        </div>
+        <div class="cls-field">
+          <span class="cls-label" id="clsSourceLabel">How'd you hear about tonight?</span>
+          <div class="cls-chip-group" id="clsSource" role="group" aria-labelledby="clsSourceLabel">
+            <button type="button" class="cls-chip" data-value="Social Media" aria-pressed="false">📱 Social media</button>
+            <button type="button" class="cls-chip" data-value="Friend / word of mouth" aria-pressed="false">👥 Friend / word of mouth</button>
+            <button type="button" class="cls-chip" data-value="NuDirectory" aria-pressed="false">📍 NuDirectory</button>
+            <button type="button" class="cls-chip" data-value="Flyer / poster" aria-pressed="false">🧾 Flyer / poster</button>
+            <button type="button" class="cls-chip" data-value="Other" aria-pressed="false">✨ Other</button>
+          </div>
+          <div class="cls-subreveal" id="clsSocialWrap">
+            <span class="cls-subreveal-label" id="clsSocialLabel">↳ Which platform?</span>
+            <div class="cls-chip-group" id="clsSocialPlatform" role="group" aria-labelledby="clsSocialLabel">
+              <button type="button" class="cls-chip" data-value="Instagram" aria-pressed="false">📸 Instagram</button>
+              <button type="button" class="cls-chip" data-value="Facebook" aria-pressed="false">👍 Facebook</button>
+              <button type="button" class="cls-chip" data-value="TikTok" aria-pressed="false">🎵 TikTok</button>
+              <button type="button" class="cls-chip" data-value="Social - Other" aria-pressed="false">✨ Other</button>
+            </div>
+          </div>
+        </div>
+        <div class="cls-field" style="margin-bottom:0;">
+          <span class="cls-label" id="clsFriendLabel">Would you bring a friend next time?</span>
+          <div class="cls-chip-group" id="clsBringFriend" role="group" aria-labelledby="clsFriendLabel">
+            <button type="button" class="cls-chip" data-value="Yes" aria-pressed="false">🙌 Yes</button>
+            <button type="button" class="cls-chip" data-value="Maybe" aria-pressed="false">🤔 Maybe</button>
+            <button type="button" class="cls-chip" data-value="No" aria-pressed="false">🙅 No</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 — anything stand out + stay plugged in, ends in Submit -->
+    <div class="cls-step" data-flow="show" data-step="3">
+      <div class="cls-step-header">
+        <h2 class="cls-step-title" tabindex="-1">Last Few Things</h2>
+        <div class="cls-step-sub">All optional — then you're done.</div>
+      </div>
+
+      <div class="cls-card">
+        <div class="cls-field">
+          <label class="cls-label" for="clsFeedback">What stood out — or what could be better?</label>
+          <textarea id="clsFeedback" class="cls-textarea" placeholder="We read every word."></textarea>
+        </div>
+        <div class="cls-field">
+          <span class="cls-label" id="clsPerformerLabel">Who stood out to you tonight?</span>
+          <div class="cls-chip-group cls-hidden" id="clsPerformerChips" role="group" aria-labelledby="clsPerformerLabel"></div>
+          <input id="clsPerformerText" class="cls-input cls-hidden" type="text" placeholder="Artist name (optional)" aria-labelledby="clsPerformerLabel">
+        </div>
+        <div class="cls-field" style="margin-bottom:0;">
+          <label class="cls-label" for="clsNote">Anything else you want us to know?</label>
+          <textarea id="clsNote" class="cls-textarea" placeholder="Optional — anything at all."></textarea>
+        </div>
+      </div>
+
+      <div class="cls-card">
+        <div class="cls-field" style="margin-bottom:0;">
+          <button type="button" class="cls-toggle-row" id="clsSubToggleRow" aria-pressed="false">
+            <span class="cls-checkbox" id="clsSubCheckbox" aria-hidden="true"></span>
+            <span class="cls-toggle-text">
+              <b>Stay plugged in.</b> Keep me posted on Nashville hip hop &amp; R&amp;B shows, opportunities, and what's happening around the scene.
+            </span>
+          </button>
+          <div class="cls-subscribe-fields" id="clsSubscribeFields">
+            <div>
+              <label class="cls-visually-hidden" for="clsName">First name (optional)</label>
+              <input id="clsName" class="cls-input" type="text" placeholder="First name (optional)">
+            </div>
+            <div>
+              <label class="cls-visually-hidden" for="clsEmail">Email address</label>
+              <input id="clsEmail" class="cls-input" type="email" placeholder="Email address">
+            </div>
+            <p class="cls-subscribe-note">Just Certified Lounge &amp; NuRenaissance updates — unsubscribe anytime.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ SERVICE FLOW ============ -->
+
+    <!-- STEP 1 — how it went (the only required part) -->
+    <div class="cls-step" data-flow="service" data-step="1">
+      <div class="cls-step-header">
+        <h2 class="cls-step-title" tabindex="-1">How'd We Do?</h2>
+        <div class="cls-step-sub">The one required part — 15 seconds.</div>
+      </div>
+
+      <div class="cls-card">
+        <div id="clsServicePickerField" class="cls-field cls-hidden">
+          <span class="cls-label cls-required" id="clsServiceTypeLabel">Which service was this for?<span class="cls-visually-hidden"> (required)</span></span>
+          <!-- role="group" doesn't support aria-required per the ARIA spec (only roles like
+               radiogroup/listbox/combobox do) — an axe-core audit flagged it as a critical
+               violation. Required-ness is still conveyed accessibly two other ways: the
+               visually-hidden "(required)" text on the label above, and the live-region
+               validation message if Next is tapped without a pick. -->
+          <div class="cls-chip-group" id="clsServiceType" role="group" aria-labelledby="clsServiceTypeLabel">
+            <button type="button" class="cls-chip" data-value="Video Production" aria-pressed="false">🎥 Video</button>
+            <button type="button" class="cls-chip" data-value="Photography" aria-pressed="false">📸 Photo</button>
+            <button type="button" class="cls-chip" data-value="Livestream" aria-pressed="false">🔴 Livestream</button>
+            <button type="button" class="cls-chip" data-value="Web Design" aria-pressed="false">🌐 Web Design</button>
+            <button type="button" class="cls-chip" data-value="Artist Admin" aria-pressed="false">🗂️ Admin</button>
+            <button type="button" class="cls-chip" data-value="Other" aria-pressed="false">✨ Other</button>
+          </div>
+        </div>
+        <div class="cls-field" style="margin-bottom:0;">
+          <span class="cls-label cls-required" id="clsServiceRatingLabel">Overall, how was the experience?<span class="cls-visually-hidden"> (required)</span></span>
+          <div class="cls-stars" id="clsServiceStars" role="radiogroup" aria-labelledby="clsServiceRatingLabel" aria-required="true">
+            <button type="button" class="cls-star" data-val="1" aria-label="Rate 1 out of 5" role="radio" aria-checked="false" tabindex="0">🖤</button>
+            <button type="button" class="cls-star" data-val="2" aria-label="Rate 2 out of 5" role="radio" aria-checked="false" tabindex="-1">🖤</button>
+            <button type="button" class="cls-star" data-val="3" aria-label="Rate 3 out of 5" role="radio" aria-checked="false" tabindex="-1">🖤</button>
+            <button type="button" class="cls-star" data-val="4" aria-label="Rate 4 out of 5" role="radio" aria-checked="false" tabindex="-1">🖤</button>
+            <button type="button" class="cls-star" data-val="5" aria-label="Rate 5 out of 5" role="radio" aria-checked="false" tabindex="-1">🖤</button>
+          </div>
+          <div class="cls-rating-caption" id="clsServiceRatingCaption" aria-live="polite">&nbsp;</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 — a few quick things (all optional), split off its own step for the same
+         reason as the show flow: this content plus the platform sub-picker was too much
+         to reliably share a screen with the rating card above on shorter phones. -->
+    <div class="cls-step" data-flow="service" data-step="2">
+      <div class="cls-step-header">
+        <h2 class="cls-step-title" tabindex="-1">A Few Quick Things</h2>
+        <div class="cls-step-sub">All optional — just a few taps.</div>
+      </div>
+
+      <div class="cls-card">
+        <div class="cls-field">
+          <span class="cls-label" id="clsHireAgainLabel">Would you hire us again?</span>
+          <div class="cls-chip-group" id="clsHireAgain" role="group" aria-labelledby="clsHireAgainLabel">
+            <button type="button" class="cls-chip" data-value="Yes" aria-pressed="false">🙌 Yes</button>
+            <button type="button" class="cls-chip" data-value="Maybe" aria-pressed="false">🤔 Maybe</button>
+            <button type="button" class="cls-chip" data-value="No" aria-pressed="false">🙅 No</button>
+          </div>
+        </div>
+        <div class="cls-field" style="margin-bottom:0;">
+          <span class="cls-label" id="clsServiceSourceLabel">How'd you hear about NuRenaissance?</span>
+          <div class="cls-chip-group" id="clsServiceSource" role="group" aria-labelledby="clsServiceSourceLabel">
+            <button type="button" class="cls-chip" data-value="Social Media" aria-pressed="false">📱 Social media</button>
+            <button type="button" class="cls-chip" data-value="Referral / word of mouth" aria-pressed="false">👥 Referral</button>
+            <button type="button" class="cls-chip" data-value="NuDirectory" aria-pressed="false">📍 NuDirectory</button>
+            <button type="button" class="cls-chip" data-value="Web search" aria-pressed="false">🔍 Web search</button>
+            <button type="button" class="cls-chip" data-value="Other" aria-pressed="false">✨ Other</button>
+          </div>
+          <div class="cls-subreveal" id="clsServiceSocialWrap">
+            <span class="cls-subreveal-label" id="clsServiceSocialLabel">↳ Which platform?</span>
+            <div class="cls-chip-group" id="clsServiceSocialPlatform" role="group" aria-labelledby="clsServiceSocialLabel">
+              <button type="button" class="cls-chip" data-value="Instagram" aria-pressed="false">📸 Instagram</button>
+              <button type="button" class="cls-chip" data-value="Facebook" aria-pressed="false">👍 Facebook</button>
+              <button type="button" class="cls-chip" data-value="TikTok" aria-pressed="false">🎵 TikTok</button>
+              <button type="button" class="cls-chip" data-value="Social - Other" aria-pressed="false">✨ Other</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 — anything stand out + testimonial + stay plugged in, ends in Submit -->
+    <div class="cls-step" data-flow="service" data-step="3">
+      <div class="cls-step-header">
+        <h2 class="cls-step-title" tabindex="-1">Last Few Things</h2>
+        <div class="cls-step-sub">All optional — then you're done.</div>
+      </div>
+
+      <div class="cls-card">
+        <div class="cls-field">
+          <label class="cls-label" for="clsSvcFeedback">What stood out — or what could be better?</label>
+          <textarea id="clsSvcFeedback" class="cls-textarea" placeholder="We read every word."></textarea>
+        </div>
+        <div class="cls-field" style="margin-bottom:0;">
+          <label class="cls-label" for="clsSvcNote">Anything else you want us to know?</label>
+          <textarea id="clsSvcNote" class="cls-textarea" placeholder="Optional — anything at all."></textarea>
+        </div>
+      </div>
+
+      <div class="cls-card">
+        <div class="cls-field">
+          <button type="button" class="cls-toggle-row" id="clsTestimonialToggle" aria-pressed="false">
+            <span class="cls-checkbox" id="clsTestimonialCheckbox" aria-hidden="true"></span>
+            <span class="cls-toggle-text">
+              <b>OK to use as a testimonial?</b> We may feature a short quote from this on the site or in future pitches.
+            </span>
+          </button>
+        </div>
+        <div class="cls-field" style="margin-bottom:0;">
+          <button type="button" class="cls-toggle-row" id="clsSvcSubToggleRow" aria-pressed="false">
+            <span class="cls-checkbox" id="clsSvcSubCheckbox" aria-hidden="true"></span>
+            <span class="cls-toggle-text">
+              <b>Stay plugged in.</b> Get updates on NuRenaissance's work, availability, and the Nashville scene.
+            </span>
+          </button>
+          <div class="cls-subscribe-fields" id="clsSvcSubscribeFields">
+            <div>
+              <label class="cls-visually-hidden" for="clsSvcName">First name (optional)</label>
+              <input id="clsSvcName" class="cls-input" type="text" placeholder="First name (optional)">
+            </div>
+            <div>
+              <label class="cls-visually-hidden" for="clsSvcEmail">Email address</label>
+              <input id="clsSvcEmail" class="cls-input" type="email" placeholder="Email address">
+            </div>
+            <p class="cls-subscribe-note">Just NuRenaissance updates — unsubscribe anytime.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cls-field">
+      <label class="cls-honeypot" for="clsWebsite" aria-hidden="true">Leave this field blank</label>
+      <input id="clsWebsite" class="cls-honeypot" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+    </div>
+
+   </div>
+    <div class="cls-nav">
+      <button id="clsBackBtn" class="cls-nav-back cls-hidden" type="button">Back</button>
+      <button id="clsNextBtn" class="cls-nav-next" type="button">Next</button>
+    </div>
+    <div class="cls-error" id="clsError" role="alert" aria-live="polite">&nbsp;</div>
+
+    <div class="cls-footer">A NURENAISSANCE PRODUCTION</div>
+  </div>
+
+  <div id="clsThanks" class="cls-thanks" role="status">
+    <div class="cls-thanks-badge-wrap" aria-hidden="true">
+      <span class="cls-sparkle cls-sparkle-1">✦</span>
+      <span class="cls-sparkle cls-sparkle-2">✦</span>
+      <span class="cls-sparkle cls-sparkle-3">✦</span>
+      <div class="cls-thanks-badge">✓</div>
+    </div>
+    <div class="cls-thanks-title" id="clsThanksTitle">Thanks For Coming Through!</div>
+    <div class="cls-thanks-note">
+      <p class="cls-thanks-body" id="clsThanksBody">Your feedback goes straight to the team behind the show.</p>
+      <p class="cls-thanks-sign" id="clsThanksSign">— Certified Lounge, a NuRenaissance production</p>
+    </div>
+    <div class="cls-thanks-links">
+      <a class="cls-scene-link" href="https://www.nrnszn.com/directory" target="_top" rel="noopener">Explore The Scene ↗</a>
+      <a class="cls-scene-link cls-scene-link-alt" href="https://www.nrnszn.com/shop" target="_top" rel="noopener">Shop Certified Lounge ↗</a>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+(function(){
+  // ---- CONFIGURE: paste your deployed Apps Script Web App URL here ----
+  var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzEigyj8nDLW4XtUANXkX8dCsWNgt0kb8Uc6gWp2vhC12g3lTke2XeX_eot1RXLYeyB/exec';
+
+  // Fail fast and obviously if that URL was never set (or got mangled somewhere along the
+  // way — e.g. a copy/paste into Wix dropping characters). Without this check, someone can
+  // fill out the entire survey and only find out something's wrong when Submit throws a
+  // cryptic browser error at the very end. This catches it the moment the page loads instead.
+  if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(APPS_SCRIPT_URL)) {
+    document.body.innerHTML =
+      '<div style="max-width:360px;margin:60px auto;padding:20px;font-family:sans-serif;' +
+      'background:#2a1414;color:#ffb4b4;border:1px solid #7a2b2b;border-radius:12px;line-height:1.5;">' +
+      '<b>Survey widget setup incomplete.</b><br><br>' +
+      'APPS_SCRIPT_URL near the top of this file\'s &lt;script&gt; isn\'t a real deployed ' +
+      'Apps Script Web App URL — it\'s either still the placeholder, or got altered when this ' +
+      'was pasted somewhere (e.g. into a Wix HTML Embed). See README-setup.md step 3.' +
+      '</div>';
+    return;
+  }
+
+  var TOTAL_STEPS = 3;
+  var loadedAt = Date.now(); // used server-side as a lightweight bot-speed check
+
+  var params = new URLSearchParams(window.location.search);
+  var showParam = (params.get('show') || '').trim();
+  var lineupParam = (params.get('lineup') || '').trim();
+  var serviceParam = (params.get('service') || '').trim();
+  var typeParam = (params.get('type') || '').trim().toLowerCase();
+
+  // ---- a quick, playful "pop" for tap feedback — restarts cleanly even on rapid taps ----
+  function pop(el){
+    el.classList.remove('cls-pop');
+    void el.offsetWidth; // force reflow so the animation restarts
+    el.classList.add('cls-pop');
+  }
+
+  // ---- generic single-select chip group (tap/Enter/Space again to clear) ----
+  function attachChipGroup(container, onChange){
+    var chips = Array.prototype.slice.call(container.querySelectorAll('.cls-chip'));
+    chips.forEach(function(chip){
+      chip.addEventListener('click', function(){
+        var wasSelected = chip.classList.contains('selected');
+        chips.forEach(function(c){ c.classList.remove('selected'); c.setAttribute('aria-pressed', 'false'); });
+        if (wasSelected) { onChange(''); }
+        else {
+          chip.classList.add('selected');
+          chip.setAttribute('aria-pressed', 'true');
+          onChange(chip.getAttribute('data-value'));
+          pop(chip);
+        }
+      });
+    });
+  }
+
+  // ---- reusable star rating (used once per flow) ----
+  // Implements the WAI-ARIA "radio group" pattern: role="radiogroup" on the container
+  // (already in the HTML), role="radio" + aria-checked on each star, and roving tabindex
+  // so Tab moves to/from the group as one stop while Left/Right/Up/Down arrows move and
+  // select within it — matching how a screen reader user expects a single-choice 1-5
+  // rating to behave (unlike the optional chip groups elsewhere, which stay a plain
+  // toggle-button group since they support clearing a selection).
+  function makeStarRating(containerId, captionId, captions){
+    var stars = Array.prototype.slice.call(document.querySelectorAll('#' + containerId + ' .cls-star'));
+    var caption = document.getElementById(captionId);
+    var rating = 0;
+
+    function paint(val){
+      stars.forEach(function(s){
+        var v = parseInt(s.getAttribute('data-val'), 10);
+        var isFilled = v <= val;
+        s.classList.toggle('filled', isFilled);
+        s.setAttribute('aria-checked', v === val ? 'true' : 'false');
+        s.setAttribute('tabindex', v === val ? '0' : '-1');
+        s.textContent = isFilled ? '⭐' : '🖤';
+      });
+      caption.textContent = val ? captions[val] : ' ';
+      caption.classList.toggle('hype', val === 5);
+    }
+
+    function select(val, opts){
+      rating = val;
+      paint(rating);
+      if (!opts || opts.focus !== false) {
+        stars[rating - 1].focus();
+      }
+    }
+
+    stars.forEach(function(s, i){
+      s.addEventListener('click', function(){
+        select(parseInt(s.getAttribute('data-val'), 10), { focus: false });
+        pop(s);
+      });
+      s.addEventListener('keydown', function(ev){
+        var handled = true;
+        if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') {
+          select(rating ? Math.min(rating + 1, stars.length) : 1);
+        } else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') {
+          select(rating ? Math.max(rating - 1, 1) : 1);
+        } else if (ev.key === ' ' || ev.key === 'Enter') {
+          select(parseInt(s.getAttribute('data-val'), 10));
+        } else {
+          handled = false;
+        }
+        if (handled) { ev.preventDefault(); pop(stars[rating - 1]); }
+      });
+    });
+
+    return { get: function(){ return rating; } };
+  }
+
+  // ---- reusable "stay plugged in" subscribe toggle ----
+  function makeSubscribeToggle(rowId, checkboxId, fieldsId){
+    var row = document.getElementById(rowId);
+    var checkbox = document.getElementById(checkboxId);
+    var fields = document.getElementById(fieldsId);
+    var subscribed = false;
+    row.addEventListener('click', function(){
+      subscribed = !subscribed;
+      row.setAttribute('aria-pressed', subscribed ? 'true' : 'false');
+      checkbox.classList.toggle('checked', subscribed);
+      checkbox.textContent = subscribed ? '✓' : '';
+      fields.classList.toggle('show', subscribed);
+      if (subscribed) pop(checkbox);
+    });
+    return { isSubscribed: function(){ return subscribed; } };
+  }
+
+  // ================= SHOW FLOW WIRING =================
+  var showCaptions = {1:'Rough night 😕', 2:'Not it', 3:'Solid', 4:'Really good 🔥', 5:'Unreal — best one yet 🔥🔥'};
+  var showRating = makeStarRating('clsShowStars', 'clsRatingCaption', showCaptions);
+
+  var attendeeType = '';
+  attachChipGroup(document.getElementById('clsAttendeeType'), function(v){ attendeeType = v; });
+
+  var source = '';
+  var socialWrap = document.getElementById('clsSocialWrap');
+  attachChipGroup(document.getElementById('clsSource'), function(v){
+    if (v === 'Social Media') {
+      socialWrap.classList.add('show');
+      source = ''; // wait for a platform pick below
+    } else {
+      socialWrap.classList.remove('show');
+      Array.prototype.slice.call(socialWrap.querySelectorAll('.cls-chip')).forEach(function(c){
+        c.classList.remove('selected'); c.setAttribute('aria-pressed', 'false');
+      });
+      source = v;
+    }
+  });
+  attachChipGroup(document.getElementById('clsSocialPlatform'), function(v){ source = v; });
+
+  var bringFriend = '';
+  attachChipGroup(document.getElementById('clsBringFriend'), function(v){ bringFriend = v; });
+
+  // favorite performer: chips if ?lineup= was passed, free text otherwise
+  var performerChipsEl = document.getElementById('clsPerformerChips');
+  var performerTextEl = document.getElementById('clsPerformerText');
+  var selectedPerformer = '';
+
+  if (lineupParam) {
+    var artists = lineupParam.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    artists.forEach(function(name){
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'cls-chip';
+      chip.setAttribute('data-value', name);
+      chip.setAttribute('aria-pressed', 'false');
+      chip.textContent = name;
+      performerChipsEl.appendChild(chip);
+    });
+    performerChipsEl.classList.remove('cls-hidden');
+    attachChipGroup(performerChipsEl, function(v){ selectedPerformer = v; });
+  } else {
+    performerTextEl.classList.remove('cls-hidden');
+  }
+
+  var showSubscribe = makeSubscribeToggle('clsSubToggleRow', 'clsSubCheckbox', 'clsSubscribeFields');
+
+  var feedbackInput = document.getElementById('clsFeedback');
+  var noteInput = document.getElementById('clsNote');
+  var nameInput = document.getElementById('clsName');
+  var emailInput = document.getElementById('clsEmail');
+  var showInput = document.getElementById('clsShowInput');
+
+  // ================= SERVICE FLOW WIRING =================
+  var serviceCaptions = {1:'Not what we hoped for 😕', 2:'Missed the mark', 3:'Solid', 4:'Really good 🔥', 5:'Exceeded expectations 🔥🔥'};
+  var serviceRating = makeStarRating('clsServiceStars', 'clsServiceRatingCaption', serviceCaptions);
+
+  var selectedService = '';
+  attachChipGroup(document.getElementById('clsServiceType'), function(v){ selectedService = v; });
+
+  var hireAgain = '';
+  attachChipGroup(document.getElementById('clsHireAgain'), function(v){ hireAgain = v; });
+
+  var serviceSource = '';
+  var serviceSocialWrap = document.getElementById('clsServiceSocialWrap');
+  attachChipGroup(document.getElementById('clsServiceSource'), function(v){
+    if (v === 'Social Media') {
+      serviceSocialWrap.classList.add('show');
+      serviceSource = '';
+    } else {
+      serviceSocialWrap.classList.remove('show');
+      Array.prototype.slice.call(serviceSocialWrap.querySelectorAll('.cls-chip')).forEach(function(c){
+        c.classList.remove('selected'); c.setAttribute('aria-pressed', 'false');
+      });
+      serviceSource = v;
+    }
+  });
+  attachChipGroup(document.getElementById('clsServiceSocialPlatform'), function(v){ serviceSource = v; });
+
+  var testimonialToggle = document.getElementById('clsTestimonialToggle');
+  var testimonialCheckbox = document.getElementById('clsTestimonialCheckbox');
+  var testimonialOk = false;
+  testimonialToggle.addEventListener('click', function(){
+    testimonialOk = !testimonialOk;
+    testimonialToggle.setAttribute('aria-pressed', testimonialOk ? 'true' : 'false');
+    testimonialCheckbox.classList.toggle('checked', testimonialOk);
+    testimonialCheckbox.textContent = testimonialOk ? '✓' : '';
+    if (testimonialOk) pop(testimonialCheckbox);
+  });
+
+  var serviceSubscribe = makeSubscribeToggle('clsSvcSubToggleRow', 'clsSvcSubCheckbox', 'clsSvcSubscribeFields');
+
+  var svcFeedbackInput = document.getElementById('clsSvcFeedback');
+  var svcNoteInput = document.getElementById('clsSvcNote');
+  var svcNameInput = document.getElementById('clsSvcName');
+  var svcEmailInput = document.getElementById('clsSvcEmail');
+
+  var websiteInput = document.getElementById('clsWebsite');
+
+  // ---- context pill (URL-tagged show/service skips the picker) ----
+  var contextPill = document.getElementById('clsContextPill');
+  var contextPillIcon = document.getElementById('clsContextPillIcon');
+  var contextPillText = document.getElementById('clsContextPillText');
+  var showPickerField = document.getElementById('clsShowPickerField');
+  var servicePickerField = document.getElementById('clsServicePickerField');
+
+  if (showParam) {
+    contextPill.classList.remove('cls-hidden');
+    contextPillIcon.textContent = '📍';
+    contextPillText.textContent = showParam;
+  } else {
+    showPickerField.classList.remove('cls-hidden');
+  }
+  if (serviceParam) {
+    contextPill.classList.remove('cls-hidden');
+    contextPillIcon.textContent = '🎬';
+    contextPillText.textContent = serviceParam;
+  } else {
+    servicePickerField.classList.remove('cls-hidden');
+  }
+
+  // ================= PAGINATION (shared by both flows) =================
+  var currentFlow = null;
+  var currentStep = 1;
+  var stepEls = Array.prototype.slice.call(document.querySelectorAll('.cls-step'));
+  var dotEls = Array.prototype.slice.call(document.querySelectorAll('.cls-dot'));
+  var backBtn = document.getElementById('clsBackBtn');
+  var nextBtn = document.getElementById('clsNextBtn');
+  var errorEl = document.getElementById('clsError');
+  var stepAnnounce = document.getElementById('clsStepAnnounce');
+
+  function showError(msg){ errorEl.textContent = msg; }
+
+  function goToStep(n){
+    currentStep = n;
+    var activeStepEl = null;
+    stepEls.forEach(function(s){
+      var matches = s.getAttribute('data-flow') === currentFlow && parseInt(s.getAttribute('data-step'), 10) === n;
+      s.classList.toggle('active', matches);
+      if (matches) activeStepEl = s;
+    });
+    dotEls.forEach(function(d){
+      var ds = parseInt(d.getAttribute('data-step'), 10);
+      d.classList.toggle('active', ds === n);
+      d.classList.toggle('done', ds < n);
+    });
+    backBtn.classList.toggle('cls-hidden', n === 1);
+    nextBtn.textContent = n === TOTAL_STEPS ? 'Submit' : 'Next';
+    stepAnnounce.textContent = 'Step ' + n + ' of ' + TOTAL_STEPS;
+    showError(' ');
+    // Move focus to the new step's heading — otherwise a keyboard/screen-reader user's
+    // focus stays wherever it was on the old (now-hidden) step, and nothing announces
+    // that the view changed underneath them.
+    if (activeStepEl) {
+      var heading = activeStepEl.querySelector('.cls-step-title');
+      if (heading) heading.focus();
+    }
+  }
+
+  backBtn.addEventListener('click', function(){
+    if (currentStep > 1) goToStep(currentStep - 1);
+  });
+
+  function emailLooksValid(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+  function submitSurvey(){
+    var email, subscribedNow, payload;
+
+    if (currentFlow === 'show') {
+      var resolvedShow = showParam || showInput.value.trim();
+      var favoritePerformer = lineupParam ? selectedPerformer : performerTextEl.value.trim();
+      email = emailInput.value.trim();
+      subscribedNow = showSubscribe.isSubscribed();
+
+      if (subscribedNow && email && !emailLooksValid(email)) {
+        showError('That email doesn’t look right — double check it.');
+        return;
+      }
+
+      payload = {
+        _kind: 'show',
+        show: resolvedShow,
+        rating: showRating.get(),
+        feedback: feedbackInput.value.trim(),
+        note: noteInput.value.trim(),
+        attendeeType: attendeeType,
+        source: source,
+        favoritePerformer: favoritePerformer,
+        bringFriend: bringFriend,
+        name: nameInput.value.trim(),
+        email: subscribedNow ? email : '',
+        subscribed: !!(subscribedNow && email),
+        website: websiteInput.value,
+        loadedAt: loadedAt
+      };
+    } else {
+      var resolvedService = serviceParam || selectedService;
+      email = svcEmailInput.value.trim();
+      subscribedNow = serviceSubscribe.isSubscribed();
+
+      if (subscribedNow && email && !emailLooksValid(email)) {
+        showError('That email doesn’t look right — double check it.');
+        return;
+      }
+
+      payload = {
+        _kind: 'service',
+        service: resolvedService,
+        rating: serviceRating.get(),
+        feedback: svcFeedbackInput.value.trim(),
+        note: svcNoteInput.value.trim(),
+        hireAgain: hireAgain,
+        testimonialOk: testimonialOk,
+        source: serviceSource,
+        name: svcNameInput.value.trim(),
+        email: subscribedNow ? email : '',
+        subscribed: !!(subscribedNow && email),
+        website: websiteInput.value,
+        loadedAt: loadedAt
+      };
+    }
+
+    nextBtn.disabled = true;
+    backBtn.disabled = true;
+    nextBtn.textContent = 'Sending…';
+
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        if (data && data.error) throw new Error(data.error);
+
+        var thanksTitle = document.getElementById('clsThanksTitle');
+        var thanksSign = document.getElementById('clsThanksSign');
+        var thanksBody = document.getElementById('clsThanksBody');
+
+        if (currentFlow === 'show') {
+          thanksTitle.textContent = 'Thanks For Coming Through!';
+          thanksSign.textContent = '— Certified Lounge, a NuRenaissance production';
+          thanksBody.textContent = payload.subscribed
+            ? 'You’re on the list — keep an eye out for what’s next on the Nashville scene.'
+            : 'Your feedback goes straight to the team behind the show.';
+        } else {
+          thanksTitle.textContent = 'Thanks For The Feedback!';
+          thanksSign.textContent = '— NuRenaissance Media';
+          thanksBody.textContent = payload.subscribed
+            ? 'You’re on the list — keep an eye out for what’s next from NuRenaissance.'
+            : 'This goes straight to Nick — thanks for trusting NuRenaissance with your project.';
+        }
+
+        document.getElementById('clsForm').style.display = 'none';
+        document.getElementById('clsThanks').classList.add('show');
+      })
+      .catch(function(err){
+        nextBtn.disabled = false;
+        backBtn.disabled = false;
+        nextBtn.textContent = 'Submit';
+        showError('Something didn’t send — mind trying again? (' + err.message + ')');
+      });
+  }
+
+  nextBtn.addEventListener('click', function(){
+    showError(' ');
+
+    if (currentStep === 1) {
+      if (currentFlow === 'show') {
+        if (!showRating.get()) { showError('Tap a rating before you continue.'); return; }
+        if (!showParam && !showInput.value.trim()) { showError('Let us know which show you were at.'); return; }
+      } else if (currentFlow === 'service') {
+        if (!serviceRating.get()) { showError('Tap a rating before you continue.'); return; }
+        if (!serviceParam && !selectedService) { showError('Let us know which service this was for.'); return; }
+      }
+    }
+
+    if (currentStep < TOTAL_STEPS) {
+      goToStep(currentStep + 1);
+    } else {
+      submitSurvey();
+    }
+  });
+
+  // ================= SURVEY TYPE PICKER =================
+  var typeSelectEl = document.getElementById('clsTypeSelect');
+  var formEl = document.getElementById('clsForm');
+  var switchFlowBtn = document.getElementById('clsSwitchFlow');
+  var eyebrowMain = document.getElementById('clsEyebrowMain');
+  var eyebrowSub = document.getElementById('clsEyebrowSub');
+
+  var FLOW_META = {
+    show: { eyebrow: 'Certified Lounge', sub: 'A Concert Series' },
+    service: { eyebrow: 'NuRenaissance', sub: 'Service Feedback' }
+  };
+
+  var flowForcedByParam = false;
+  var initialFlow = null;
+  if (typeParam === 'show' || showParam) { initialFlow = 'show'; flowForcedByParam = true; }
+  else if (typeParam === 'service' || serviceParam) { initialFlow = 'service'; flowForcedByParam = true; }
+
+  function enterFlow(flow){
+    currentFlow = flow;
+    typeSelectEl.classList.add('cls-hidden');
+    formEl.classList.remove('cls-hidden');
+    eyebrowMain.textContent = FLOW_META[flow].eyebrow;
+    eyebrowSub.textContent = FLOW_META[flow].sub;
+    switchFlowBtn.classList.toggle('cls-hidden', flowForcedByParam);
+    goToStep(1);
+  }
+
+  Array.prototype.slice.call(document.querySelectorAll('.cls-type-card')).forEach(function(card){
+    card.addEventListener('click', function(){
+      enterFlow(card.getAttribute('data-flow'));
+    });
+  });
+
+  switchFlowBtn.addEventListener('click', function(){
+    currentFlow = null;
+    formEl.classList.add('cls-hidden');
+    typeSelectEl.classList.remove('cls-hidden');
+    var heading = typeSelectEl.querySelector('.cls-step-title');
+    if (heading) heading.focus();
+  });
+
+  if (initialFlow) {
+    enterFlow(initialFlow);
+  }
+
+  // ================= DYNAMIC FRAME HEIGHT =================
+  // The frame's CSS height (950px) is only a pre-JS fallback. From here on, the frame
+  // tracks whatever screen is actually visible: short screens (the type picker, the
+  // thank-you screen) shrink down instead of sitting inside a tall box with dead space
+  // below them, and a screen that grows — picking "Social Media" to reveal the platform
+  // sub-picker, opening "Stay plugged in" — grows the frame to match instead of leaning on
+  // internal scroll for it. It's capped at the actual viewport height, so on a short
+  // screen it can't force the page to scroll further than the widget itself needs; the
+  // .cls-scroll-area sticky-nav fallback from before is still underneath this for whatever
+  // that cap can't fit, it's just rarely the thing doing the work now.
+  var embedFrame = document.querySelector('.cls-embed-frame');
+  var rootEl = document.querySelector('.cls-root');
+  var frameSyncQueued = false;
+  function syncFrameHeight(){
+    if (frameSyncQueued) return;
+    frameSyncQueued = true;
+    requestAnimationFrame(function(){
+      frameSyncQueued = false;
+      // .cls-root normally sits at height:100% of the frame, so its scrollHeight alone
+      // would just report back whatever height the frame already has (not the content's
+      // real size). Drop that constraint for a moment to read the true content height,
+      // then put it back — this all happens inside one animation frame, invisibly.
+      //
+      // While .cls-root is unconstrained like that, its scrolling descendant
+      // (.cls-scroll-area) briefly has nothing to scroll — which resets its scrollTop to 0.
+      // Left alone, that meant every single DOM change the MutationObserver below reacts to
+      // (tapping a rating star, picking a chip — anything at all) silently snapped whoever
+      // was scrolled partway down a tall step back to its top. Saving and restoring
+      // scrollTop across the flip is what stops that.
+      var scrollArea = rootEl.querySelector('.cls-scroll-area');
+      var prevScrollTop = scrollArea ? scrollArea.scrollTop : 0;
+      var prevRootHeight = rootEl.style.height;
+      rootEl.style.height = 'auto';
+      var needed = rootEl.scrollHeight;
+      rootEl.style.height = prevRootHeight;
+      if (scrollArea) scrollArea.scrollTop = prevScrollTop;
+      var target = Math.min(needed, window.innerHeight);
+      embedFrame.style.height = target + 'px';
+      embedFrame.classList.add('cls-frame-live');
+    });
+  }
+  new MutationObserver(syncFrameHeight).observe(rootEl, {
+    attributes: true, attributeFilter: ['class'], childList: true, subtree: true
+  });
+  window.addEventListener('resize', syncFrameHeight);
+  syncFrameHeight();
+})();
+</script>
+
+</body>
+</html>

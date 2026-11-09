@@ -7,6 +7,11 @@ The interactive side of nrnszn.com, served at **app.nrnszn.com**. It's built wit
 | Path | What it is |
 |---|---|
 | `src/pages/portal.astro` | The Portal (link-in-bio). Live at `/portal`. |
+| `src/pages/support.astro` | Payment options page, live at `/support`. |
+| `src/pages/survey.astro` | Feedback survey page, live at `/survey`. `?type=`, `?show=`, `?lineup=` and `?service=` links still work. |
+| `public/widgets/` | Your original widget files, unchanged. To update one, replace its file here. |
+| `src/layouts/Site.astro` | Shared header menu and footer for the main site pages. |
+| `src/data/site.js` | The menu. Pages not moved yet still link to Wix; switch each link as its page moves in. |
 | `src/data/portal.js` | Portal links, socials and playlists. Edit text and links here. |
 | `src/styles/tokens.css` | Shared colors, fonts and spacing for every route. |
 | `src/lib/api.js` | The only file that talks to Apps Script. |

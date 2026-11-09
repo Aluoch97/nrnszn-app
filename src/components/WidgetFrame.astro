@@ -1,0 +1,123 @@
+---
+// Shows one of your existing widgets, unchanged, inside a site page.
+// The widget file lives in public/widgets/ and is served from this same site,
+// so the page can size the frame to the widget and pass URL params through.
+//
+// Default: the frame grows/shrinks to fit the widget's page height (Support).
+// fitTo + maxHeight: for widgets that size their own card to the window they're
+// given (Survey). The frame follows that card, and never gets taller than
+// maxHeight or the screen, so long steps scroll inside the card.
+
+interface Props {
+  src: string;
+  title: string;
+  fitTo?: string;
+  measure?: string;
+  maxHeight?: number;
+  maxWidth?: number;
+  passParams?: boolean;
+  transparent?: boolean;
+}
+const { src, title, fitTo, measure, maxHeight = 950, maxWidth = 520, passParams = false, transparent = false } = Astro.props;
+---
+<div class="wf" style={`--wf-max:${maxWidth}px`}>
+  <iframe
+    class="wf-frame"
+    src={src}
+    title={title}
+    data-src={src}
+    data-fit-to={fitTo}
+    data-measure={measure}
+    data-max={maxHeight}
+    data-pass={passParams ? '' : undefined}
+    data-transparent={transparent ? '' : undefined}
+    style="height:640px"
+    loading="eager"
+  ></iframe>
+</div>
+
+<style>
+  .wf { width: 100%; max-width: var(--wf-max); margin: 0 auto; padding: var(--space-4) var(--space-3) var(--space-6); }
+  .wf-frame { display: block; width: 100%; border: 0; border-radius: var(--radius-md); background: transparent; color-scheme: normal; }
+</style>
+
+<script>
+  for (const frame of document.querySelectorAll<HTMLIFrameElement>('.wf-frame')) {
+    // Pass the page's ?params on to the widget (e.g. /survey?type=show&show=...).
+    if (frame.dataset.pass !== undefined && location.search) {
+      const url = new URL(frame.dataset.src!, location.href);
+      new URLSearchParams(location.search).forEach((v, k) => url.searchParams.set(k, v));
+      frame.src = url.pathname + url.search;
+    }
+
+    const fitTo = frame.dataset.fitTo;
+    const maxH = Number(frame.dataset.max) || 950;
+    const header = () => document.querySelector('.bar')?.getBoundingClientRect().height ?? 0;
+    const cap = () => Math.max(480, Math.min(maxH, window.innerHeight - header() - 24));
+    const setH = (h: number) => {
+      const px = Math.round(h) + 'px';
+      if (frame.style.height !== px) frame.style.height = px;
+    };
+
+    let watched: Document | null = null;
+    const watch = () => {
+      const doc = frame.contentDocument;
+      if (!doc?.body || doc.URL === 'about:blank' || doc === watched) return;
+      watched = doc;
+
+      if (frame.dataset.transparent !== undefined) {
+        const s = doc.createElement('style');
+        s.textContent = 'html,body{background:transparent!important}';
+        doc.head.appendChild(s);
+      }
+
+      if (fitTo) {
+        // The widget sizes its card to min(content height, its window height).
+        // Measure the content the same way it does (let the content box grow
+        // for an instant, read it, put it back) and give the frame that much,
+        // capped at the screen. The widget then fills the frame exactly.
+        const card = doc.querySelector<HTMLElement>(fitTo);
+        const content = frame.dataset.measure ? doc.querySelector<HTMLElement>(frame.dataset.measure) : card;
+        if (!card || !content) return;
+
+        let observer: MutationObserver;
+        const measure = () => {
+          // Collapsing and restoring the box resets inner scroll positions, so keep them.
+          const scrolled = [...content.querySelectorAll<HTMLElement>('*')].filter((el) => el.scrollTop > 0)
+            .map((el) => [el, el.scrollTop] as const);
+          const prev = content.style.height;
+          content.style.height = 'auto';
+          const needed = content.scrollHeight;
+          content.style.height = prev;
+          for (const [el, top] of scrolled) el.scrollTop = top;
+          observer?.takeRecords(); // ignore our own measuring
+          return needed;
+        };
+        const follow = () => setH(Math.min(measure(), cap()));
+
+        let queued = false;
+        const later = () => {
+          if (queued) return;
+          queued = true;
+          requestAnimationFrame(() => { queued = false; follow(); });
+        };
+        observer = new MutationObserver(later);
+        observer.observe(card, { attributes: true, attributeFilter: ['class'], childList: true, subtree: true, characterData: true });
+        window.addEventListener('resize', later);
+        doc.fonts?.ready.then(later);
+        follow();
+        return;
+      }
+
+      // Page-height widgets: match the widget document's full height.
+      const fit = () => setH(Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight));
+      fit();
+      new ResizeObserver(fit).observe(doc.body);
+      new MutationObserver(fit).observe(doc.body, { childList: true, subtree: true, attributes: true });
+      doc.fonts?.ready.then(fit);
+    };
+    frame.addEventListener('load', watch);
+    // The widget may finish loading before this script runs.
+    if (frame.contentDocument?.readyState === 'complete') watch();
+  }
+</script>
