@@ -134,7 +134,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
   .tabbar { display: none; }
   .sheet { display: none; }
 
-  @media (max-width: 879px) {
+  @media (max-width: 1023px) {
     .site { --tab-h: calc(60px + env(safe-area-inset-bottom)); padding-bottom: var(--tab-h); }
     .topnav { display: none; }
     .bar { justify-content: center; }
@@ -241,7 +241,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
     const r = sheet.getBoundingClientRect();
     if ((e as MouseEvent).clientY < r.top) sheet.close();
   } });
-  matchMedia('(min-width: 880px)').addEventListener('change', (m) => { if (m.matches) sheet?.close(); });
+  matchMedia("(min-width: 1024px)").addEventListener('change', (m) => { if (m.matches) sheet?.close(); });
 </script>
 
 <style is:global>

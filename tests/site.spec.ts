@@ -98,7 +98,7 @@ for (const route of ROUTES) {
       test.skip(info.project.name !== 'phone-390' && info.project.name !== 'desktop-1280', 'run at one phone and one desktop size');
       await open(page, route);
       // Widget pages are checked including the widget inside the frame.
-      // NuDirectory is a separate site shown in a frame, so it's left out here.
+      // NuDirectory and Certified Lounge are separate sites shown in a frame, so they're left out here.
       const results = await new AxeBuilder({ page }).exclude('.dir-frame').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
       const serious = results.violations
         .filter((v) => v.impact === 'serious' || v.impact === 'critical')

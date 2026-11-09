@@ -10,12 +10,13 @@ export const nav = [
   { label: 'Gallery', href: '/gallery', icon: 'gallery' },
   { label: 'Cinema', href: '/cinema', icon: 'cinema' },
   { label: 'Directory', href: '/directory', icon: 'directory' },
-  { label: 'Certified', href: '/certified', icon: 'certified' },
+  { label: 'Certified', href: '/play', icon: 'certified' },
+  { label: 'Certified eras', href: '/certified', icon: 'certified' },
   { label: 'Contact', href: '/contact', icon: 'contact' },
   { label: 'Support', href: '/support', icon: 'support' },
 ];
 
-export const tabs = ['/services', '/certified', '/', '/directory'];
+export const tabs = ['/services', '/play', '/', '/directory'];
 
 export const footer = [
   { label: 'Contact', href: '/contact' },

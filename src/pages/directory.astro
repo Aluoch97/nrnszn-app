@@ -1,70 +1,10 @@
 ---
-// NuDirectory lives on its own site (directory.nrnszn.com) and has its own
-// bottom menu, so it's shown full screen here with just a slim back bar on top.
-import Base from '../layouts/Base.astro';
-import Icon from '../components/Icon.astro';
-const DIRECTORY = 'https://directory.nrnszn.com';
+// NuDirectory lives on its own site; shown full screen with a back bar.
+import AppFrame from '../components/AppFrame.astro';
 ---
-<Base
+<AppFrame
   title="NuDirectory | NuRenaissance"
   description="NuDirectory, the Nashville directory from NuRenaissance Media."
->
-  <div class="dir">
-    <header class="dir-bar">
-      <a class="dir-back" href="/" data-back>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
-        <span>Back</span>
-      </a>
-      <h1 class="dir-title">NuDirectory</h1>
-      <a class="dir-open" href={DIRECTORY} target="_blank" rel="noopener" aria-label="Open NuDirectory in a new tab">
-        <Icon name="external" size={20} />
-      </a>
-    </header>
-    <iframe class="dir-frame" src={DIRECTORY} title="NuDirectory"
-      allow="fullscreen; clipboard-write; geolocation" allowfullscreen></iframe>
-  </div>
-</Base>
-
-<script>
-  // Back returns to the page you came from in this app; otherwise it goes Home.
-  document.querySelector('[data-back]')?.addEventListener('click', (e) => {
-    const ref = document.referrer && new URL(document.referrer);
-    if (ref && ref.origin === location.origin && history.length > 1) {
-      e.preventDefault();
-      history.back();
-    }
-  });
-</script>
-
-<style>
-  .dir {
-    height: 100svh; display: flex; flex-direction: column;
-    background: #0e0b16; color: #f3f0fa;
-  }
-  .dir-bar {
-    display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center;
-    padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 4px max(8px, env(safe-area-inset-left));
-    background: #0e0b16; border-bottom: 1px solid #2a2238;
-    view-transition-name: nrn-bar;
-  }
-  .dir-back {
-    justify-self: start; display: inline-flex; align-items: center; gap: 2px;
-    min-height: 44px; padding: 0 10px 0 4px; border-radius: 10px;
-    color: var(--gold-300); text-decoration: none; font-size: 17px; font-weight: 500;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .dir-back:active { opacity: 0.6; }
-  .dir-title { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 17px; color: #f3f0fa; }
-  .dir-open {
-    justify-self: end; width: 44px; height: 44px; display: grid; place-items: center;
-    border-radius: 10px; color: #a99fc6;
-  }
-  .dir-open:hover { color: #f3f0fa; }
-  .dir :global(:focus-visible) { outline-color: var(--gold-300); }
-  .dir-frame { flex: 1; min-height: 0; width: 100%; border: 0; display: block; background: #0e0b16; }
-</style>
-
-<style is:global>
-  html:has(.dir), html:has(.dir) body { background: #0e0b16; }
-</style>
+  name="NuDirectory"
+  src="https://directory.nrnszn.com"
+/>
