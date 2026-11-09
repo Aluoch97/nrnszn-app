@@ -1,0 +1,7 @@
+/* The site's fonts for the widgets in /widgets (same files the pages use, hosted here). */
+@font-face { font-family: 'Inter Variable'; font-style: normal; font-display: swap; font-weight: 100 900; src: url(inter-latin-wght-normal.woff2) format('woff2-variations'); }
+@font-face { font-family: 'Inter Variable'; font-style: italic; font-display: swap; font-weight: 100 900; src: url(inter-latin-wght-italic.woff2) format('woff2-variations'); }
+@font-face { font-family: 'Fraunces Variable'; font-style: normal; font-display: swap; font-weight: 100 900; src: url(fraunces-latin-opsz-normal.woff2) format('woff2-variations'); }
+@font-face { font-family: 'Fraunces Variable'; font-style: italic; font-display: swap; font-weight: 100 900; src: url(fraunces-latin-opsz-italic.woff2) format('woff2-variations'); }
+@font-face { font-family: 'Big Shoulders Display'; font-style: normal; font-display: swap; font-weight: 700; src: url(big-shoulders-display-latin-700-normal.woff2) format('woff2'); }
+@font-face { font-family: 'Big Shoulders Display'; font-style: normal; font-display: swap; font-weight: 800; src: url(big-shoulders-display-latin-800-normal.woff2) format('woff2'); }

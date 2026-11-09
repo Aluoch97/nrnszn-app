@@ -49,7 +49,7 @@ const isExternal = (href: string) => /^https?:/.test(href);
       {footerLinks.map((f, i) => (
         <>
           {i > 0 && <span aria-hidden="true">·</span>}
-          <a href={f.href} target="_blank" rel="noopener">{f.label}</a>
+          <a href={f.href}>{f.label}</a>
         </>
       ))}
       <span class="copy">© {new Date().getFullYear()} NuRenaissance Media</span>
@@ -104,28 +104,27 @@ const isExternal = (href: string) => /^https?:/.test(href);
     font-weight: 700;
     font-size: clamp(30px, 9vw, 38px);
     letter-spacing: -0.01em;
-    color: var(--purple-900);
+    color: var(--gold-300);
   }
-  .tag { margin: 0; color: var(--ink-soft); font-size: 15px; }
+  .tag { margin: 0; color: #a99fc6; font-size: 15px; }
 
   .videos { display: grid; gap: var(--space-4); }
 
-  .hub { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+  .hub { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
   .hub-link {
     display: grid; justify-items: center; gap: var(--space-2);
     padding: var(--space-4) var(--space-2);
-    background: var(--paper);
-    border: 2px solid var(--purple-500);
+    background: #1a1526;
+    border: 1.5px solid #3a3150;
     border-radius: var(--radius-md);
-    color: var(--purple-900);
+    color: #f3f0fa;
     text-decoration: none;
     font-weight: 600;
     font-size: 14px;
     transition: background var(--dur-fast), color var(--dur-fast), transform var(--dur-fast) var(--ease-out);
   }
-  .hub-link:hover { background: var(--purple-500); color: var(--paper); transform: translateY(-2px); }
-  .hub-icon { display: grid; place-items: center; color: var(--purple-500); }
-  .hub-link:hover .hub-icon { color: var(--gold-300); }
+  .hub-link:hover { background: #241d34; border-color: var(--gold-500); transform: translateY(-2px); }
+  .hub-icon { display: grid; place-items: center; color: var(--gold-300); }
 
   .socials {
     list-style: none; margin: 0; padding: 0;
@@ -135,21 +134,28 @@ const isExternal = (href: string) => /^https?:/.test(href);
     width: 44px; height: 44px;
     display: grid; place-items: center;
     border-radius: var(--radius-pill);
-    background: var(--purple-900);
+    background: #1a1526;
     color: var(--gold-300);
     transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-out);
   }
-  .socials a:hover { background: var(--purple-700); transform: translateY(-2px); }
+  .socials a:hover { background: #241d34; transform: translateY(-2px); }
 
   .foot {
     display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
-    gap: var(--space-2); font-size: 13px; color: var(--ink-soft);
+    gap: var(--space-2); font-size: 13px; color: #a99fc6;
   }
-  .foot a { color: var(--purple-900); font-weight: 500; display: inline-block; padding: 12px 6px; }
+  .foot a { color: #f3f0fa; font-weight: 500; display: inline-block; padding: 12px 6px; }
   .copy { flex-basis: 100%; text-align: center; margin-top: var(--space-1); }
+
+  .portal :global(:focus-visible) { outline-color: var(--gold-300); }
 
   @keyframes rise {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: none; }
   }
+</style>
+
+<style is:global>
+  /* Portal matches the rest of the app's dark look. */
+  html:has(.portal), html:has(.portal) body { background: #0e0b16; color: #f3f0fa; }
 </style>

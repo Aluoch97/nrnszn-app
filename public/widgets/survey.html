@@ -4,9 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NuRenaissance — Feedback Survey</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Work+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/fonts/fonts.css">
 <style>
 :root{
   --bg: #14121B;
@@ -34,7 +32,7 @@ html{ font-size: clamp(12.5px, 4.44vw, 16px); }
 body{
   background: transparent; /* the frame below carries the visual background, so it reads as one rounded floating widget on whatever page it's embedded in */
   color: var(--ink);
-  font-family:'Work Sans', sans-serif;
+  font-family:'Inter Variable', sans-serif;
   min-height:100vh;
   display:flex;
   align-items:center;
@@ -115,11 +113,11 @@ body{
 /* ---- top bar: eyebrow + progress dots ---- */
 .cls-topbar{ display:flex; align-items:flex-start; justify-content:space-between; margin-bottom: 14px; }
 .cls-eyebrow-small{
-  font-family:'Space Mono', monospace; font-size: 0.625rem; letter-spacing: 3px;
+  font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.625rem; letter-spacing: 3px;
   color: var(--gold); text-transform: uppercase;
 }
 .cls-eyebrow-sub{
-  font-family:'Space Mono', monospace; font-size: 0.5938rem; letter-spacing: 1.5px;
+  font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.5938rem; letter-spacing: 1.5px;
   color: var(--ink-dim); text-transform: uppercase; margin-top: 3px;
 }
 .cls-dots{ display:flex; gap: 7px; margin-top: 3px; }
@@ -129,7 +127,7 @@ body{
 
 .cls-show-pill{
   display:flex; align-items:center; gap:6px; width: fit-content;
-  font-family:'Space Mono', monospace; font-size: 0.6562rem; letter-spacing: .4px;
+  font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.6562rem; letter-spacing: .4px;
   color: var(--ink); background: var(--card); border: 1px solid var(--card-edge);
   border-radius: 999px; padding: 6px 13px; margin-bottom: 14px;
 }
@@ -154,14 +152,14 @@ body{
 }
 .cls-type-card[data-flow="service"] .cls-type-icon{ background: linear-gradient(135deg, var(--violet), var(--magenta-btn)); }
 .cls-type-text-title{
-  display:block; font-family:'Space Mono', monospace; font-size: 0.8125rem; letter-spacing: .3px;
+  display:block; font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.8125rem; letter-spacing: .3px;
   color: var(--ink); font-weight:700; margin-bottom: 2px;
 }
 .cls-type-text-sub{ display:block; font-size: 0.7188rem; color: var(--ink-dim); line-height:1.4; }
 
 .cls-switch-link{
   display:inline-block; background:none; border:none; padding:0; margin-bottom: 12px; cursor:pointer;
-  font-family:'Space Mono', monospace; font-size: 0.6562rem; letter-spacing: .5px; text-transform: uppercase;
+  font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.6562rem; letter-spacing: .5px; text-transform: uppercase;
   color: var(--ink-dim); text-decoration: underline; text-underline-offset: 2px;
 }
 .cls-switch-link:hover{ color: var(--ink); }
@@ -179,7 +177,7 @@ body{
 }
 .cls-step-header{ margin-bottom: 12px; }
 .cls-step-title{
-  font-family:'Bebas Neue', sans-serif; font-size: clamp(23px, 7vw, 29px); letter-spacing: .5px; line-height: 1.05;
+  font-family:'Big Shoulders Display', sans-serif; text-transform: uppercase; font-weight: 800; font-size: clamp(23px, 7vw, 29px); letter-spacing: .5px; line-height: 1.05;
   font-weight: normal;
   background: linear-gradient(90deg, var(--gold), var(--magenta) 60%, var(--violet));
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
@@ -195,20 +193,20 @@ body{
 }
 .cls-card + .cls-card{ margin-top: 14px; }
 .cls-card-title{
-  font-family:'Space Mono', monospace; font-size: 0.625rem; letter-spacing: 1.5px; text-transform: uppercase;
+  font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.625rem; letter-spacing: 1.5px; text-transform: uppercase;
   color: var(--violet-text); margin-bottom: 13px;
 }
 .cls-field{ margin-bottom: 15px; }
 .cls-field:last-child{ margin-bottom: 0; }
 .cls-label{
-  font-family:'Space Mono', monospace; font-size: 0.6875rem; letter-spacing: .8px; text-transform: uppercase;
+  font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.6875rem; letter-spacing: .8px; text-transform: uppercase;
   color: var(--ink-dim); display:block; margin-bottom: 8px;
 }
 .cls-required::after{ content:" *"; color: var(--magenta); }
 
 .cls-select, .cls-input, .cls-textarea{
   width:100%; background: #14121B; border: 1px solid var(--card-edge); color: var(--ink);
-  font-family:'Work Sans', sans-serif; font-size: 0.9062rem; padding: 11px 13px; border-radius: 9px;
+  font-family:'Inter Variable', sans-serif; font-size: 0.9062rem; padding: 11px 13px; border-radius: 9px;
   outline: none; transition: border-color .15s ease, box-shadow .15s ease;
 }
 .cls-select:focus, .cls-input:focus, .cls-textarea:focus{ border-color: var(--violet); }
@@ -226,7 +224,7 @@ body{
 }
 .cls-subreveal.show{ display:block; }
 .cls-subreveal-label{
-  font-family:'Space Mono', monospace; font-size: 0.625rem; letter-spacing: .6px; text-transform: uppercase;
+  font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.625rem; letter-spacing: .6px; text-transform: uppercase;
   color: var(--violet-text); margin-bottom: 8px;
 }
 /* platform bubbles read as a smaller, secondary choice under the main chip row */
@@ -245,7 +243,7 @@ body{
 .cls-star:active{ transform: scale(0.92); }
 .cls-star:focus-visible{ box-shadow: var(--focus-ring); }
 .cls-rating-caption{
-  text-align:center; font-family:'Space Mono', monospace; font-size: 0.6875rem; color: var(--ink-dim);
+  text-align:center; font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.6875rem; color: var(--ink-dim);
   margin-top: 8px; min-height: 14px; transition: color .2s ease, transform .2s ease;
 }
 .cls-rating-caption.hype{ color: var(--gold); font-weight:700; transform: scale(1.06); }
@@ -257,7 +255,7 @@ body{
 
 .cls-chip-group{ display:flex; flex-wrap:wrap; gap: 7px; }
 .cls-chip{
-  font-family:'Space Mono', monospace; font-size: 0.7188rem; letter-spacing: .3px;
+  font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.7188rem; letter-spacing: .3px;
   background:#14121B; border:1px solid var(--card-edge); color: var(--ink-dim);
   padding: 8px 12px; border-radius: 999px; cursor:pointer; user-select:none;
   appearance: none; -webkit-appearance: none;
@@ -300,7 +298,7 @@ body{
 .cls-nav{ display:flex; gap: 9px; margin-top: 18px; }
 .cls-nav-back{
   flex: 0 0 auto; background: transparent; border: 1px solid var(--card-edge); color: var(--ink-dim);
-  border-radius: 999px; padding: 0 20px; font-family:'Space Mono', monospace; font-size: 0.75rem;
+  border-radius: 999px; padding: 0 20px; font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.75rem;
   letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: border-color .15s ease, color .15s ease;
 }
 .cls-nav-back:hover{ border-color: var(--ink-dim); color: var(--ink); }
@@ -308,7 +306,7 @@ body{
 .cls-nav-next{
   position: relative; overflow: hidden;
   flex: 1; border:none; border-radius: 999px; padding: 14px 0;
-  font-family:'Space Mono', monospace; font-size: 0.7812rem; letter-spacing: 1.5px; text-transform: uppercase;
+  font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.7812rem; letter-spacing: 1.5px; text-transform: uppercase;
   font-weight:700; color: #14121B; background: linear-gradient(90deg, var(--gold), var(--magenta-btn));
   cursor:pointer; transition: opacity .15s ease, transform .1s ease, box-shadow .15s ease;
   box-shadow: 0 8px 22px -10px rgba(232,179,61,0.55);
@@ -328,12 +326,12 @@ body{
 @media (prefers-reduced-motion: reduce){ .cls-nav-next::after{ animation: none; display:none; } }
 
 .cls-error{
-  color: var(--bad); font-family:'Space Mono', monospace; font-size: 0.6875rem; margin-top: 9px; text-align:center;
+  color: var(--bad); font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.6875rem; margin-top: 9px; text-align:center;
   min-height: 13px;
 }
 
 .cls-footer{
-  text-align:center; margin-top: 14px; font-family:'Space Mono', monospace; font-size: 0.625rem;
+  text-align:center; margin-top: 14px; font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.625rem;
   color: var(--ink-dim); opacity: .7; letter-spacing: .5px;
 }
 
@@ -367,7 +365,7 @@ body{
 @media (prefers-reduced-motion: reduce){ .cls-sparkle{ animation:none; opacity:.85; } }
 
 .cls-thanks-title{
-  font-family:'Bebas Neue', sans-serif; font-size: 1.875rem; letter-spacing: 1px; font-weight: normal;
+  font-family:'Big Shoulders Display', sans-serif; text-transform: uppercase; font-size: 1.875rem; letter-spacing: 1px; font-weight: 800;
   background: linear-gradient(90deg, var(--gold), var(--magenta) 60%, var(--violet));
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
   margin: 4px 0 14px;
@@ -377,10 +375,10 @@ body{
   padding: 16px 17px; margin: 0 0 20px; box-shadow: 0 12px 28px -16px rgba(0,0,0,0.6);
 }
 .cls-thanks-body{ color: var(--ink); font-size: 0.8438rem; line-height:1.65; margin: 0 0 10px; }
-.cls-thanks-sign{ color: var(--ink-dim); font-family:'Space Mono', monospace; font-size: 0.6875rem; letter-spacing: .4px; }
+.cls-thanks-sign{ color: var(--ink-dim); font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.6875rem; letter-spacing: .4px; }
 .cls-thanks-links{ display:flex; flex-wrap:wrap; gap: 9px; justify-content:center; }
 .cls-scene-link{
-  display:inline-block; font-family:'Space Mono', monospace; font-size: 0.6875rem; letter-spacing: .7px;
+  display:inline-block; font-family:'Inter Variable', system-ui, sans-serif; font-size: 0.6875rem; letter-spacing: .7px;
   text-transform: uppercase; color: var(--violet-text); border: 1px solid var(--violet); border-radius: 999px;
   padding: 11px 18px; text-decoration:none; transition: background .15s ease, color .15s ease;
 }
