@@ -37,5 +37,5 @@ export const socials = [
 
 export const footerLinks = [
   { label: 'Contact', href: 'https://www.nrnszn.com/contact' },
-  { label: 'Privacy', href: 'https://www.nrnszn.com/privacy' },
+  { label: 'Privacy', href: '/privacy-policy' },
 ];

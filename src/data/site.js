@@ -16,5 +16,5 @@ export const nav = [
 
 export const footer = [
   { label: 'Contact', href: `${WIX}/contact` },
-  { label: 'Privacy policy', href: `${WIX}/privacy-policy` },
+  { label: 'Privacy policy', href: '/privacy-policy' },
 ];
