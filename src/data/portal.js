@@ -36,6 +36,6 @@ export const socials = [
 ];
 
 export const footerLinks = [
-  { label: 'Contact', href: '/contact' },
+  { label: 'About', href: '/about' },
   { label: 'Privacy', href: '/privacy-policy' },
 ];
