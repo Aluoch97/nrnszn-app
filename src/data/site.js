@@ -2,6 +2,7 @@
 // Computers: every `nav` link shows in the top bar.
 // Phones: the `tabs` show as an app-style bar along the bottom, and the rest
 // of `nav` sits under the last tab, "More". Keep tabs to four (plus More).
+// Home sits in the middle as the bigger, raised button.
 
 export const nav = [
   { label: 'Home', href: '/', icon: 'home' },
@@ -14,7 +15,7 @@ export const nav = [
   { label: 'Support', href: '/support', icon: 'support' },
 ];
 
-export const tabs = ['/', '/services', '/certified', '/directory'];
+export const tabs = ['/services', '/certified', '/', '/directory'];
 
 export const footer = [
   { label: 'Contact', href: '/contact' },

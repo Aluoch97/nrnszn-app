@@ -50,8 +50,8 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
 
     <nav class="tabbar" aria-label="Tabs">
       {tabLinks.map((n) => (
-        <a class="tab" href={n.href} aria-current={isCurrent(n.href) ? 'page' : undefined}>
-          <Icon name={n.icon} size={24} /><span>{n.label}</span>
+        <a class:list={['tab', { 'tab-home': n.href === '/' }]} href={n.href} aria-current={isCurrent(n.href) ? 'page' : undefined}>
+          <Icon name={n.icon} size={n.href === '/' ? 28 : 24} /><span>{n.label}</span>
         </a>
       ))}
       <button class="tab" type="button" data-more-open aria-haspopup="dialog" aria-current={moreCurrent ? 'page' : undefined}>
@@ -164,6 +164,15 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
     .tab[aria-current='page'] { color: var(--gold-300); }
     .tab[aria-current='page'] :global(svg) { background: rgba(232, 187, 82, 0.18); }
     .tab:active :global(svg) { transform: scale(0.88); }
+    /* Home: raised gold button in the middle, a bit bigger than the rest. */
+    .tab-home { justify-content: flex-end; padding-bottom: 6px; color: var(--shell-text); }
+    .tab-home :global(svg) {
+      padding: 12px; margin-top: -22px;
+      background: var(--gold-300); color: var(--purple-900);
+      box-shadow: 0 0 0 4px #0e0b16, 0 6px 16px rgba(0, 0, 0, 0.5);
+    }
+    .tab-home[aria-current='page'] :global(svg) { background: var(--gold-300); }
+    .tab-home:not([aria-current='page']) :global(svg) { background: #2c2440; color: var(--gold-300); }
     /* Phones: the More sheet has the footer links, so no footer (like an app). */
     .site .foot { display: none; }
 

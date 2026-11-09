@@ -40,7 +40,7 @@ const press = [
     <img class="hero-bg" src="/img/home-hero.webp" srcset="/img/home-hero-640.webp 640w, /img/home-hero.webp 1280w" sizes="100vw" alt="" width="1280" height="720" fetchpriority="high" />
     <div class="hero-inner">
       <img class="hero-mascot" src="/img/mascot.webp" alt="" width="132" height="132" />
-      <h1 class="wordmark">NuRenaissance</h1>
+      <h1 class="sr-only">NuRenaissance</h1>
       <p class="tagline">An independent media company providing video, photo, livestream, and artist services.</p>
       <div class="actions">
         <a class="btn" href="/gallery"><span class="btn-label">Gallery</span><span class="btn-sub">Photos from events and interviews</span></a>
@@ -110,20 +110,6 @@ const press = [
   }
   .hero-inner { width: 100%; min-width: 0; max-width: 760px; grid-template-columns: minmax(0, 1fr); text-align: center; display: grid; justify-items: center; gap: var(--space-3); }
   .hero-mascot { width: 96px; height: 96px; filter: drop-shadow(0 0 18px rgba(155, 93, 229, 0.6)); animation: float 5s ease-in-out infinite; }
-  .wordmark {
-    margin: 0;
-    font-family: var(--font-poster);
-    font-weight: 800;
-    text-transform: uppercase;
-    font-size: clamp(40px, 15vw, 128px);
-    max-width: 100%;
-    line-height: 0.9;
-    letter-spacing: 0.01em;
-    color: #fff;
-    background: linear-gradient(180deg, #ffffff 30%, var(--gold-300) 70%, var(--gold-500));
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.6));
-  }
   .tagline {
     margin: 0; max-width: 36ch;
     font-size: clamp(16px, 4.2vw, 19px); line-height: 1.5;
