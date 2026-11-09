@@ -1,5 +1,5 @@
 ---
-import Base from '../layouts/Base.astro';
+import Site from '../layouts/Site.astro';
 import { SERVICES_API_URL } from '../data/services.js';
 
 // Ported from the Wix "Service Select Screen" embed. The pricing, booking
@@ -8,12 +8,11 @@ import { SERVICES_API_URL } from '../data/services.js';
 // Services sheet, so prices update without a rebuild.
 const SCRIPT_URL = SERVICES_API_URL;
 ---
-<Base
+<Site
   title="Services — NuRenaissance"
   description="Video production, photography, web design, livestream, graphic design and artist admin services in Nashville. Live pricing and booking."
 >
-  <main class="services-page">
-    <a class="back" href="/portal">&larr; Portal</a>
+  <div class="services-page">
 
     <noscript>
       <div class="nrn-noscript">
@@ -55,7 +54,7 @@ const SCRIPT_URL = SERVICES_API_URL;
         </div>
       </div>
     </div>
-  </main>
+  </div>
 
   <script is:inline define:vars={{ SCRIPT_URL }}>
 (function () {
@@ -1255,26 +1254,22 @@ const SCRIPT_URL = SERVICES_API_URL;
   }
 })();
   </script>
-</Base>
+</Site>
 
 <style is:global>
   /* Global (not scoped) because most of this markup is built by the script
      at runtime. Every selector is namespaced under #nrn-select / .nrn-. */
+  /* Light booking panel on the dark site shell. */
   .services-page {
-    max-width: 520px;
-    margin: 0 auto;
-    padding: max(var(--space-5), env(safe-area-inset-top)) var(--space-4) var(--space-6);
+    max-width: 560px;
+    margin: var(--space-5) auto var(--space-6);
+    padding: 0 var(--space-3);
   }
-  .services-page .back {
-    display: inline-block;
-    color: var(--purple-700);
-    font-weight: 600;
-    font-size: 15px;
-    text-decoration: none;
-    padding: 10px 0;
-    margin-bottom: var(--space-1);
+  .services-page > #nrn-select, .services-page > noscript > .nrn-noscript {
+    background: var(--paper);
+    border-radius: var(--radius-lg, 20px);
+    padding: var(--space-5) var(--space-4) var(--space-6);
   }
-  .services-page .back:hover { text-decoration: underline; }
   .nrn-noscript { background: var(--paper); border: 2px solid var(--purple-500); border-radius: var(--radius-md); padding: var(--space-5); }
   .nrn-noscript h2 { margin: 0 0 8px; font-family: var(--font-display); color: var(--purple-900); }
 

@@ -5,7 +5,7 @@ const WIX = 'https://www.nrnszn.com';
 
 export const nav = [
   { label: 'Home', href: '/' },
-  { label: 'Services', href: '/services-apply' },
+  { label: 'Services', href: '/services' },
   { label: 'Gallery', href: '/gallery' },
   { label: 'Cinema', href: '/cinema' },
   { label: 'Certified', href: '/certified' },
