@@ -24,7 +24,7 @@ The interactive side of nrnszn.com, served at **app.nrnszn.com**. It's built wit
 | `src/styles/tokens.css` | Shared colors, fonts and spacing for every route. |
 | `src/lib/api.js` | The only file that talks to Apps Script. |
 | `apps-script/` | Backend code. `Code.gs` is the Portal's; `gallery/Code.gs` is a reference copy of the NuGallery backend that's already deployed. Nothing there needs redeploying. |
-| `public/icons/` | App icons. These are placeholders, so swap in your real logo. |
+| `public/icons/` | App icons, browser-tab icons and the link-preview image, all made from the NuRenaissance logo. |
 
 ## One-time setup
 
