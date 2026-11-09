@@ -7,18 +7,21 @@
 // fitTo + maxHeight: for widgets that size their own card to the window they're
 // given (Survey). The frame follows that card, and never gets taller than
 // maxHeight or the screen, so long steps scroll inside the card.
+// fill: if the widget caps itself at a share of its window (Services uses
+// max-height: 95vh), the frame adds that headroom so the widget isn't squeezed.
 
 interface Props {
   src: string;
   title: string;
   fitTo?: string;
   measure?: string;
+  fill?: number;
   maxHeight?: number;
   maxWidth?: number;
   passParams?: boolean;
   transparent?: boolean;
 }
-const { src, title, fitTo, measure, maxHeight = 950, maxWidth = 520, passParams = false, transparent = false } = Astro.props;
+const { src, title, fitTo, measure, fill = 1, maxHeight = 950, maxWidth = 520, passParams = false, transparent = false } = Astro.props;
 ---
 <div class="wf" style={`--wf-max:${maxWidth}px`}>
   <iframe
@@ -28,6 +31,7 @@ const { src, title, fitTo, measure, maxHeight = 950, maxWidth = 520, passParams 
     data-src={src}
     data-fit-to={fitTo}
     data-measure={measure}
+    data-fill={fill}
     data-max={maxHeight}
     data-pass={passParams ? '' : undefined}
     data-transparent={transparent ? '' : undefined}
@@ -85,15 +89,19 @@ const { src, title, fitTo, measure, maxHeight = 950, maxWidth = 520, passParams 
           // Collapsing and restoring the box resets inner scroll positions, so keep them.
           const scrolled = [...content.querySelectorAll<HTMLElement>('*')].filter((el) => el.scrollTop > 0)
             .map((el) => [el, el.scrollTop] as const);
-          const prev = content.style.height;
+          const prevH = content.style.height;
+          const prevMax = content.style.maxHeight;
           content.style.height = 'auto';
+          content.style.maxHeight = 'none';
           const needed = content.scrollHeight;
-          content.style.height = prev;
+          content.style.height = prevH;
+          content.style.maxHeight = prevMax;
           for (const [el, top] of scrolled) el.scrollTop = top;
           observer?.takeRecords(); // ignore our own measuring
           return needed;
         };
-        const follow = () => setH(Math.min(measure(), cap()));
+        const fill = Number(frame.dataset.fill) || 1;
+        const follow = () => setH(Math.min(Math.ceil(measure() / fill) + 2, cap()));
 
         let queued = false;
         const later = () => {
@@ -102,7 +110,7 @@ const { src, title, fitTo, measure, maxHeight = 950, maxWidth = 520, passParams 
           requestAnimationFrame(() => { queued = false; follow(); });
         };
         observer = new MutationObserver(later);
-        observer.observe(card, { attributes: true, attributeFilter: ['class'], childList: true, subtree: true, characterData: true });
+        observer.observe(card, { attributes: true, attributeFilter: ['class', 'hidden', 'aria-pressed'], childList: true, subtree: true, characterData: true });
         window.addEventListener('resize', later);
         doc.fonts?.ready.then(later);
         follow();

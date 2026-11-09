@@ -8,6 +8,7 @@ The interactive side of nrnszn.com, served at **app.nrnszn.com**. It's built wit
 |---|---|
 | `src/pages/portal.astro` | The Portal (link-in-bio). Live at `/portal`. |
 | `src/pages/support.astro` | Payment options page, live at `/support`. |
+| `src/pages/services-apply.astro` | Services and booking page, live at `/services-apply` (same address as on Wix; `/services` redirects there). |
 | `src/pages/survey.astro` | Feedback survey page, live at `/survey`. `?type=`, `?show=`, `?lineup=` and `?service=` links still work. |
 | `public/widgets/` | Your original widget files, unchanged. To update one, replace its file here. |
 | `src/layouts/Site.astro` | Shared header menu and footer for the main site pages. |
