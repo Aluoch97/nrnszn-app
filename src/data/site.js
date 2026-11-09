@@ -1,8 +1,7 @@
 // Main-site navigation.
 // Computers: every `nav` link shows in the top bar.
-// Phones: the `tabs` show as an app-style bar along the bottom (Home in the
-// middle as the bigger, raised button), and the `more` links sit under the
-// last tab, "More".
+// Phones: the `tabs` show as an app-style bar along the bottom (Home is the
+// bigger, raised button), and the `more` links sit under the last tab, "More".
 // `also`: other pages that count as this section (highlights its tab there).
 
 export const nav = [
@@ -15,7 +14,7 @@ export const nav = [
   { label: 'Support', href: '/support', icon: 'support' },
 ];
 
-export const tabs = ['/media', '/services', '/', '/apps'];
+export const tabs = ['/', '/media', '/apps', '/services'];
 export const more = ['/events', '/contact', '/support'];
 
 // The apps on the Apps page. `inApp`: opens inside this site (full screen with a back bar).
