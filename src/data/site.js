@@ -14,7 +14,7 @@ export const nav = [
   { label: 'Support', href: '/support', icon: 'support' },
 ];
 
-export const tabs = ['/', '/services', '/gallery', '/directory'];
+export const tabs = ['/', '/services', '/certified', '/directory'];
 
 export const footer = [
   { label: 'Contact', href: '/contact' },
