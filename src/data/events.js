@@ -16,7 +16,7 @@ export async function getShowGuide() {
 // `video`: YouTube link for that show. `watch`: a page on this site to watch it.
 // `day` (YYYY-MM-DD) sorts them and lets the page skip a show-guide show that is already listed here.
 export const pastEvents = [
-  { day: '2026-10-17', video: 'https://www.youtube.com/watch?v=U2G0B46Dmz4&list=PLC76lyWua4z4', title: 'Certified Lounge · Fall 2026', when: 'Sat, Oct 17, 2026 · 7–11 PM', where: 'HOME Studios · 615 Main St G1, Nashville, TN 37206',
+  { day: '2026-10-17', video: 'https://www.youtube.com/playlist?list=PLC76lyWua4z4', title: 'Certified Lounge · Fall 2026', when: 'Sat, Oct 17, 2026 · 7–11 PM', where: 'HOME Studios · 615 Main St G1, Nashville, TN 37206',
     img: 'certified-lounge-fall-2026', alt: 'Certified Lounge Fall 2026 flyer: Shaka D. Cakes, Yonna Jones, OhMyGvddess and Nicolas Soul',
     text: 'Certified is back! Home Studios becomes a hip-hop and R&B showcase featuring Shaka D. Cakes, Yonna Jones, OhMyGvddess and Nicolas Soul, hosted by Amore Dear and Grace Oboh with sounds by Cool The Neptune. $15 at the door. 21+.' },
   { day: '2025-11-08', video: 'https://www.youtube.com/playlist?list=PLVprhlbgSo1tsyRw4KJUxmPhpQNB9BQAq', title: 'Renaissance Certified · Fall 2025', when: 'Sat, Nov 8, 2025 · 7–11 PM', where: '615 Main St G1, Nashville, TN 37206',
@@ -31,7 +31,7 @@ export const pastEvents = [
   { day: '2024-04-06', video: 'https://www.youtube.com/playlist?list=PLVprhlbgSo1txI50gMfx9J8gKshnp_2D9', title: 'Renaissance Certified · Spring 2024', when: 'Sat, Apr 6, 2024 · 7–11 PM', where: '1511 Jefferson St, Nashville, TN 37208',
     img: 'renaissance-certified-spring-2024', alt: 'Renaissance Certified Spring 2024 flyer: Yonna Jones, SeddyMac, Foundation Mecca, Nicolas Soul, JYou and Dimestate Don',
     text: 'Join us for a night of musical wonder as NuRenaissance & Samaria Kay present Renaissance Certified, featuring talent from the urban scene.' },
-  { day: '2023-11-24', title: 'Carnelian Aura · Documentary Screening', when: 'Fri, Nov 24, 2023 · Doors 7 PM, screening 8 PM', where: '1708 Gallatin Pike N, Madison, TN 37115',
+  { day: '2023-11-24', video: 'https://www.youtube.com/playlist?list=PLVprhlbgSo1uIVhS6Y4TWMezT8aSKBsy-', title: 'Carnelian Aura · Documentary Screening', when: 'Fri, Nov 24, 2023 · Doors 7 PM, screening 8 PM', where: '1708 Gallatin Pike N, Madison, TN 37115',
     img: 'carnelian-aura-screening', alt: 'Carnelian Aura documentary screening poster',
-    text: 'An in-person screening of the docuseries “Carnelian Aura.”', watch: '/cinema' },
+    text: 'An in-person screening of the docuseries “Carnelian Aura.”' },
 ];
