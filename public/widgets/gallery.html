@@ -11,21 +11,22 @@
 <link rel="stylesheet" href="/fonts/fonts.css">
 <style>
   :root{
-    --wall:#efe7d8;
-    --wall-shadow:#ddd0b6;
-    --wall-deep:#e3d5b8;
-    --frame:#1a1512;
+    /* Dark gallery wall to match the rest of the site. */
+    --wall:#0e0b16;
+    --wall-shadow:#1a1526;
+    --wall-deep:#150f22;
+    --frame:#05040a;
     --frame-walnut:#3b2a1c;
-    --mat:#faf6ec;
-    --ink:#211a12;
-    --ink-soft:#5c5041;
-    --gold:#c69a3e;
-    --gold-bright:#eccb75;
-    --gold-deep:#8a6a24;
-    --wine:#7a1b26;
-    --wine-deep:#4a0f17;
-    --rule:rgba(33,26,18,0.16);
-    --shadow:rgba(28,18,8,0.32);
+    --mat:#1a1526;
+    --ink:#f3f0fa;
+    --ink-soft:#a99fc6;
+    --gold:#e2af39;
+    --gold-bright:#f3d27e;
+    --gold-deep:#9a6f12;
+    --wine:#ff6aa6;
+    --wine-deep:#c8175f;
+    --rule:rgba(255,255,255,0.12);
+    --shadow:rgba(0,0,0,0.6);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -34,8 +35,8 @@
   }
   body{
     background:
-      radial-gradient(ellipse 1000px 420px at 50% 0%, rgba(255,255,255,0.4) 0%, transparent 60%),
-      radial-gradient(ellipse 700px 500px at 90% 85%, rgba(122,27,38,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 1000px 420px at 50% 0%, rgba(133,32,204,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 700px 500px at 90% 85%, rgba(236,42,122,0.06) 0%, transparent 60%),
       linear-gradient(180deg, var(--wall) 0%, var(--wall-deep) 100%);
     color:var(--ink);
     font-family:'Inter Variable', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -64,7 +65,7 @@
     margin:6px 0 0;
     background:linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 45%, var(--gold-deep) 100%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 1px 0 rgba(255,255,255,0.4));
+    filter:none;
     letter-spacing:0.01em;
   }
   .flourish{ display:flex; align-items:center; justify-content:center; gap:12px; margin:20px auto 0; }
@@ -117,7 +118,7 @@
   .cta-btn{
     display:inline-block; font-family:'Big Shoulders Display', sans-serif; font-weight:600;
     font-size:11.5px; letter-spacing:0.12em; text-transform:uppercase;
-    color:var(--mat); background:linear-gradient(180deg, var(--wine) 0%, var(--wine-deep) 100%);
+    color:#fff; background:var(--wine-deep);
     padding:14px 30px; border-radius:999px; text-decoration:none;
     box-shadow:0 12px 24px -10px rgba(74,15,23,0.55);
     transition:transform 0.2s ease, box-shadow 0.2s ease;
@@ -266,12 +267,12 @@
   .skeleton-door{ width:220px; text-align:center; }
   .skeleton-door .sk-frame{
     width:220px; height:300px; margin:0 auto; border-radius:110px 110px 10px 10px;
-    background:linear-gradient(100deg, var(--wall-shadow) 30%, #f3ecd9 50%, var(--wall-shadow) 70%);
+    background:linear-gradient(100deg, var(--wall-shadow) 30%, #2a2238 50%, var(--wall-shadow) 70%);
     background-size:220% 100%; animation:shimmer 1.6s ease-in-out infinite;
   }
   .skeleton-door .sk-line{
     height:10px; border-radius:6px; margin:18px auto 0; background:var(--wall-shadow);
-    background-image:linear-gradient(100deg, var(--wall-shadow) 30%, #f3ecd9 50%, var(--wall-shadow) 70%);
+    background-image:linear-gradient(100deg, var(--wall-shadow) 30%, #2a2238 50%, var(--wall-shadow) 70%);
     background-size:220% 100%; animation:shimmer 1.6s ease-in-out infinite;
   }
   .skeleton-door .sk-line.short{ width:60%; }

@@ -3,15 +3,14 @@
 // Computers: top bar with every link, footer at the bottom.
 // Phones: works like an app: slim top bar, tab bar along the bottom, and a
 // "More" sheet for the links that don't fit in the tabs.
-// `app` pages (Directory) fill the screen between the bars and hide the footer.
 // The Portal keeps its own standalone link-in-bio look and doesn't use this.
 import Base from './Base.astro';
 import Icon from '../components/Icon.astro';
 import { nav, tabs, footer } from '../data/site.js';
 import { socials } from '../data/portal.js';
 
-interface Props { title: string; description: string; app?: boolean; }
-const { title, description, app = false } = Astro.props;
+interface Props { title: string; description: string; }
+const { title, description } = Astro.props;
 const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 const isCurrent = (href: string) => href === path || (href !== '/' && path.startsWith(href + '-'));
 const tabLinks = tabs.map((t) => nav.find((n) => n.href === t)!).filter(Boolean);
@@ -19,7 +18,7 @@ const moreLinks = nav.filter((n) => !tabs.includes(n.href));
 const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) => isCurrent(f.href));
 ---
 <Base title={title} description={description}>
-  <div class:list={['site', { 'site-app': app }]}>
+  <div class="site">
     <a class="skip" href="#content">Skip to content</a>
     <header class="bar">
       <a class="brand" href="/" aria-label="NuRenaissance home">
@@ -37,19 +36,17 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
       <slot />
     </main>
 
-    {!app && (
-      <footer class="foot">
-        <ul class="socials" aria-label="Social links">
-          {socials.filter((s) => s.icon !== 'web').map((s) => (
-            <li><a href={s.href} target="_blank" rel="noopener" aria-label={s.label}><Icon name={s.icon} size={18} /></a></li>
-          ))}
-        </ul>
-        <p class="links">
-          {footer.map((f, i) => (<>{i > 0 && <span aria-hidden="true"> · </span>}<a href={f.href}>{f.label}</a></>))}
-        </p>
-        <p class="copy">© {new Date().getFullYear()} NuRenaissance Media</p>
-      </footer>
-    )}
+    <footer class="foot">
+      <ul class="socials" aria-label="Social links">
+        {socials.filter((s) => s.icon !== 'web').map((s) => (
+          <li><a href={s.href} target="_blank" rel="noopener" aria-label={s.label}><Icon name={s.icon} size={18} /></a></li>
+        ))}
+      </ul>
+      <p class="links">
+        {footer.map((f, i) => (<>{i > 0 && <span aria-hidden="true"> · </span>}<a href={f.href}>{f.label}</a></>))}
+      </p>
+      <p class="copy">© {new Date().getFullYear()} NuRenaissance Media</p>
+    </footer>
 
     <nav class="tabbar" aria-label="Tabs">
       {tabLinks.map((n) => (
@@ -206,10 +203,6 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
     .sheet-foot a { color: var(--shell-text); }
   }
   @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
-
-  /* App pages (Directory): fill the screen between the bars, no footer. */
-  .site-app { height: 100svh; min-height: 0; overflow: hidden; }
-  .site-app .content { display: flex; flex-direction: column; min-height: 0; }
 
   .content { flex: 1; width: 100%; }
 
