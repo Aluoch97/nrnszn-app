@@ -413,7 +413,7 @@
   <!-- HOME VIEW -->
   <div class="view active" id="homeView">
     <section class="hero" id="hero">
-      <img id="heroImg" src="https://static.wixstatic.com/media/355bb7_27e18e65a5874f98b0c535492fea59f0~mv2.png/v1/fill/w_962,h_542,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/Certified%20Tour%20overs_PNG.png" fetchpriority="high" alt="">
+      <img id="heroImg" src="/img/cinema/certified-tour.webp" srcset="/img/cinema/certified-tour-800.webp 800w, /img/cinema/certified-tour.webp 1600w" sizes="100vw" fetchpriority="high" alt="">
       <!-- src above is just the fallback feature's image, set statically so the
            browser can start fetching the hero (the page's LCP element) during
            HTML parsing instead of waiting on JS to run first. renderHero() below
@@ -509,7 +509,7 @@
   const FALLBACK_FEATURE = {
     title: "Certified Tour",
     synopsis: "Follow the NuRenaissance crew on the road as they bring their sound, style, and live energy from intimate venues to bigger stages across the map.",
-    image: "https://static.wixstatic.com/media/355bb7_27e18e65a5874f98b0c535492fea59f0~mv2.png/v1/fill/w_962,h_542,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/Certified%20Tour%20overs_PNG.png",
+    image: "/img/cinema/certified-tour.webp",
     youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1vgKbKRq7c3tsY-Y1tl4D3X",
     imdb: ""
     // NOTE: this generic fallback only renders if CATALOG_ENDPOINT can't be
@@ -525,14 +525,14 @@
         {
           title: "Carnelian Aura",
           synopsis: "A live show hosted by NuRenaissance in the heart of Knoxville, TN, bringing University of Tennessee students together for a night of performance, art, and culture.",
-          image: "https://static.wixstatic.com/media/355bb7_6ace616b99cb4d9381cc0d3170e1fe9c~mv2.png/v1/fill/w_214,h_322,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/CACoverYT%20(Your%20Story).png",
+          image: "/img/cinema/carnelian-aura.webp",
           youtube: "https://youtu.be/95pgWqLNJTY",
           imdb: "https://www.imdb.com/title/tt29931208"
         },
         {
           title: "\u2018...cause it feels good.\u2019",
           synopsis: "A collaborative documentary from hip-hop artists Yonna Jones and Nic\u00f3las Soul, released February 14, 2024 by NuRenaissance Media LLC and Yonna Movement Productions.",
-          image: "https://static.wixstatic.com/media/355bb7_dc1aee8b2eb143848b4a998536c103b7~mv2.png/v1/fill/w_214,h_322,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/cause%20it%20feels%20good_%20(Doc%20Intro)%20(Your%20Story).png",
+          image: "/img/cinema/cause-it-feels-good.webp",
           youtube: "https://youtu.be/dL9N8OcbXjE",
           imdb: "https://www.imdb.com/title/tt32611240/"
         }
@@ -556,49 +556,49 @@
     {
       title: "Certified Tour", sub: "Vlogumentaries",
       synopsis: "Follow the NuRenaissance crew on the road as they bring their sound, style, and live energy from intimate venues to bigger stages across the map.",
-      image: "https://static.wixstatic.com/media/355bb7_27e18e65a5874f98b0c535492fea59f0~mv2.png/v1/fill/w_962,h_542,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/Certified%20Tour%20overs_PNG.png",
+      image: "/img/cinema/certified-tour.webp",
       imdb: "",
       episodes: [{ title: "Watch Certified Tour", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1vgKbKRq7c3tsY-Y1tl4D3X", imdb: "" }]
     },
     {
       title: "Da Healerz Circle", sub: "Podcasts",
       synopsis: "Hosted by Lord Goldie and Foundation Mecca, sitting down with \u201cHealerz\u201d from all walks of life to talk through their unique journeys.",
-      image: "https://static.wixstatic.com/media/355bb7_a7b11a8bc15349f4b05dabac499c364d~mv2.jpg/v1/fill/w_220,h_220,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/IMG_0105_JPG.jpg",
+      image: "/img/cinema/da-healerz-circle.webp",
       imdb: "",
       episodes: [{ title: "Watch Da Healerz Circle", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1s-Y05sQgXSvubfSVGbV9GW", imdb: "" }]
     },
     {
       title: "Certified Lounge", sub: "Podcasts",
       synopsis: "NuRenaissance's live venue residency series \u2014 a rotating lineup across Nashville stages, captured and cut into a live EP.",
-      image: "https://static.wixstatic.com/media/355bb7_0dc7961e0e184d7db7a4f4e36d287ce3~mv2.png/v1/fill/w_229,h_220,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/1.png",
+      image: "/img/cinema/certified-lounge.webp",
       imdb: "",
       episodes: [{ title: "Watch Certified Lounge", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1vwwgh1yYmGGXdk754TJpGO", imdb: "" }]
     },
     {
       title: "It Ain't Dat Deep", sub: "Podcasts",
       synopsis: "Hosted by Jo Huxley & Nic\u00f3las Soul \u2014 less a podcast, more a running hub for the conversations between two close friends.",
-      image: "https://static.wixstatic.com/media/355bb7_113ea51f3c8444158cf38a46eff2e490~mv2.jpeg/v1/fill/w_220,h_220,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/IADD.jpeg",
+      image: "/img/cinema/it-aint-dat-deep.webp",
       imdb: "",
       episodes: [{ title: "Watch It Ain't Dat Deep", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1sSGO_TEfPEstYg5pwaEA3O", imdb: "" }]
     },
     {
       title: "NuRadio", sub: "Podcasts",
       synopsis: "PLACEHOLDER \u2014 swap in the real description. NuRenaissance's radio-style show mixing artist interviews and conversation.",
-      image: "https://static.wixstatic.com/media/355bb7_6f86aace0a7d4245bc0a5747f5790d97~mv2.png/v1/fill/w_229,h_220,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/NURADIO.png",
+      image: "/img/cinema/nuradio.webp",
       imdb: "",
       episodes: [{ title: "Watch NuRadio", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1t3IZX7ml1zaSyXzEgfcwSQ", imdb: "" }]
     },
     {
       title: "Heal Hop Sessions", sub: "Podcasts",
       synopsis: "PLACEHOLDER \u2014 swap in the real description.",
-      image: "https://static.wixstatic.com/media/355bb7_2b3383d91e044d8c8dc62018464f0e80~mv2.png",
+      image: "/img/cinema/heal-hop-sessions.webp",
       imdb: "",
       episodes: [{ title: "Watch Heal Hop Sessions", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1vA9cv3TbqqEnwfS9A71Pz9", imdb: "" }]
     },
     {
       title: "Muse Sessions", sub: "Originals",
       synopsis: "A collaboration between 9Muses and NuRenaissance \u2014 a curated Tiny Desk-style submission and artist development micro-residency.",
-      image: "https://static.wixstatic.com/media/355bb7_88a26694caac497089fb3ce5901f21bf~mv2.png",
+      image: "/img/cinema/muse-sessions.webp",
       imdb: "",
       episodes: [{ title: "Watch Muse Sessions", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1vele5uvKunOFo11Cw_NC02", imdb: "" }]
     }
@@ -793,6 +793,8 @@
   // ---------- home: hero + category tiles ----------
   function renderHero(feature){
     if(!feature) return;
+    // The phone-size srcset only fits the default feature image.
+    if ((feature.image || "") !== document.getElementById("heroImg").getAttribute("src")) document.getElementById("heroImg").removeAttribute("srcset");
     document.getElementById("heroImg").src = feature.image || "";
     document.getElementById("heroImg").alt = feature.title || "";
     document.getElementById("heroTitle").textContent = feature.title || "";
@@ -1004,11 +1006,32 @@
 
     return fetch(CATALOG_ENDPOINT)
       .then(r => r.json())
+      .then(localizeImages)
       .then(data => {
         try { sessionStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); }
         catch(err){ /* storage full or unavailable — non-fatal, just skip caching */ }
         return data;
       });
+  }
+
+  // The catalog sheet still lists images on Wix's servers. Copies of those
+  // images live in /img/cinema, so swap them in (matched by Wix image id).
+  // New images added to the sheet from anywhere else are left as they are.
+  const LOCAL_IMAGES = {
+    "27e18e65a5874f98b0c535492fea59f0": "/img/cinema/certified-tour.webp",
+    "6ace616b99cb4d9381cc0d3170e1fe9c": "/img/cinema/carnelian-aura.webp",
+    "dc1aee8b2eb143848b4a998536c103b7": "/img/cinema/cause-it-feels-good.webp",
+    "a7b11a8bc15349f4b05dabac499c364d": "/img/cinema/da-healerz-circle.webp",
+    "0dc7961e0e184d7db7a4f4e36d287ce3": "/img/cinema/certified-lounge.webp",
+    "113ea51f3c8444158cf38a46eff2e490": "/img/cinema/it-aint-dat-deep.webp",
+    "6f86aace0a7d4245bc0a5747f5790d97": "/img/cinema/nuradio.webp",
+    "2b3383d91e044d8c8dc62018464f0e80": "/img/cinema/heal-hop-sessions.webp",
+    "88a26694caac497089fb3ce5901f21bf": "/img/cinema/muse-sessions.webp"
+  };
+  function localizeImages(data){
+    const json = JSON.stringify(data).replace(/https:\/\/static\.wixstatic\.com\/media\/355bb7_([0-9a-f]{32})[^"]*/g,
+      (url, id) => LOCAL_IMAGES[id] || url);
+    return JSON.parse(json);
   }
 
   function boot(){

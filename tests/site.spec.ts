@@ -98,7 +98,8 @@ for (const route of ROUTES) {
       test.skip(info.project.name !== 'phone-390' && info.project.name !== 'desktop-1280', 'run at one phone and one desktop size');
       await open(page, route);
       // Widget pages are checked including the widget inside the frame.
-      const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+      // NuDirectory is a separate site shown in a frame, so it's left out here.
+      const results = await new AxeBuilder({ page }).exclude('.dir-frame').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
       const serious = results.violations
         .filter((v) => v.impact === 'serious' || v.impact === 'critical')
         .map((v) => `${v.id} (${v.impact}): ${v.help} — ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`);

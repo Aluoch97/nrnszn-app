@@ -1,0 +1,21 @@
+name: Backend check
+
+# Every morning, checks that each Google Apps Script backend (Services, NuCinema,
+# NuGallery, Support, Survey) and the live site answer. Read-only: it submits
+# nothing. If anything is down the run fails, and GitHub emails the repo owner.
+# Run it by hand any time from the Actions tab ("Run workflow").
+on:
+  schedule:
+    - cron: '43 13 * * *' # 7:43am Nashville in winter, 8:43am in summer (GitHub uses UTC)
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-backends.mjs

@@ -1,0 +1,54 @@
+// Daily health check for the Google Apps Script backends and the live site.
+// Read-only: it never submits forms, records payments or counts clicks.
+// Each backend address is read from the file that uses it, so this stays in
+// step if a widget is pointed at a new script.
+// Run: node scripts/check-backends.mjs   (exits 1 if anything is down)
+import { readFileSync } from 'node:fs';
+
+const fromFile = (file, name) => {
+  const text = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+  const m = text.match(new RegExp(`${name}\\s*=\\s*\\n?\\s*['"](https://script\\.google\\.com/macros/s/[^'"]+)['"]`));
+  if (!m) throw new Error(`Couldn't find ${name} in ${file}`);
+  return m[1];
+};
+const json = (test) => async (res) => test(await res.json());
+
+const checks = [
+  { name: 'Services (prices + booking)', url: fromFile('src/data/services.js', 'SERVICES_API_URL'),
+    ok: json((d) => Array.isArray(d.services) && d.services.length > 0) },
+  { name: 'NuCinema catalog', url: fromFile('public/widgets/cinema.html', 'CATALOG_ENDPOINT'),
+    ok: json((d) => Array.isArray(d.films) && d.films.length > 0) },
+  { name: 'NuGallery', url: fromFile('public/widgets/gallery.html', 'GALLERY_ENDPOINT'),
+    ok: json((d) => !d.error && Array.isArray(d.categories) && d.categories.length > 0) },
+  { name: 'Support (payment logger)', url: fromFile('public/widgets/support.html', 'SCRIPT_URL'),
+    ok: json((d) => d.status === 'ok') },
+  { name: 'Survey', url: fromFile('public/widgets/survey.html', 'APPS_SCRIPT_URL'),
+    ok: async (res) => /Feedback Survey/.test(await res.text()) },
+  { name: 'Website home', url: 'https://app.nrnszn.com/', ok: async (res) => /NuRenaissance/.test(await res.text()) },
+  { name: 'Website services page', url: 'https://app.nrnszn.com/services', ok: async (res) => /Services/.test(await res.text()) },
+];
+
+async function run(check) {
+  // Apps Script can be slow to wake up, so allow a long wait and one retry.
+  let last = '';
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(check.url, { redirect: 'follow', signal: AbortSignal.timeout(60_000) });
+      if (!res.ok) { last = `HTTP ${res.status}`; continue; }
+      if (await check.ok(res)) return { ...check, pass: true };
+      last = 'answered, but not with the expected data';
+    } catch (e) {
+      last = e.name === 'TimeoutError' ? 'no answer within 60 seconds' : e.message;
+    }
+  }
+  return { ...check, pass: false, why: last };
+}
+
+const results = await Promise.all(checks.map(run));
+for (const r of results) console.log(`${r.pass ? 'OK  ' : 'DOWN'}  ${r.name}${r.pass ? '' : ` — ${r.why}`}`);
+const down = results.filter((r) => !r.pass);
+if (down.length) {
+  console.log(`\n${down.length} of ${results.length} checks failed.`);
+  process.exit(1);
+}
+console.log(`\nAll ${results.length} checks passed.`);

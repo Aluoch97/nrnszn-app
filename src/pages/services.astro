@@ -200,7 +200,7 @@ const SCRIPT_URL = SERVICES_API_URL;
   var VIDEO_EXTRA_HOUR_RATE = 100;
   var RAISE_THE_BAR_PRICE = 100;   // one mic performance series
   var RAISE_THE_BAR_DEPOSIT = 50;  // $50 to book, remaining $50 due at the shoot
-  var PHOTOGRAPHY_EXAMPLE_URL = 'https://www.nrnszn.com/gallery';
+  var PHOTOGRAPHY_EXAMPLE_URL = '/gallery';
   var VIDEO_TYPE_EXAMPLES = {
     music: 'https://www.youtube.com/playlist?list=PLVprhlbgSo1sfS02MFZbi3t7pCJkoy9rd',
     interview: 'https://www.youtube.com/playlist?list=PLVprhlbgSo1vN-wkuvFDjabBQ85XURyTd',
@@ -870,7 +870,7 @@ const SCRIPT_URL = SERVICES_API_URL;
         '<select id="nrn-timeline" class="nrn-intake-field">' + optionsHtml(timelineOptions) + '</select>' +
         '<label class="nrn-config-label" for="nrn-intake-details" style="margin-top:14px;">📝 Anything else? (optional)</label>' +
         '<textarea id="nrn-intake-details" class="nrn-intake-field nrn-intake-textarea" placeholder="Event date, vision, specific requests...">' + escapeHtml(leadDetails) + '</textarea>' +
-        '<div class="nrn-help-text" style="margin-top:14px;">What you enter here is used to prepare your quote and coordinate your booking. See our <a class="nrn-inline-link" href="https://www.nrnszn.com/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy</a> for details.</div>' +
+        '<div class="nrn-help-text" style="margin-top:14px;">What you enter here is used to prepare your quote and coordinate your booking. See our <a class="nrn-inline-link" href="/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy</a> for details.</div>' +
         '<button id="nrn-intake-submit" type="button">Continue</button>' +
         '<div id="nrn-intake-error" role="alert"></div>' +
       '</div>';
