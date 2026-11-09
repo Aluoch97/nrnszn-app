@@ -9,18 +9,19 @@ export const nav = [
   { label: 'Home', href: '/', icon: 'home' },
   { label: 'Services', href: '/services', icon: 'services' },
   { label: 'Media', href: '/media', icon: 'media', also: ['/gallery', '/cinema'] },
-  { label: 'Certified', href: '/play', icon: 'certified' },
   { label: 'Events', href: '/events', icon: 'events' },
-  { label: 'Apps', href: '/apps', icon: 'apps', also: ['/directory'] },
+  { label: 'Apps', href: '/apps', icon: 'apps', also: ['/directory', '/play'] },
   { label: 'Contact', href: '/contact', icon: 'contact' },
   { label: 'Support', href: '/support', icon: 'support' },
 ];
 
-export const tabs = ['/media', '/services', '/', '/play'];
-export const more = ['/events', '/apps', '/contact', '/support'];
+export const tabs = ['/media', '/services', '/', '/apps'];
+export const more = ['/events', '/contact', '/support'];
 
 // The apps on the Apps page. `inApp`: opens inside this site (full screen with a back bar).
 export const apps = [
+  { name: 'Certified Lounge', href: '/play', inApp: true, img: '/img/apps/certified-lounge.webp',
+    text: 'Renaissance Certified in one app: play along at the show, the show guide, and the eras, recaps and videos.' },
   { name: 'NuDirectory', href: '/directory', inApp: true, img: '/img/apps/nudirectory.webp',
     text: 'The Nashville scene board: shows, studios, session players, promo contacts and more, all in one place.' },
   { name: 'PODI', href: 'http://podi.nrnszn.com', img: '/img/apps/podi.webp',
