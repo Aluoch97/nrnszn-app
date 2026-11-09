@@ -1,0 +1,13 @@
+---
+import Site from '../layouts/Site.astro';
+import WidgetFrame from '../components/WidgetFrame.astro';
+---
+<Site
+  title="Gallery | NuRenaissance"
+  description="NuGallery: event, interview and Renaissance Certified photography by NuRenaissance Media in Nashville."
+>
+  <h1 class="sr-only">NuGallery</h1>
+  <!-- Full-screen under the menu: the gallery scrolls inside its frame so the
+       photo viewer and video pop-up always open on screen. -->
+  <WidgetFrame src="/widgets/gallery.html" title="NuGallery photo gallery" screen />
+</Site>

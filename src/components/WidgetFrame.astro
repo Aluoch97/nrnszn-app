@@ -7,6 +7,9 @@
 // fitTo + maxHeight: for widgets that size their own card to the window they're
 // given (Survey). The frame follows that card, and never gets taller than
 // maxHeight or the screen, so long steps scroll inside the card.
+// screen: for full-page widgets with pop-up viewers pinned to the window
+// (Gallery). The frame fills the screen under the menu and the widget scrolls
+// inside it, so its pop-ups open where the visitor is looking.
 // fill: if the widget caps itself at a share of its window (Services uses
 // max-height: 95vh), the frame adds that headroom so the widget isn't squeezed.
 
@@ -19,11 +22,12 @@ interface Props {
   maxHeight?: number;
   maxWidth?: number;
   passParams?: boolean;
+  screen?: boolean;
   transparent?: boolean;
 }
-const { src, title, fitTo, measure, fill = 1, maxHeight = 950, maxWidth = 520, passParams = false, transparent = false } = Astro.props;
+const { src, title, fitTo, measure, fill = 1, maxHeight = 950, maxWidth = 520, passParams = false, transparent = false, screen = false } = Astro.props;
 ---
-<div class="wf" style={`--wf-max:${maxWidth}px`}>
+<div class:list={['wf', { 'wf-screen': screen }]} style={`--wf-max:${maxWidth}px`}>
   <iframe
     class="wf-frame"
     src={src}
@@ -35,13 +39,18 @@ const { src, title, fitTo, measure, fill = 1, maxHeight = 950, maxWidth = 520, p
     data-max={maxHeight}
     data-pass={passParams ? '' : undefined}
     data-transparent={transparent ? '' : undefined}
+    data-screen={screen ? '' : undefined}
     style="height:640px"
     loading="eager"
+    allow="fullscreen; clipboard-write; autoplay; encrypted-media; picture-in-picture"
+    allowfullscreen
   ></iframe>
 </div>
 
 <style>
   .wf { width: 100%; max-width: var(--wf-max); margin: 0 auto; padding: var(--space-4) var(--space-3) var(--space-6); }
+  .wf-screen { max-width: none; padding: 0; }
+  .wf-screen .wf-frame { border-radius: 0; }
   .wf-frame { display: block; width: 100%; border: 0; border-radius: var(--radius-md); background: transparent; color-scheme: normal; }
 </style>
 
@@ -62,6 +71,13 @@ const { src, title, fitTo, measure, fill = 1, maxHeight = 950, maxWidth = 520, p
       const px = Math.round(h) + 'px';
       if (frame.style.height !== px) frame.style.height = px;
     };
+
+    if (frame.dataset.screen !== undefined) {
+      const fill = () => setH(Math.max(420, window.innerHeight - header()));
+      fill();
+      window.addEventListener('resize', fill);
+      continue;
+    }
 
     let watched: Document | null = null;
     const watch = () => {

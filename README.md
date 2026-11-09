@@ -9,6 +9,7 @@ The interactive side of nrnszn.com, served at **app.nrnszn.com**. It's built wit
 | `src/pages/portal.astro` | The Portal (link-in-bio). Live at `/portal`. |
 | `src/pages/support.astro` | Payment options page, live at `/support`. |
 | `src/pages/services-apply.astro` | Services and booking page, live at `/services-apply` (same address as on Wix; `/services` redirects there). |
+| `src/pages/gallery.astro` | NuGallery, live at `/gallery`. Fills the screen under the menu and scrolls inside itself so the photo viewer opens where you're looking. |
 | `src/pages/survey.astro` | Feedback survey page, live at `/survey`. `?type=`, `?show=`, `?lineup=` and `?service=` links still work. |
 | `public/widgets/` | Your original widget files, unchanged. To update one, replace its file here. |
 | `src/layouts/Site.astro` | Shared header menu and footer for the main site pages. |
@@ -16,7 +17,7 @@ The interactive side of nrnszn.com, served at **app.nrnszn.com**. It's built wit
 | `src/data/portal.js` | Portal links, socials and playlists. Edit text and links here. |
 | `src/styles/tokens.css` | Shared colors, fonts and spacing for every route. |
 | `src/lib/api.js` | The only file that talks to Apps Script. |
-| `apps-script/` | Backend code to paste into Apps Script. |
+| `apps-script/` | Backend code. `Code.gs` is the Portal's; `gallery/Code.gs` is a reference copy of the NuGallery backend that's already deployed. Nothing there needs redeploying. |
 | `public/icons/` | App icons. These are placeholders, so swap in your real logo. |
 
 ## One-time setup
