@@ -7,7 +7,7 @@ export const nav = [
   { label: 'Home', href: `${WIX}/` },
   { label: 'Services', href: '/services-apply' },
   { label: 'Gallery', href: '/gallery' },
-  { label: 'Cinema', href: `${WIX}/cinema` },
+  { label: 'Cinema', href: '/cinema' },
   { label: 'Certified', href: `${WIX}/certified` },
   { label: 'Directory', href: 'https://directory.nrnszn.com' },
   { label: 'Contact', href: `${WIX}/contact` },

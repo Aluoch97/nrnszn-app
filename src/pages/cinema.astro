@@ -1,0 +1,12 @@
+---
+import Site from '../layouts/Site.astro';
+import WidgetFrame from '../components/WidgetFrame.astro';
+---
+<Site
+  title="Cinema | NuRenaissance"
+  description="NuCinema: films, documentaries, vlogumentaries and shows from NuRenaissance Media."
+>
+  <h1 class="sr-only">NuCinema</h1>
+  <!-- Full-screen under the menu, like the Gallery, so the video pop-up opens on screen. -->
+  <WidgetFrame src="/widgets/cinema.html" title="NuCinema films and shows" screen />
+</Site>

@@ -10,6 +10,7 @@ The interactive side of nrnszn.com, served at **app.nrnszn.com**. It's built wit
 | `src/pages/support.astro` | Payment options page, live at `/support`. |
 | `src/pages/services-apply.astro` | Services and booking page, live at `/services-apply` (same address as on Wix; `/services` redirects there). |
 | `src/pages/gallery.astro` | NuGallery, live at `/gallery`. Fills the screen under the menu and scrolls inside itself so the photo viewer opens where you're looking. |
+| `src/pages/cinema.astro` | NuCinema, live at `/cinema`. Full-screen under the menu, like the Gallery. |
 | `src/pages/survey.astro` | Feedback survey page, live at `/survey`. `?type=`, `?show=`, `?lineup=` and `?service=` links still work. |
 | `public/widgets/` | Your original widget files, unchanged. To update one, replace its file here. |
 | `src/layouts/Site.astro` | Shared header menu and footer for the main site pages. |

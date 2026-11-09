@@ -1,0 +1,1054 @@
+<!--
+  NuRenaissance Cinema — Feature + Films/Shows category select + episodic Shows
+  Drop this whole file into a Wix HTML embed on the Cinema page.
+
+  LIVE DATA: set CATALOG_ENDPOINT below to your Apps Script /exec URL
+  (see Code.gs) and the widget pulls whatever's "Approved" in your
+  Cinema_Catalog sheet. Leave blank to preview on the FALLBACK data below.
+
+  STRUCTURE: Home = Feature hero + two tiles (FILMS / SHOWS).
+  FILMS tile -> browse Documentaries/Originals, tap a poster -> lightbox plays inline.
+  SHOWS tile -> browse shows, tap a show -> lightbox opens playing its most
+  recent episode, with the rest of the season listed below the player —
+  tap another episode there to swap the player without leaving the lightbox.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Newsreader:ital,wght@1,500&family=Work+Sans:wght@400;500;600&display=swap">
+<title>NuCinema — NuRenaissance</title>
+<style>
+  /* Fonts are loaded via <link> above (not @import) so the browser can
+     fetch them in parallel with this stylesheet instead of blocking on it. */
+
+  :root{
+    --void:#0A0714;
+    --panel:#150C24;
+    --row:#1B1030;
+    --purple:#6C2BD9;
+    --purple-bright:#9B5DE5;
+    --purple-deep:#341563;
+    --gold:#C99A44;
+    --gold-bright:#E0B865;
+    --cream:#F1E9F7;
+    --muted:#9C8FA8;
+    --focus:#E0B865;
+    --gutter: clamp(12px, 3vw, 26px);
+    --radius: 8px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--void);}
+  body{
+    font-family:'Work Sans', sans-serif;
+    color:var(--cream);
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  a{color:inherit; text-decoration:none;}
+  button{font-family:inherit;}
+
+  .nrn-cinema{
+    position:relative;
+    width:100%;
+    max-width:1180px;
+    margin:0 auto;
+    padding-bottom:30px;
+    padding-left:env(safe-area-inset-left);
+    padding-right:env(safe-area-inset-right);
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(108,43,217,0.25), transparent 60%),
+      radial-gradient(ellipse 700px 420px at 90% 10%, rgba(201,154,68,0.10), transparent 55%),
+      var(--void);
+  }
+
+  .bulb-strip{
+    display:flex; justify-content:center; align-items:center; gap:12px;
+    padding:10px var(--gutter); background:linear-gradient(180deg, #0F0819, var(--void));
+  }
+  .bulb{
+    width:14px; height:14px; border-radius:50%;
+    background: radial-gradient(circle, rgba(201,154,68,0.95) 0%, rgba(201,154,68,0.55) 35%, rgba(201,154,68,0) 72%);
+    opacity:0.3;
+    animation:chase 2.4s infinite ease-in-out;
+    will-change:opacity;
+  }
+  @keyframes chase{
+    0%, 100%{ opacity:0.3; }
+    50%{ opacity:1; }
+  }
+
+  .cinema-header{ text-align:center; padding:14px var(--gutter) 4px; }
+  .cinema-title-row{
+    display:inline-flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap;
+  }
+  .cinema-title{
+    font-family:'Big Shoulders Display', sans-serif; font-weight:800;
+    font-size:clamp(28px, 6vw, 52px); letter-spacing:0.02em; line-height:0.95;
+    margin:0; text-transform:uppercase;
+    background:linear-gradient(180deg, var(--cream) 45%, var(--gold-bright));
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .cinema-social-links{ display:flex; align-items:center; gap:8px; }
+  .social-link{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:6px 12px; border-radius:16px; flex-shrink:0;
+    background:rgba(201,154,68,0.08); border:1px solid rgba(201,154,68,0.35);
+    color:var(--gold-bright); font-weight:600; font-size:12px; letter-spacing:0.02em;
+    transition:background .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .social-link:hover{ background:rgba(201,154,68,0.18); border-color:var(--gold-bright); transform:translateY(-1px); }
+  .social-link:focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+  .social-link svg{ width:14px; height:14px; flex-shrink:0; }
+
+  /* ---------- feature hero ---------- */
+  .hero{
+    position:relative; margin:14px auto 6px; width:100%; max-width:1100px;
+    border-radius:var(--radius); overflow:hidden; aspect-ratio:16/9; background:#000;
+    border:1px solid rgba(201,154,68,0.3); cursor:pointer;
+  }
+  .hero img{ width:100%; height:100%; object-fit:cover; display:block; filter:saturate(1.05); }
+  .hero::after{
+    content:""; position:absolute; inset:0;
+    background:linear-gradient(0deg, rgba(10,7,20,0.97) 0%, rgba(10,7,20,0.8) 32%, rgba(10,7,20,0.4) 58%, rgba(10,7,20,0.08) 85%);
+  }
+  .hero-content{ position:absolute; left:0; right:0; bottom:0; padding:5vw 5vw 5.5vw; z-index:2; }
+  .hero-kicker{
+    font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:14px;
+    letter-spacing:0.24em; color:var(--gold-bright); margin:0 0 6px;
+    text-shadow:0 1px 3px rgba(0,0,0,0.95), 0 2px 14px rgba(0,0,0,0.8);
+  }
+  .hero-title{
+    font-family:'Big Shoulders Display', sans-serif; font-weight:800;
+    font-size:clamp(19px, 4.6vw, 44px); text-transform:uppercase; line-height:1.05;
+    margin:0 0 10px; text-shadow:0 1px 4px rgba(0,0,0,0.95), 0 4px 22px rgba(0,0,0,0.8);
+  }
+  .hero-cta{
+    display:inline-flex; align-items:center; gap:10px; background:var(--purple);
+    color:var(--cream); font-weight:600; font-size:15px; padding:12px 22px; border-radius:3px;
+    border:none; cursor:pointer; transition:background 0.15s ease, transform 0.15s ease;
+  }
+  .hero-cta:hover, .hero-cta:focus-visible{ background:var(--purple-bright); transform:translateY(-1px); }
+  .hero-cta:focus-visible{ outline:3px solid var(--gold-bright); outline-offset:2px; }
+  .hero-cta svg{ width:16px; height:16px; }
+
+  /* ---------- category tiles (home) ---------- */
+  .category-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:12px;
+    width:100%; max-width:1100px; margin:14px auto 6px;
+  }
+  @media (max-width:520px){
+    .category-grid{ grid-template-columns:1fr; }
+  }
+  .category-tile{
+    position:relative; aspect-ratio:2.2/1; border-radius:var(--radius); overflow:hidden;
+    cursor:pointer; border:1px solid rgba(155,93,229,0.35);
+    background:linear-gradient(160deg, var(--purple-deep), var(--panel));
+    display:flex; align-items:flex-end; padding:18px;
+    transition:transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .category-tile img{
+    position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    opacity:0.38; filter:saturate(1.1);
+  }
+  .category-tile::after{
+    content:""; position:absolute; inset:0;
+    background:linear-gradient(0deg, rgba(10,7,20,0.92) 10%, rgba(52,21,99,0.55) 60%, rgba(108,43,217,0.25) 100%);
+  }
+  .category-tile:hover, .category-tile:focus-visible{
+    transform:translateY(-3px); border-color:var(--gold-bright);
+    box-shadow:0 16px 34px -12px rgba(108,43,217,0.55), 0 0 0 1px rgba(201,154,68,0.25);
+  }
+  .category-tile:focus-visible{ outline:none; }
+  .category-tile-content{ position:relative; z-index:2; }
+  .category-tile .cat-label{
+    font-family:'Big Shoulders Display', sans-serif; font-weight:800;
+    font-size:clamp(24px, 5.5vw, 36px); text-transform:uppercase; letter-spacing:0.02em;
+    color:var(--cream); margin:0 0 4px;
+    text-shadow:0 1px 3px rgba(0,0,0,0.95), 0 3px 16px rgba(0,0,0,0.8);
+  }
+  .category-tile .cat-count{
+    font-family:'Newsreader', serif; font-style:italic; color:var(--gold-bright); font-size:13px;
+    text-shadow:0 1px 4px rgba(0,0,0,0.9);
+  }
+
+  /* ---------- view switching ---------- */
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  .view-header{
+    display:flex; align-items:center; gap:14px; padding:12px var(--gutter) 4px;
+  }
+  .back-btn{
+    display:inline-flex; align-items:center; gap:6px; background:transparent;
+    border:1px solid rgba(201,154,68,0.4); color:var(--gold-bright); font-weight:600;
+    font-size:13px; letter-spacing:0.04em; text-transform:uppercase; padding:9px 14px;
+    border-radius:3px; cursor:pointer; min-height:40px; transition:border-color .15s, color .15s;
+  }
+  .back-btn:hover, .back-btn:focus-visible{ border-color:var(--gold-bright); color:var(--cream); background:rgba(201,154,68,0.1); }
+  .view-header h2{
+    font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:clamp(22px, 5vw, 30px);
+    text-transform:uppercase; letter-spacing:0.02em; margin:0;
+  }
+  /* focused programmatically after navigating views — give keyboard users a visible landing point */
+  .view-header h2:focus-visible{ outline:3px solid var(--focus); outline-offset:3px; border-radius:2px; }
+
+  /* ---------- rows (films / shows browse) ---------- */
+  .row-block{ margin-top:16px; }
+  .row-heading{ padding:0 var(--gutter) 12px; }
+  .row-heading .eyebrow{
+    display:block; font-family:'Newsreader', serif; font-style:italic; color:var(--muted);
+    font-size:13px; margin-bottom:1px;
+  }
+  .row-heading h3{
+    font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:21px;
+    letter-spacing:0.04em; text-transform:uppercase; margin:0;
+  }
+
+  .row-scroller{
+    display:flex; gap:14px; overflow-x:auto; padding:6px var(--gutter) 18px;
+    scroll-snap-type:x mandatory; scrollbar-width:thin; scrollbar-color:var(--purple) var(--void);
+  }
+  .row-scroller::-webkit-scrollbar{ height:6px; }
+  .row-scroller::-webkit-scrollbar-track{ background:transparent; }
+  .row-scroller::-webkit-scrollbar-thumb{ background:var(--purple); border-radius:3px; }
+
+  .poster-card{
+    position:relative; flex:0 0 auto; width:clamp(122px, 30vw, 170px); aspect-ratio:2/3;
+    border-radius:var(--radius); overflow:hidden; background:var(--row); scroll-snap-align:start;
+    cursor:pointer; border:1px solid rgba(255,255,255,0.06);
+    transition:transform 0.22s cubic-bezier(.2,.8,.3,1), box-shadow 0.22s ease, border-color 0.22s ease;
+  }
+  .poster-card img{ width:100%; height:100%; object-fit:cover; display:block; transition:filter 0.22s ease; }
+  .poster-card:hover, .poster-card:focus-visible{
+    transform:scale(1.09) translateY(-6px); z-index:5; border-color:var(--gold-bright);
+    box-shadow:0 14px 30px -8px rgba(0,0,0,0.75), 0 0 0 1px rgba(201,154,68,0.35), 0 0 22px rgba(108,43,217,0.45);
+  }
+  .poster-card:focus-visible{ outline:none; }
+  .poster-card:hover img{ filter:brightness(0.55); }
+
+  @media (hover: none){
+    .poster-overlay{ opacity:1; background:linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 40%, transparent 75%); }
+    .poster-card img{ filter:brightness(0.68); }
+    .poster-card:active{ transform:scale(0.96); border-color:var(--gold-bright); }
+    .play-chip{ display:none; }
+  }
+
+  .poster-fallback{
+    width:100%; height:100%; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:10px; padding:14px; text-align:center;
+    background:linear-gradient(160deg, var(--purple-deep), #0F0819);
+  }
+  .poster-fallback svg{ width:26px; height:26px; opacity:0.6; color:var(--gold-bright); }
+  .poster-fallback span{
+    font-family:'Big Shoulders Display', sans-serif; font-weight:600; font-size:15px;
+    text-transform:uppercase; letter-spacing:0.02em; line-height:1.1; color:var(--muted);
+  }
+
+  .poster-badge{
+    position:absolute; top:8px; left:8px; z-index:2;
+    font-family:'Big Shoulders Display', sans-serif; font-weight:700; font-size:9px;
+    letter-spacing:0.08em; padding:3px 6px; border-radius:2px; text-transform:uppercase;
+    background:rgba(10,7,20,0.85); border:1px solid var(--gold-bright); color:var(--gold-bright);
+  }
+
+  .poster-overlay{
+    position:absolute; inset:0; display:flex; flex-direction:column; justify-content:flex-end;
+    padding:10px; opacity:0; transition:opacity 0.2s ease;
+    background:linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 40%, transparent 75%);
+  }
+  .poster-card:hover .poster-overlay, .poster-card:focus-visible .poster-overlay{ opacity:1; }
+  .poster-title{
+    font-family:'Big Shoulders Display', sans-serif; font-weight:600; font-size:14px;
+    letter-spacing:0.01em; text-transform:uppercase; margin:0 0 6px; line-height:1.05;
+    text-shadow:0 1px 3px rgba(0,0,0,0.95), 0 2px 12px rgba(0,0,0,0.8);
+  }
+  .play-chip{ width:30px; height:30px; border-radius:50%; background:var(--cream); display:flex; align-items:center; justify-content:center; }
+  .play-chip svg{ width:12px; height:12px; fill:#1A0F2E; margin-left:1px; }
+
+  /* ---------- show grid (shows browse) ---------- */
+  .show-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(clamp(92px,22vw,128px), 1fr));
+    gap:10px; padding:6px var(--gutter) 18px;
+  }
+  .show-card{
+    position:relative; aspect-ratio:2/3; border-radius:var(--radius); overflow:hidden;
+    cursor:pointer; background:var(--row); border:1px solid rgba(255,255,255,0.06);
+    transition:transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .show-card img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .show-card:hover, .show-card:focus-visible{
+    transform:translateY(-4px); border-color:var(--gold-bright); z-index:2;
+    box-shadow:0 14px 28px -10px rgba(0,0,0,0.7), 0 0 22px rgba(108,43,217,0.4);
+  }
+  .show-card:focus-visible{ outline:none; }
+  .show-card-title{
+    position:absolute; left:0; right:0; bottom:0; padding:8px;
+    font-family:'Big Shoulders Display', sans-serif; font-weight:600; font-size:11px;
+    text-transform:uppercase; letter-spacing:0.01em; line-height:1.15;
+    background:linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.75) 45%, transparent 90%);
+    text-shadow:0 1px 3px rgba(0,0,0,0.95), 0 2px 10px rgba(0,0,0,0.8);
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+
+  /* ---------- episode list (inside the lightbox, for shows) ---------- */
+  .lightbox-episodes{
+    margin-top:22px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.08);
+  }
+  .lightbox-episodes-heading{
+    font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:12px;
+    letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin:0 0 10px;
+  }
+  .episode-list-inline{
+    display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto;
+  }
+  .episode-row{
+    display:flex; gap:12px; align-items:center; background:var(--row);
+    border:1px solid rgba(255,255,255,0.06); border-radius:var(--radius); padding:8px;
+    cursor:pointer; transition:border-color .15s ease, background .15s ease;
+  }
+  .episode-row:hover, .episode-row:focus-visible{ border-color:var(--gold-bright); background:#1D1130; }
+  .episode-row:focus-visible{ outline:none; }
+  .episode-row.active{ border-color:var(--gold-bright); background:#241639; }
+  .episode-row.active .episode-title{ color:var(--gold-bright); }
+  .episode-thumb{ position:relative; flex-shrink:0; width:96px; aspect-ratio:16/9; border-radius:4px; overflow:hidden; background:#000; }
+  .episode-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .episode-thumb .ep-play{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(10,7,20,0.25);
+  }
+  .episode-thumb .ep-play svg{ width:22px; height:22px; fill:var(--cream); filter:drop-shadow(0 1px 4px rgba(0,0,0,0.6)); }
+  .episode-info{ min-width:0; flex:1; }
+  .episode-title{
+    font-family:'Big Shoulders Display', sans-serif; font-weight:700; font-size:15px;
+    text-transform:uppercase; letter-spacing:0.01em; margin:0 0 3px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .episode-synopsis{
+    font-size:12.5px; color:var(--muted); line-height:1.4; margin:0;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  }
+
+  .footer-note{ text-align:center; color:var(--muted); font-size:12px; letter-spacing:0.03em; padding-top:10px; }
+
+  /* ---------- lightbox ---------- */
+  .lightbox-scrim{
+    position:fixed; inset:0; background:rgba(6,4,12,0.9);
+    -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+    display:none; align-items:center; justify-content:center; z-index:1000; padding:var(--gutter);
+  }
+  .lightbox-scrim.open{ display:flex; }
+  .lightbox{
+    width:100%; max-width:860px; max-height:92vh; overflow-y:auto;
+    background:var(--panel); border:1px solid rgba(201,154,68,0.3); border-radius:var(--radius);
+    box-shadow:0 30px 80px -20px rgba(0,0,0,0.85);
+  }
+  .lightbox-player{ position:relative; width:100%; aspect-ratio:16/9; background:#000; }
+  .lightbox-player iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .lightbox-body{ padding:clamp(16px, 5vw, 28px); }
+  .lightbox-title{
+    font-family:'Big Shoulders Display', sans-serif; font-weight:800; font-size:clamp(22px, 6vw, 28px);
+    text-transform:uppercase; letter-spacing:0.01em; margin:0 0 12px;
+  }
+  /* focused programmatically when swapping episodes (see openLightbox) so
+     screen readers announce the new "now playing" title, and so focus has
+     somewhere stable to land instead of the removed/rebuilt episode row */
+  .lightbox-title:focus-visible{ outline:3px solid var(--focus); outline-offset:4px; border-radius:2px; }
+  .lightbox-synopsis{ font-size:15px; line-height:1.55; color:#DCD1EA; margin:0 0 20px; max-width:64ch; }
+  .lightbox-links{ display:flex; flex-wrap:wrap; gap:10px; }
+  .link-btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px;
+    padding:10px 18px; border-radius:3px; font-weight:600; font-size:14px; border:1px solid transparent;
+    cursor:pointer; transition:transform 0.15s ease, background 0.15s ease;
+  }
+  .link-btn:focus-visible{ outline:3px solid var(--focus); outline-offset:2px; }
+  .link-btn svg{ width:15px; height:15px; flex-shrink:0; }
+  .link-btn.youtube{ background:var(--purple); color:var(--cream); }
+  .link-btn.youtube:hover{ background:var(--purple-bright); transform:translateY(-1px); }
+  .link-btn.imdb{ background:transparent; color:var(--cream); border-color:rgba(243,234,217,0.35); }
+  .link-btn.imdb:hover{ border-color:var(--gold-bright); color:var(--gold-bright); transform:translateY(-1px); }
+
+  .lightbox-close{
+    position:absolute; top:12px; right:12px; z-index:3; width:40px; height:40px; border-radius:50%;
+    background:rgba(10,7,20,0.75); border:1px solid rgba(243,234,217,0.3); color:var(--cream);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px; line-height:1;
+  }
+  .lightbox-close:hover, .lightbox-close:focus-visible{ background:var(--purple); border-color:var(--purple); }
+  .lightbox-wrap{ position:relative; }
+
+  @media (max-width: 420px){
+    .lightbox-links{ flex-direction:column; }
+    .link-btn{ width:100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="nrn-cinema" id="nrnCinemaRoot">
+
+  <div class="bulb-strip" id="bulbTop"></div>
+
+  <header class="cinema-header">
+    <div class="cinema-title-row">
+      <h1 class="cinema-title">NuCinema</h1>
+      <nav class="cinema-social-links" aria-label="NuRenaissance elsewhere">
+        <a class="social-link" href="https://www.youtube.com/@nrnszn" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8ZM9.6 15.5v-7l6.3 3.5-6.3 3.5Z"/></svg>
+          YouTube
+        </a>
+        <a class="social-link" href="https://www.imdb.com/list/ls547470798/" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M0 3.5h24v17H0v-17Zm3.5 3v11h2v-11h-2Zm4 0v11h2.7l.2-1.9.2 1.9H13V6.5h-1.9l-.4 5.2-.5-5.2H8.3l-.5 5.2-.4-5.2H5.5Zm10.3 0v11h3.4c1.4 0 2.3-.9 2.3-2.3v-6.4c0-1.4-.9-2.3-2.3-2.3h-3.4Zm2 1.8h1c.4 0 .7.3.7.7v6.2c0 .4-.3.7-.7.7h-1v-7.6Z"/></svg>
+          IMDb
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HOME VIEW -->
+  <div class="view active" id="homeView">
+    <section class="hero" id="hero" role="button" tabindex="0" aria-label="Open the feature">
+      <img id="heroImg" src="https://static.wixstatic.com/media/355bb7_27e18e65a5874f98b0c535492fea59f0~mv2.png/v1/fill/w_962,h_542,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/Certified%20Tour%20overs_PNG.png" fetchpriority="high" alt="">
+      <!-- src above is just the fallback feature's image, set statically so the
+           browser can start fetching the hero (the page's LCP element) during
+           HTML parsing instead of waiting on JS to run first. renderHero() below
+           overwrites it with the live Feature's image the moment data arrives. -->
+      <div class="hero-content">
+        <p class="hero-kicker">Feature</p>
+        <h2 class="hero-title" id="heroTitle"></h2>
+        <button class="hero-cta" id="heroCta" type="button">
+          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5v11l9-5.5-9-5.5z"/></svg>
+          Watch Now
+        </button>
+      </div>
+    </section>
+
+    <div class="category-grid">
+      <div class="category-tile" id="tileFilms" role="button" tabindex="0" aria-label="Browse Films">
+        <img id="tileFilmsImg" src="" alt="">
+        <div class="category-tile-content">
+          <p class="cat-label">Films</p>
+          <p class="cat-count" id="tileFilmsCount"></p>
+        </div>
+      </div>
+      <div class="category-tile" id="tileShows" role="button" tabindex="0" aria-label="Browse Shows">
+        <img id="tileShowsImg" src="" alt="">
+        <div class="category-tile-content">
+          <p class="cat-label">Shows</p>
+          <p class="cat-count" id="tileShowsCount"></p>
+        </div>
+      </div>
+    </div>
+
+    <p class="footer-note">nrnszn.com &middot; tap Films or Shows to browse</p>
+  </div>
+
+  <!-- FILMS VIEW -->
+  <div class="view" id="filmsView">
+    <div class="view-header">
+      <button class="back-btn" data-back="home">&larr; Back</button>
+      <h2 tabindex="-1">Films</h2>
+    </div>
+    <div id="filmsRows"></div>
+  </div>
+
+  <!-- SHOWS VIEW -->
+  <div class="view" id="showsView">
+    <div class="view-header">
+      <button class="back-btn" data-back="home">&larr; Back</button>
+      <h2 tabindex="-1">Shows</h2>
+    </div>
+    <div id="showsRows"></div>
+  </div>
+
+  <div class="bulb-strip" id="bulbBottom"></div>
+
+</div>
+
+<!-- LIGHTBOX (plays any single video: films or a chosen episode) -->
+<div class="lightbox-scrim" id="scrim">
+  <div class="lightbox" role="dialog" aria-modal="true" aria-labelledby="lbTitle">
+    <div class="lightbox-wrap">
+      <button class="lightbox-close" id="lbClose" aria-label="Close">&times;</button>
+      <div class="lightbox-player"><div id="lbPlayerMount"></div></div>
+    </div>
+    <div class="lightbox-body">
+      <span class="lightbox-badge" id="lbBadge" style="display:none;"></span>
+      <h3 class="lightbox-title" id="lbTitle" tabindex="-1"></h3>
+      <p class="lightbox-synopsis" id="lbSynopsis"></p>
+      <div class="lightbox-links">
+        <a class="link-btn youtube" id="lbYoutube" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8ZM9.6 15.5v-7l6.3 3.5-6.3 3.5Z"/></svg>
+          Watch on YouTube
+        </a>
+        <a class="link-btn imdb" id="lbImdb" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M0 3.5h24v17H0v-17Zm3.5 3v11h2v-11h-2Zm4 0v11h2.7l.2-1.9.2 1.9H13V6.5h-1.9l-.4 5.2-.5-5.2H8.3l-.5 5.2-.4-5.2H5.5Zm10.3 0v11h3.4c1.4 0 2.3-.9 2.3-2.3v-6.4c0-1.4-.9-2.3-2.3-2.3h-3.4Zm2 1.8h1c.4 0 .7.3.7.7v6.2c0 .4-.3.7-.7.7h-1v-7.6Z"/></svg>
+          View on IMDb
+        </a>
+      </div>
+      <div class="lightbox-episodes" id="lbEpisodes" style="display:none;">
+        <p class="lightbox-episodes-heading">Episodes</p>
+        <div class="episode-list-inline" id="lbEpisodeList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  // ============ LIVE DATA SOURCE ============
+  const CATALOG_ENDPOINT = "https://script.google.com/macros/s/AKfycbwvTktScBSsHqzk2_T1CmL1wDjEvcrye23VKbuMdiqqsp6SW5Wj7wlN06Eoje45GYgK/exec";
+
+  // ============ FALLBACK DATA (used until CATALOG_ENDPOINT responds) ============
+  const FALLBACK_FEATURE = {
+    title: "Certified Tour",
+    synopsis: "Follow the NuRenaissance crew on the road as they bring their sound, style, and live energy from intimate venues to bigger stages across the map.",
+    image: "https://static.wixstatic.com/media/355bb7_27e18e65a5874f98b0c535492fea59f0~mv2.png/v1/fill/w_962,h_542,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/Certified%20Tour%20overs_PNG.png",
+    youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1vgKbKRq7c3tsY-Y1tl4D3X",
+    imdb: ""
+    // NOTE: this generic fallback only renders if CATALOG_ENDPOINT can't be
+    // reached at all. Once the Sheet has a Certified Tour episode row with
+    // IsFeature=TRUE, the live Feature will show that episode's own title
+    // (via Code.gs's featureWithEpisodes), not the show name.
+  };
+
+  const FALLBACK_FILMS = [
+    {
+      row: "Films", sub: "Documentaries",
+      items: [
+        {
+          title: "Carnelian Aura",
+          synopsis: "A live show hosted by NuRenaissance in the heart of Knoxville, TN, bringing University of Tennessee students together for a night of performance, art, and culture.",
+          image: "https://static.wixstatic.com/media/355bb7_6ace616b99cb4d9381cc0d3170e1fe9c~mv2.png/v1/fill/w_214,h_322,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/CACoverYT%20(Your%20Story).png",
+          youtube: "https://youtu.be/95pgWqLNJTY",
+          imdb: "https://www.imdb.com/title/tt29931208"
+        },
+        {
+          title: "\u2018...cause it feels good.\u2019",
+          synopsis: "A collaborative documentary from hip-hop artists Yonna Jones and Nic\u00f3las Soul, released February 14, 2024 by NuRenaissance Media LLC and Yonna Movement Productions.",
+          image: "https://static.wixstatic.com/media/355bb7_dc1aee8b2eb143848b4a998536c103b7~mv2.png/v1/fill/w_214,h_322,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/cause%20it%20feels%20good_%20(Doc%20Intro)%20(Your%20Story).png",
+          youtube: "https://youtu.be/dL9N8OcbXjE",
+          imdb: "https://www.imdb.com/title/tt32611240/"
+        }
+      ]
+    },
+    {
+      row: "Films", sub: "Originals",
+      items: [
+        {
+          title: "BLUU",
+          synopsis: "A short film by Nic\u00f3las Soul, the second half of the REDD & bluu concept project \u2014 a coming-of-age story framed around the choice between blissful ignorance and hard truth.",
+          image: "",
+          youtube: "https://youtu.be/lk_92NWBk5U",
+          imdb: ""
+        }
+      ]
+    }
+  ];
+
+  const FALLBACK_SHOWS = [
+    {
+      title: "Certified Tour", sub: "Vlogumentaries",
+      synopsis: "Follow the NuRenaissance crew on the road as they bring their sound, style, and live energy from intimate venues to bigger stages across the map.",
+      image: "https://static.wixstatic.com/media/355bb7_27e18e65a5874f98b0c535492fea59f0~mv2.png/v1/fill/w_962,h_542,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/Certified%20Tour%20overs_PNG.png",
+      imdb: "",
+      episodes: [{ title: "Watch Certified Tour", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1vgKbKRq7c3tsY-Y1tl4D3X", imdb: "" }]
+    },
+    {
+      title: "Da Healerz Circle", sub: "Podcasts",
+      synopsis: "Hosted by Lord Goldie and Foundation Mecca, sitting down with \u201cHealerz\u201d from all walks of life to talk through their unique journeys.",
+      image: "https://static.wixstatic.com/media/355bb7_a7b11a8bc15349f4b05dabac499c364d~mv2.jpg/v1/fill/w_220,h_220,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/IMG_0105_JPG.jpg",
+      imdb: "",
+      episodes: [{ title: "Watch Da Healerz Circle", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1s-Y05sQgXSvubfSVGbV9GW", imdb: "" }]
+    },
+    {
+      title: "Certified Lounge", sub: "Podcasts",
+      synopsis: "NuRenaissance's live venue residency series \u2014 a rotating lineup across Nashville stages, captured and cut into a live EP.",
+      image: "https://static.wixstatic.com/media/355bb7_0dc7961e0e184d7db7a4f4e36d287ce3~mv2.png/v1/fill/w_229,h_220,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/1.png",
+      imdb: "",
+      episodes: [{ title: "Watch Certified Lounge", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1vwwgh1yYmGGXdk754TJpGO", imdb: "" }]
+    },
+    {
+      title: "It Ain't Dat Deep", sub: "Podcasts",
+      synopsis: "Hosted by Jo Huxley & Nic\u00f3las Soul \u2014 less a podcast, more a running hub for the conversations between two close friends.",
+      image: "https://static.wixstatic.com/media/355bb7_113ea51f3c8444158cf38a46eff2e490~mv2.jpeg/v1/fill/w_220,h_220,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/IADD.jpeg",
+      imdb: "",
+      episodes: [{ title: "Watch It Ain't Dat Deep", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1sSGO_TEfPEstYg5pwaEA3O", imdb: "" }]
+    },
+    {
+      title: "NuRadio", sub: "Podcasts",
+      synopsis: "PLACEHOLDER \u2014 swap in the real description. NuRenaissance's radio-style show mixing artist interviews and conversation.",
+      image: "https://static.wixstatic.com/media/355bb7_6f86aace0a7d4245bc0a5747f5790d97~mv2.png/v1/fill/w_229,h_220,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/NURADIO.png",
+      imdb: "",
+      episodes: [{ title: "Watch NuRadio", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1t3IZX7ml1zaSyXzEgfcwSQ", imdb: "" }]
+    },
+    {
+      title: "Heal Hop Sessions", sub: "Podcasts",
+      synopsis: "PLACEHOLDER \u2014 swap in the real description.",
+      image: "https://static.wixstatic.com/media/355bb7_2b3383d91e044d8c8dc62018464f0e80~mv2.png",
+      imdb: "",
+      episodes: [{ title: "Watch Heal Hop Sessions", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1vA9cv3TbqqEnwfS9A71Pz9", imdb: "" }]
+    },
+    {
+      title: "Muse Sessions", sub: "Originals",
+      synopsis: "A collaboration between 9Muses and NuRenaissance \u2014 a curated Tiny Desk-style submission and artist development micro-residency.",
+      image: "https://static.wixstatic.com/media/355bb7_88a26694caac497089fb3ce5901f21bf~mv2.png",
+      imdb: "",
+      episodes: [{ title: "Watch Muse Sessions", synopsis: "", image: "", youtube: "https://www.youtube.com/playlist?list=PLVprhlbgSo1vele5uvKunOFo11Cw_NC02", imdb: "" }]
+    }
+  ];
+  // ============ end fallback data ============
+
+  const filmIcon = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 4h18v2h-2v12h2v2H3v-2h2V6H3V4Zm4 2v12h10V6H7Z"/></svg>';
+  const playIcon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5-9-5.5z"/></svg>';
+  const playIconBig = '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5v11l9-5.5-9-5.5z"/></svg>';
+
+  // Catalog text (titles, synopses, category names) comes from the Google
+  // Sheet — and some of it (video titles) is pulled in automatically from
+  // YouTube by Code.gs, not typed by hand. None of it is trusted HTML, so
+  // anywhere it's interpolated into an innerHTML template it has to be
+  // escaped first, or a stray "<" or '"' in a title/synopsis could inject
+  // markup into the page. .textContent assignments elsewhere are already
+  // safe by nature and don't need this.
+  function escapeHtml(str){
+    return String(str ?? "").replace(/[&<>"']/g, ch => ({
+      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    }[ch]));
+  }
+
+  function toEmbedUrl(url){
+    if(!url) return "";
+    let m = url.match(/(?:youtu\.be\/|watch\?v=)([\w-]{6,})/);
+    if(m) return "https://www.youtube.com/embed/" + m[1] + "?autoplay=1&rel=0";
+    m = url.match(/[?&]list=([\w-]+)/);
+    if(m) return "https://www.youtube.com/embed/videoseries?list=" + m[1] + "&autoplay=1&rel=0";
+    return "";
+  }
+
+  function videoIdFor(url){
+    const m = (url||"").match(/(?:youtu\.be\/|watch\?v=)([\w-]{6,})/);
+    return m ? m[1] : null;
+  }
+
+  function posterImg(item){
+    if(item.image) return item.image;
+    const vid = videoIdFor(item.youtube);
+    return vid ? `https://img.youtube.com/vi/${vid}/hqdefault.jpg` : "";
+  }
+
+  // ---------- view router ----------
+  const views = {
+    home: document.getElementById("homeView"),
+    films: document.getElementById("filmsView"),
+    shows: document.getElementById("showsView")
+  };
+  function showView(name){
+    Object.values(views).forEach(v => v.classList.remove("active"));
+    const next = views[name];
+    next.classList.add("active");
+    window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
+    // Move focus into the new view so keyboard/screen-reader users aren't
+    // left stranded on a now-hidden button from the previous view.
+    const heading = next.querySelector("h2[tabindex]");
+    if(heading){
+      heading.focus();
+    } else {
+      next.setAttribute("tabindex","-1");
+      next.focus();
+      next.removeAttribute("tabindex");
+    }
+  }
+  document.querySelectorAll(".back-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=> showView(btn.dataset.back));
+  });
+
+  // ---------- lightbox ----------
+  const scrim = document.getElementById("scrim");
+  const lightboxPanel = document.querySelector(".lightbox");
+  const mainContent = document.getElementById("nrnCinemaRoot");
+  const lbMount = document.getElementById("lbPlayerMount");
+  const lbTitle = document.getElementById("lbTitle");
+  const lbSynopsis = document.getElementById("lbSynopsis");
+  const lbYoutube = document.getElementById("lbYoutube");
+  const lbImdb = document.getElementById("lbImdb");
+  const lbBadge = document.getElementById("lbBadge");
+  const lbEpisodesWrap = document.getElementById("lbEpisodes");
+  const lbEpisodeList = document.getElementById("lbEpisodeList");
+  const lbClose = document.getElementById("lbClose");
+  let lastFocused = null;
+
+  // Keeps Tab/Shift+Tab cycling within the open dialog instead of leaking
+  // focus out into the (visually hidden) page behind it.
+  function trapFocus(e){
+    if(e.key !== "Tab" || !scrim.classList.contains("open")) return;
+    const focusable = lightboxPanel.querySelectorAll(
+      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if(!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if(e.shiftKey && document.activeElement === first){
+      e.preventDefault(); last.focus();
+    } else if(!e.shiftKey && document.activeElement === last){
+      e.preventDefault(); first.focus();
+    }
+  }
+
+  // item = the entry currently playing. episodes = full list for a show
+  // (most recent plays by default; the rest are listed below, newest first).
+  // switching = true when swapping episodes inside an already-open lightbox.
+  function openLightbox(item, episodes, switching){
+    if(!switching) lastFocused = document.activeElement;
+
+    if(item.badge){ lbBadge.textContent = item.badge; lbBadge.style.display = "inline-block"; }
+    else { lbBadge.style.display = "none"; }
+    lbTitle.textContent = item.title;
+    lbSynopsis.textContent = item.synopsis || "";
+    lbYoutube.href = item.youtube || "#";
+    if(item.imdb){ lbImdb.href = item.imdb; lbImdb.style.display = "inline-flex"; }
+    else { lbImdb.style.display = "none"; }
+
+    const embed = toEmbedUrl(item.youtube);
+    lbMount.innerHTML = embed
+      ? `<iframe src="${escapeHtml(embed)}" title="${escapeHtml(item.title)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`
+      : "";
+
+    renderLightboxEpisodes(episodes, item);
+
+    if(switching){
+      lightboxPanel.scrollTo({ top: 0, behavior: "smooth" });
+      // The episode row that was just clicked gets destroyed and rebuilt
+      // by renderLightboxEpisodes above, so focus would otherwise silently
+      // drop to <body>. Move it to the updated title instead — a stable
+      // element that also announces what's now playing.
+      lbTitle.focus();
+    } else {
+      scrim.classList.add("open");
+      document.body.style.overflow = "hidden";
+      mainContent.setAttribute("aria-hidden", "true");
+      if("inert" in mainContent) mainContent.inert = true;
+      lbClose.focus();
+    }
+  }
+
+  // Renders the "other episodes" list under the player. Most recent episode
+  // (last item in the array) is assumed to be whatever's currently playing
+  // by default, and the list itself shows newest-first.
+  function renderLightboxEpisodes(episodes, currentItem){
+    if(!episodes || episodes.length < 2){
+      lbEpisodesWrap.style.display = "none";
+      lbEpisodeList.innerHTML = "";
+      return;
+    }
+    lbEpisodesWrap.style.display = "block";
+    lbEpisodeList.innerHTML = "";
+
+    episodes.slice().reverse().forEach(ep => {
+      const row = document.createElement("div");
+      row.className = "episode-row" + (ep === currentItem ? " active" : "");
+      row.tabIndex = 0;
+      row.setAttribute("role","button");
+      row.setAttribute("aria-label", `Play ${ep.title}`);
+      const thumb = posterImg(ep);
+      row.innerHTML = `
+        <div class="episode-thumb">
+          <img src="${escapeHtml(thumb)}" alt="" loading="lazy">
+          <div class="ep-play">${playIconBig}</div>
+        </div>
+        <div class="episode-info">
+          <p class="episode-title">${escapeHtml(ep.title)}</p>
+          <p class="episode-synopsis">${escapeHtml(ep.synopsis || "")}</p>
+        </div>
+      `;
+      const fire = () => openLightbox(ep, episodes, true);
+      row.addEventListener("click", fire);
+      row.addEventListener("keydown", (e)=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); fire(); } });
+      lbEpisodeList.appendChild(row);
+    });
+  }
+
+  function closeLightbox(){
+    scrim.classList.remove("open");
+    document.body.style.overflow = "";
+    lbMount.innerHTML = "";
+    mainContent.removeAttribute("aria-hidden");
+    if("inert" in mainContent) mainContent.inert = false;
+    if(lastFocused) lastFocused.focus();
+  }
+
+  lbClose.addEventListener("click", closeLightbox);
+  scrim.addEventListener("click", (e)=>{ if(e.target === scrim) closeLightbox(); });
+  document.addEventListener("keydown", (e)=>{
+    if(!scrim.classList.contains("open")) return;
+    if(e.key === "Escape") closeLightbox();
+    else trapFocus(e);
+  });
+
+  // ---------- home: hero + category tiles ----------
+  function renderHero(feature){
+    if(!feature) return;
+    document.getElementById("heroImg").src = feature.image || "";
+    document.getElementById("heroImg").alt = feature.title || "";
+    document.getElementById("heroTitle").textContent = feature.title || "";
+    const hero = document.getElementById("hero");
+    const fireHero = () => openLightbox(feature, feature.episodes);
+    document.getElementById("heroCta").onclick = (e)=>{ e.stopPropagation(); fireHero(); };
+    hero.onclick = fireHero;
+    hero.onkeydown = (e)=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); fireHero(); } };
+  }
+
+  function renderCategoryTiles(films, shows){
+    const filmCount = films.reduce((n,s)=> n + s.items.length, 0);
+    const showCount = shows.length;
+
+    const filmImg = films.length && films[0].items.length ? posterImg(films[0].items[0]) : "";
+    const showImg = shows.length ? posterImg(shows[0]) : "";
+
+    document.getElementById("tileFilmsImg").src = filmImg;
+    document.getElementById("tileShowsImg").src = showImg;
+    document.getElementById("tileFilmsCount").textContent = filmCount + " title" + (filmCount===1?"":"s");
+    document.getElementById("tileShowsCount").textContent = showCount + " show" + (showCount===1?"":"s");
+
+    const tileFilms = document.getElementById("tileFilms");
+    const tileShows = document.getElementById("tileShows");
+    const openFilms = ()=> showView("films");
+    const openShows = ()=> showView("shows");
+    tileFilms.onclick = openFilms;
+    tileFilms.onkeydown = (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openFilms(); } };
+    tileShows.onclick = openShows;
+    tileShows.onkeydown = (e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openShows(); } };
+  }
+
+  // ---------- films view ----------
+  function renderFilmsView(films){
+    const rowsEl = document.getElementById("filmsRows");
+    rowsEl.innerHTML = "";
+
+    films.forEach(section => {
+      if(!section.items || !section.items.length) return;
+
+      const block = document.createElement("div");
+      block.className = "row-block";
+
+      const heading = document.createElement("div");
+      heading.className = "row-heading";
+      heading.innerHTML = `<span class="eyebrow">Films</span><h3>${escapeHtml(section.sub)}</h3>`;
+      block.appendChild(heading);
+
+      const scroller = document.createElement("div");
+      scroller.className = "row-scroller";
+
+      section.items.forEach(item => {
+        const card = document.createElement("div");
+        card.className = "poster-card";
+        card.tabIndex = 0;
+        card.setAttribute("role","button");
+        card.setAttribute("aria-label", `Watch ${item.title}`);
+
+        const img = posterImg(item);
+        const art = img
+          ? `<img src="${escapeHtml(img)}" alt="${escapeHtml(item.title)}" loading="lazy">`
+          : `<div class="poster-fallback">${filmIcon}<span>${escapeHtml(item.title)}</span></div>`;
+        const badge = item.badge ? `<span class="poster-badge">${escapeHtml(item.badge)}</span>` : "";
+
+        card.innerHTML = `
+          ${badge}
+          ${art}
+          <div class="poster-overlay">
+            <p class="poster-title">${escapeHtml(item.title)}</p>
+            <div class="play-chip">${playIcon}</div>
+          </div>
+        `;
+
+        const fire = () => openLightbox(item);
+        card.addEventListener("click", fire);
+        card.addEventListener("keydown", (e)=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); fire(); } });
+
+        scroller.appendChild(card);
+      });
+
+      block.appendChild(scroller);
+      rowsEl.appendChild(block);
+    });
+  }
+
+  // ---------- shows view ----------
+  function renderShowsView(shows){
+    const rowsEl = document.getElementById("showsRows");
+    rowsEl.innerHTML = "";
+
+    // group by sub, same visual pattern as films
+    const bySub = {};
+    const order = [];
+    shows.forEach(s => {
+      const sub = s.sub || "Shows";
+      if(!bySub[sub]){ bySub[sub] = []; order.push(sub); }
+      bySub[sub].push(s);
+    });
+
+    order.forEach(sub => {
+      const block = document.createElement("div");
+      block.className = "row-block";
+
+      const heading = document.createElement("div");
+      heading.className = "row-heading";
+      heading.innerHTML = `<span class="eyebrow">Shows</span><h3>${escapeHtml(sub)}</h3>`;
+      block.appendChild(heading);
+
+      const grid = document.createElement("div");
+      grid.className = "show-grid";
+
+      // "Vlogumentaries" is browsed like Films — every episode gets its own
+      // card side by side, instead of nesting them behind one show tile.
+      if(sub === "Vlogumentaries"){
+        bySub[sub].forEach(show => {
+          (show.episodes || []).forEach(ep => {
+            const card = document.createElement("div");
+            card.className = "show-card";
+            card.tabIndex = 0;
+            card.setAttribute("role","button");
+            card.setAttribute("aria-label", `Play ${ep.title}`);
+            const thumb = posterImg(ep) || posterImg(show);
+            card.innerHTML = `
+              <img src="${escapeHtml(thumb)}" alt="${escapeHtml(ep.title)}" loading="lazy">
+              <div class="show-card-title">${escapeHtml(ep.title)}</div>
+            `;
+            const fire = () => openLightbox(ep, show.episodes);
+            card.addEventListener("click", fire);
+            card.addEventListener("keydown", (e)=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); fire(); } });
+            grid.appendChild(card);
+          });
+        });
+      } else {
+        bySub[sub].forEach(show => {
+          const card = document.createElement("div");
+          card.className = "show-card";
+          card.tabIndex = 0;
+          card.setAttribute("role","button");
+          card.setAttribute("aria-label", `Open ${show.title}`);
+          card.innerHTML = `
+            <img src="${escapeHtml(posterImg(show))}" alt="${escapeHtml(show.title)}" loading="lazy">
+            <div class="show-card-title">${escapeHtml(show.title)}</div>
+          `;
+          const fire = () => openShow(show);
+          card.addEventListener("click", fire);
+          card.addEventListener("keydown", (e)=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); fire(); } });
+          grid.appendChild(card);
+        });
+      }
+
+      block.appendChild(grid);
+      rowsEl.appendChild(block);
+    });
+  }
+
+  // ---------- opening a show: plays the most recent episode in the
+  // lightbox immediately, with the rest of the season listed below it ----------
+  function openShow(show){
+    const episodes = show.episodes || [];
+    // most recent = last entry in the array (see Code.gs import order)
+    const current = episodes.length
+      ? episodes[episodes.length - 1]
+      : { title: show.title, synopsis: show.synopsis, image: show.image, youtube: "", imdb: show.imdb };
+    openLightbox(current, episodes);
+  }
+
+  // ---------- marquee bulbs ----------
+  // Skips the DOM rebuild entirely when the target bulb count hasn't
+  // changed since the last render — avoids needless reflow work on every
+  // resize tick (window can fire many resize events in quick succession).
+  function renderBulbs(){
+    [document.getElementById("bulbTop"), document.getElementById("bulbBottom")].forEach(strip=>{
+      const spacing = 26; // 14px bulb + 12px flex gap
+      const count = Math.max(10, Math.min(32, Math.round(strip.clientWidth / spacing)));
+      if(strip.childElementCount === count) return;
+      strip.innerHTML = "";
+      for(let i=0;i<count;i++){
+        const b = document.createElement("div");
+        b.className = "bulb";
+        b.style.animationDelay = (i * (2.4 / count)).toFixed(2) + "s";
+        strip.appendChild(b);
+      }
+    });
+  }
+
+  // ---------- boot ----------
+  function renderAll(feature, films, shows){
+    renderHero(feature || FALLBACK_FEATURE);
+    renderCategoryTiles(films, shows);
+    renderFilmsView(films);
+    renderShowsView(shows);
+  }
+
+  // Caches the catalog response in sessionStorage for a few minutes so
+  // navigating around the site (or reloading) doesn't re-hit the Apps
+  // Script endpoint every time — Apps Script web apps have execution
+  // quotas, and the catalog rarely changes minute to minute anyway.
+  const CATALOG_CACHE_KEY = "nrnCinemaCatalogCache";
+  const CATALOG_CACHE_TTL_MS = 10 * 60 * 1000;
+
+  function fetchCatalog(){
+    try {
+      const cached = sessionStorage.getItem(CATALOG_CACHE_KEY);
+      if(cached){
+        const parsed = JSON.parse(cached);
+        if(Date.now() - parsed.ts < CATALOG_CACHE_TTL_MS) return Promise.resolve(parsed.data);
+      }
+    } catch(err){ /* sessionStorage unavailable (private browsing, etc.) — fall through to a live fetch */ }
+
+    return fetch(CATALOG_ENDPOINT)
+      .then(r => r.json())
+      .then(data => {
+        try { sessionStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); }
+        catch(err){ /* storage full or unavailable — non-fatal, just skip caching */ }
+        return data;
+      });
+  }
+
+  function boot(){
+    // Render immediately from fallback data so the page is never blank
+    // while the network call is in flight. An Apps Script cold start can
+    // take several seconds — on mobile, that used to mean nothing but the
+    // bulb marquee was visible until the fetch resolved. Live data (if the
+    // endpoint responds) now swaps in on top a moment later instead.
+    renderAll(FALLBACK_FEATURE, FALLBACK_FILMS, FALLBACK_SHOWS);
+    renderBulbs();
+
+    if(CATALOG_ENDPOINT){
+      fetchCatalog()
+        .then(data => {
+          const films = (data.films && data.films.length) ? data.films : FALLBACK_FILMS;
+          const shows = (data.shows && data.shows.length) ? data.shows : FALLBACK_SHOWS;
+          renderAll(data.feature, films, shows);
+        })
+        .catch(err => {
+          // Fallback content is already on screen, so this doesn't block
+          // anything — but it's logged so a silent Apps Script/network
+          // failure shows up in the browser console instead of just
+          // quietly serving stale fallback data indefinitely.
+          console.error("NuCinema: catalog fetch failed, showing fallback data.", err);
+        });
+    }
+  }
+
+  boot();
+
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderBulbs, 150);
+  });
+
+})();
+</script>
+
+</body>
+</html>
