@@ -1,13 +1,43 @@
 ---
 // Home: mirrors the NuPortal page from the Wix site. The archway video plays
 // behind the welcome, then the latest interview and music video (from the
-// same playlists and backend as /portal), then the main links.
+// same playlists and backend as /portal), the main links, and press.
 import Site from '../layouts/Site.astro';
 import VideoCard from '../components/VideoCard.astro';
 import { playlists, playlistUrl } from '../data/portal.js';
 import { getLatestVideos, API_URL } from '../lib/api.js';
 
 const latest = await getLatestVideos();
+const press = [
+  {
+    title: 'NuRenaissance – REDD & bluu',
+    excerpt: 'Featuring impeccable bars, breathless in some cases, spoken-word style in others, the album manages to be artistically free yet focused.',
+    source: 'Stereo Stickman · Rebecca Cullen',
+    href: 'https://stereostickman.com/music/nurenaissance-redd-bluu/',
+    img: '/img/press-redd-bluu.webp',
+  },
+  {
+    title: 'NuRenaissance – REDD & bluu',
+    excerpt: 'Most artists strive to tell a story with their work, but the collective that is NuRenaissance has taken it to the next level with their latest release.',
+    source: 'The Ark of Music',
+    href: 'https://thearkofmusic.com/nurenaissance-redd-bluu/',
+    img: '/img/press-redd-bluu.webp',
+  },
+  {
+    title: 'Decide to go with REDD or bluu in the NuRenaissance',
+    excerpt: 'For their new project REDD & bluu, the beliefs and thoughts of NuRenaissance are laid out there for all to take in within the music.',
+    source: 'Indie Band Guru · Keith Pro · Aug 4, 2020',
+    href: 'https://indiebandguru.com/nurenaissance-redd-bluu/',
+    img: '/img/press-redd-bluu.webp',
+  },
+  {
+    title: "PHOTOS: NuRenaissance Media's Certified Lounge Podcast",
+    excerpt: 'Inspired performances and insightful, forward-thinking conversations are on their way to you!',
+    source: 'Underground Music Collective · Gerard Longo',
+    href: 'https://umcworldwide.com/author/gerardlongo/',
+    img: '/img/press-umc.webp',
+  },
+];
 const links = [
   { label: 'I have a service request', href: '/services' },
   { label: 'Find open mics & shows in Nashville', href: '/directory' },
@@ -26,7 +56,7 @@ const links = [
     </video>
     <div class="hero-inner">
       <img class="hero-mascot" src="/img/mascot.webp" alt="" width="132" height="132" />
-      <h1 class="hero-title">NuPortal</h1>
+      <h1 class="sr-only">NuRenaissance</h1>
       <p class="hero-text">Welcome to the NuRenaissance. Stream the newest visuals, experience Renaissance Certified, and book your next creative session with us.</p>
     </div>
   </section>
@@ -49,6 +79,24 @@ const links = [
       <h2 id="links-h" class="band-title">Links</h2>
       <ul class="links">
         {links.map((l) => (<li><a class="link" href={l.href}>{l.label}<span aria-hidden="true">→</span></a></li>))}
+      </ul>
+    </section>
+
+    <section aria-labelledby="press-h">
+      <h2 id="press-h" class="band-title">Press</h2>
+      <ul class="press">
+        {press.map((p) => (
+          <li>
+            <a class="press-card" href={p.href} target="_blank" rel="noopener">
+              <img src={p.img} alt="" width="320" height="160" loading="lazy" />
+              <span class="press-body">
+                <span class="press-title">{p.title}</span>
+                <span class="press-excerpt">{p.excerpt}</span>
+                <span class="press-source">{p.source} <span aria-hidden="true">↗</span></span>
+              </span>
+            </a>
+          </li>
+        ))}
       </ul>
     </section>
   </div>
@@ -107,11 +155,6 @@ const links = [
   }
   .hero-inner { width: 100%; max-width: 640px; display: grid; justify-items: center; gap: var(--space-3); text-align: center; }
   .hero-mascot { width: 96px; height: 96px; filter: drop-shadow(0 0 18px rgba(155, 93, 229, 0.6)); animation: float 5s ease-in-out infinite; }
-  .hero-title {
-    margin: 0; font-family: var(--font-poster); font-weight: 800; text-transform: uppercase;
-    font-size: clamp(48px, 16vw, 104px); line-height: 0.9; letter-spacing: 0.04em;
-    color: var(--gold-300); text-shadow: 0 4px 24px rgba(0, 0, 0, 0.7);
-  }
   .hero-text {
     margin: 0; max-width: 36ch; font-size: clamp(16px, 4.2vw, 19px); line-height: 1.5;
     color: #f3f0fa; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.9);
@@ -143,6 +186,24 @@ const links = [
   }
   .link:hover { background: #ffe08a; transform: translateY(-2px); }
   .link span { font-size: 22px; }
+
+  .press { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+  @media (min-width: 720px) { .press { grid-template-columns: 1fr 1fr; } }
+  .press-card {
+    display: grid; grid-template-columns: 112px 1fr; gap: var(--space-3); align-items: start;
+    padding: var(--space-3); border-radius: var(--radius-md); text-decoration: none;
+    background: #f7f4ee; color: #1a1220;
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .press-card:hover { transform: translateY(-2px); }
+  .press-card img { width: 112px; height: 84px; object-fit: cover; border-radius: 8px; }
+  .press-body { display: grid; gap: 4px; min-width: 0; }
+  .press-title { font-weight: 600; font-size: 15px; line-height: 1.3; }
+  .press-excerpt {
+    font-size: 13px; line-height: 1.45; color: #4a3d52;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .press-source { font-size: 12px; color: #6b5d78; }
 
   @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 </style>
