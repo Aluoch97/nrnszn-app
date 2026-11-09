@@ -1,0 +1,53 @@
+---
+// Apps: NuRenaissance's own apps (moved here from the Wix /apps page).
+import Site from '../layouts/Site.astro';
+import Icon from '../components/Icon.astro';
+import { apps } from '../data/site.js';
+---
+<Site
+  title="Apps | NuRenaissance"
+  description="Apps from NuRenaissance Media: NuDirectory, the Nashville scene board; PODI, browser-based multi-camera editing; and Soul Vault, Nicólas Soul's music archive."
+>
+  <div class="hub">
+    <h1 class="hub-title">Apps</h1>
+    <ul class="apps">
+      {apps.map((a) => (
+        <li class="app">
+          <img src={a.img} alt="" width="160" height="160" loading="lazy" />
+          <div class="app-body">
+            <h2 class="app-name">{a.name}</h2>
+            <p class="app-text">{a.text}</p>
+            <a class="app-open" href={a.href} {...(a.inApp ? {} : { target: '_blank', rel: 'noopener' })}>
+              Open {a.name}{!a.inApp && <Icon name="external" size={16} />}
+            </a>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+</Site>
+
+<style>
+  .hub { max-width: 880px; margin: 0 auto; padding: var(--space-6) var(--space-4); }
+  .hub-title {
+    margin: 0 0 var(--space-4);
+    font-family: var(--font-poster); font-weight: 800; text-transform: uppercase;
+    font-size: clamp(30px, 8vw, 44px); letter-spacing: 0.03em; line-height: 1; color: var(--pink-300);
+  }
+  .apps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+  .app {
+    display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--space-4); align-items: start;
+    padding: var(--space-4); border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238;
+  }
+  @media (min-width: 720px) { .app { grid-template-columns: 140px minmax(0, 1fr); } }
+  .app img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 18px; }
+  .app-body { min-width: 0; display: grid; gap: var(--space-2); justify-items: start; }
+  .app-name { margin: 0; font-family: var(--font-poster); font-weight: 800; font-size: 26px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; color: var(--gold-300); }
+  .app-text { margin: 0; font-size: 15px; line-height: 1.5; color: #c9c0de; }
+  .app-open {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 18px; margin-top: var(--space-1);
+    border-radius: var(--radius-pill); background: var(--gold-300); color: var(--purple-900);
+    font-weight: 700; font-size: 15px; text-decoration: none;
+  }
+  .app-open:hover { background: #ffe08a; }
+</style>

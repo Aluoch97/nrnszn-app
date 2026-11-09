@@ -1,21 +1,32 @@
 // Main-site navigation.
 // Computers: every `nav` link shows in the top bar.
-// Phones: the `tabs` show as an app-style bar along the bottom, and the rest
-// of `nav` sits under the last tab, "More". Keep tabs to four (plus More).
-// Home sits in the middle as the bigger, raised button.
+// Phones: the `tabs` show as an app-style bar along the bottom (Home in the
+// middle as the bigger, raised button), and the `more` links sit under the
+// last tab, "More".
+// `also`: other pages that count as this section (highlights its tab there).
 
 export const nav = [
   { label: 'Home', href: '/', icon: 'home' },
   { label: 'Services', href: '/services', icon: 'services' },
-  { label: 'Gallery', href: '/gallery', icon: 'gallery' },
-  { label: 'Cinema', href: '/cinema', icon: 'cinema' },
-  { label: 'Directory', href: '/directory', icon: 'directory' },
+  { label: 'Media', href: '/media', icon: 'media', also: ['/gallery', '/cinema'] },
   { label: 'Certified', href: '/play', icon: 'certified' },
+  { label: 'Apps', href: '/apps', icon: 'apps', also: ['/directory'] },
   { label: 'Contact', href: '/contact', icon: 'contact' },
   { label: 'Support', href: '/support', icon: 'support' },
 ];
 
-export const tabs = ['/services', '/play', '/', '/directory'];
+export const tabs = ['/media', '/services', '/', '/play'];
+export const more = ['/apps', '/contact', '/support'];
+
+// The apps on the Apps page. `inApp`: opens inside this site (full screen with a back bar).
+export const apps = [
+  { name: 'NuDirectory', href: '/directory', inApp: true, img: '/img/apps/nudirectory.webp',
+    text: 'The Nashville scene board: shows, studios, session players, promo contacts and more, all in one place.' },
+  { name: 'PODI', href: 'http://podi.nrnszn.com', img: '/img/apps/podi.webp',
+    text: 'A streamlined, browser-based media workflow tool that makes multi-camera editing simple, without heavy desktop software.' },
+  { name: 'Soul Vault', href: 'https://script.google.com/macros/s/AKfycbxSXeD5uM1eP7eYR1LVzhxRfa0nx1f_DbsGHdlJeL2YfjK_8JPuurNhGAJ1W5UwwNaW/exec?s=572e3302d272', img: '/img/apps/soul-vault.webp',
+    text: 'A direct-to-fan streaming space and living archive for the music of Nicólas Soul: full projects, unreleased cuts, alternate mixes, time-synced lyrics, videos and behind-the-scenes stories. Ad-free.' },
+];
 
 export const footer = [
   { label: 'Contact', href: '/contact' },

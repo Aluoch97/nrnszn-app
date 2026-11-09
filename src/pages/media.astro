@@ -1,0 +1,53 @@
+---
+// Media: the hub for NuGallery (photos) and NuCinema (shows and films). The Media tab lands here.
+import Site from '../layouts/Site.astro';
+const items = [
+  { name: 'NuGallery', href: '/gallery', img: '/img/home-hero-640.webp', w: 640, h: 360,
+    text: 'Photos from events, showcases and interviews, shot by the NuRenaissance team.' },
+  { name: 'NuCinema', href: '/cinema', img: '/img/cinema/certified-tour-800.webp', w: 800, h: 450,
+    text: 'Watch NuRenaissance shows, documentaries and vlogumentaries.' },
+];
+---
+<Site
+  title="Media | NuRenaissance"
+  description="NuRenaissance media: NuGallery photos and NuCinema shows and films from Nashville."
+>
+  <div class="hub">
+    <h1 class="hub-title">Media</h1>
+    <ul class="cards">
+      {items.map((m) => (
+        <li>
+          <a class="card" href={m.href}>
+            <img src={m.img} alt="" width={m.w} height={m.h} loading="lazy" />
+            <span class="card-body">
+              <span class="card-name">{m.name}</span>
+              <span class="card-text">{m.text}</span>
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</Site>
+
+<style>
+  .hub { max-width: 880px; margin: 0 auto; padding: var(--space-6) var(--space-4); }
+  .hub-title {
+    margin: 0 0 var(--space-4);
+    font-family: var(--font-poster); font-weight: 800; text-transform: uppercase;
+    font-size: clamp(30px, 8vw, 44px); letter-spacing: 0.03em; line-height: 1; color: var(--pink-300);
+  }
+  .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+  @media (min-width: 720px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .card {
+    display: grid; overflow: hidden; height: 100%;
+    border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238;
+    color: #f3f0fa; text-decoration: none;
+    transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast);
+  }
+  .card:hover { transform: translateY(-3px); border-color: var(--gold-500); }
+  .card img { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
+  .card-body { display: grid; gap: 6px; padding: var(--space-4); }
+  .card-name { font-family: var(--font-poster); font-weight: 800; font-size: 26px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; color: var(--gold-300); }
+  .card-text { font-size: 15px; line-height: 1.5; color: #c9c0de; }
+</style>
