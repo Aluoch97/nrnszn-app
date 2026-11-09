@@ -1,4 +1,4 @@
-// Daily health check for the Google Apps Script backends and the live site.
+// Daily health check for the Google Apps Script backends, their Cloudflare cached copies, and the live site.
 // Read-only: it never submits forms, records payments or counts clicks.
 // Each backend address is read from the file that uses it, so this stays in
 // step if a widget is pointed at a new script.
@@ -25,6 +25,10 @@ const checks = [
   { name: 'Survey', url: fromFile('public/widgets/survey.html', 'APPS_SCRIPT_URL'),
     ok: async (res) => /Feedback Survey/.test(await res.text()) },
   { name: 'Website home', url: 'https://app.nrnszn.com/', ok: async (res) => /NuRenaissance/.test(await res.text()) },
+  // The Cloudflare copies of the read-only feeds (functions/api/feed): fast path the pages use first.
+  { name: 'Cached feed: services', url: 'https://www.nrnszn.com/api/feed/services', ok: json((d) => Array.isArray(d.services) && d.services.length > 0) },
+  { name: 'Cached feed: NuCinema', url: 'https://www.nrnszn.com/api/feed/cinema', ok: json((d) => Array.isArray(d.films) && d.films.length > 0) },
+  { name: 'Cached feed: NuGallery', url: 'https://www.nrnszn.com/api/feed/gallery', ok: json((d) => Array.isArray(d.categories) && d.categories.length > 0) },
   { name: 'Website services page', url: 'https://app.nrnszn.com/services', ok: async (res) => /Services/.test(await res.text()) },
 ];
 

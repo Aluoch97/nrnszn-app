@@ -933,7 +933,10 @@
   }
 
   if (endpointConfigured){
-    fetch(GALLERY_ENDPOINT)
+    // Cached copy at Cloudflare first (photos come through /api/drive too); straight to Google if that fails.
+    fetch('/api/feed/gallery')
+      .then(r => { if (!r.ok) throw new Error(r.status); return r; })
+      .catch(() => fetch(GALLERY_ENDPOINT))
       .then(r => {
         if (!r.ok) throw new Error('Gallery endpoint responded with ' + r.status);
         return r.json();

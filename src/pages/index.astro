@@ -106,7 +106,10 @@ const links = [
     if (API_URL) {
       const url = new URL(API_URL);
       url.searchParams.set('action', 'latestVideos');
-      fetch(url)
+      // Cached copy at Cloudflare first; straight to the API if that fails.
+      fetch('/api/feed/latest')
+        .then((r) => { if (!r.ok) throw new Error(r.status); return r; })
+        .catch(() => fetch(url))
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           if (!data || !data.ok) return;

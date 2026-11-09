@@ -1,13 +1,14 @@
 {
   "name": "nrnszn-app",
   "version": "1.0.0",
-  "description": "NuRenaissance Media app hub — app.nrnszn.com",
+  "description": "NuRenaissance Media app hub \u2014 app.nrnszn.com",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro build && playwright test",
-    "check:quick": "playwright test"
+    "check": "astro build && node --test tests/edge-feeds.unit.mjs && playwright test",
+    "check:quick": "playwright test",
+    "test:edge": "node --test tests/edge-feeds.unit.mjs"
   },
   "author": "",
   "dependencies": {

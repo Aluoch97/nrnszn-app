@@ -1004,7 +1004,10 @@
       }
     } catch(err){ /* sessionStorage unavailable (private browsing, etc.) — fall through to a live fetch */ }
 
-    return fetch(CATALOG_ENDPOINT)
+    // Cached copy at Cloudflare first; straight to Google if that fails.
+    return fetch('/api/feed/cinema')
+      .then(r => { if (!r.ok) throw new Error(r.status); return r; })
+      .catch(() => fetch(CATALOG_ENDPOINT))
       .then(r => r.json())
       .then(localizeImages)
       .then(data => {
