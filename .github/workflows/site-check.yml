@@ -1,0 +1,30 @@
+name: Site check
+
+# Runs the full mobile / accessibility / SEO check on every push and pull request.
+# A red X on GitHub means something broke; open the run to see what, or download
+# the "site-check-report" file it leaves behind.
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check
+        env:
+          CI: true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: site-check-report
+          path: test-report
+          retention-days: 14

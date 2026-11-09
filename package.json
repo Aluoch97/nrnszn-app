@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "check": "astro build && playwright test",
+    "check:quick": "playwright test"
   },
   "author": "",
   "dependencies": {
@@ -17,5 +19,9 @@
     "simple-icons": "^16.35.0"
   },
   "private": true,
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.65.0"
+  }
 }

@@ -17,10 +17,10 @@
 .pill {
   display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px;
   border-radius: var(--radius-pill); text-decoration: none;
-  background: var(--pink-500); color: #fff; font-weight: 600; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;
+  background: #c8175f; color: #fff; font-weight: 600; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase;
   transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-out);
 }
-.pill:hover { background: #ff3d8b; transform: translateY(-1px); }
+.pill:hover { background: #a3104c; transform: translateY(-1px); }
 .pill.gold { background: var(--gold-300); color: var(--purple-900); }
 .pill.gold:hover { background: #ffe08a; }
 .pill.ghost { background: transparent; border: 1.5px solid var(--gold-300); color: var(--gold-300); }

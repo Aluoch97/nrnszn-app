@@ -414,7 +414,7 @@
 
   <!-- HOME VIEW -->
   <div class="view active" id="homeView">
-    <section class="hero" id="hero" role="button" tabindex="0" aria-label="Open the feature">
+    <section class="hero" id="hero">
       <img id="heroImg" src="https://static.wixstatic.com/media/355bb7_27e18e65a5874f98b0c535492fea59f0~mv2.png/v1/fill/w_962,h_542,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/Certified%20Tour%20overs_PNG.png" fetchpriority="high" alt="">
       <!-- src above is just the fallback feature's image, set statically so the
            browser can start fetching the hero (the page's LCP element) during
@@ -431,14 +431,14 @@
     </section>
 
     <div class="category-grid">
-      <div class="category-tile" id="tileFilms" role="button" tabindex="0" aria-label="Browse Films">
+      <div class="category-tile" id="tileFilms" role="button" tabindex="0">
         <img id="tileFilmsImg" src="" alt="">
         <div class="category-tile-content">
           <p class="cat-label">Films</p>
           <p class="cat-count" id="tileFilmsCount"></p>
         </div>
       </div>
-      <div class="category-tile" id="tileShows" role="button" tabindex="0" aria-label="Browse Shows">
+      <div class="category-tile" id="tileShows" role="button" tabindex="0">
         <img id="tileShowsImg" src="" alt="">
         <div class="category-tile-content">
           <p class="cat-label">Shows</p>
@@ -802,7 +802,7 @@
     const fireHero = () => openLightbox(feature, feature.episodes);
     document.getElementById("heroCta").onclick = (e)=>{ e.stopPropagation(); fireHero(); };
     hero.onclick = fireHero;
-    hero.onkeydown = (e)=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); fireHero(); } };
+    // Keyboard users reach the feature through its Watch Now button.
   }
 
   function renderCategoryTiles(films, shows){

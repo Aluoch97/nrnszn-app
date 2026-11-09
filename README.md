@@ -65,3 +65,13 @@ In Cloudflare Pages, open **Custom domains** and add `app.nrnszn.com`. Cloudflar
 1. Add `src/pages/<name>.astro` and use `Base` and the tokens.
 2. Add its action to the router in `Code.gs`, then redeploy the web app as a **new version** of the same deployment so the URL stays the same.
 3. Point the matching link in `src/data/portal.js` at `/<name>`.
+
+## Checking the site
+
+`npm run check` builds the site and tests every page at phone (320, 390), tablet (768) and desktop (1280) widths:
+no sideways scrolling, tap targets big enough, readable text, no broken images or links, no JavaScript errors,
+WCAG 2.2 AA accessibility, and title/description/share-image basics. New pages are picked up automatically.
+
+GitHub runs the same check on every push and pull request. A green check means it passed; a red X means
+something needs fixing before it goes live.
+

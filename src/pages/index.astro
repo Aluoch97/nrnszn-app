@@ -37,7 +37,7 @@ const press = [
   description="An independent media company providing video, photo, livestream, and artist services in Nashville, Tennessee."
 >
   <section class="hero">
-    <img class="hero-bg" src="/img/home-hero.webp" alt="" width="1280" height="720" fetchpriority="high" />
+    <img class="hero-bg" src="/img/home-hero.webp" srcset="/img/home-hero-640.webp 640w, /img/home-hero.webp 1280w" sizes="100vw" alt="" width="1280" height="720" fetchpriority="high" />
     <div class="hero-inner">
       <img class="hero-mascot" src="/img/mascot.webp" alt="" width="132" height="132" />
       <h1 class="wordmark">NuRenaissance</h1>
@@ -145,7 +145,7 @@ const press = [
   }
   .btn:hover { transform: translateY(-2px); background: rgba(58, 29, 122, 0.95); }
   .btn-label { font-family: var(--font-poster); font-weight: 800; font-size: clamp(19px, 5.5vw, 24px); text-transform: uppercase; letter-spacing: 0.03em; line-height: 1; }
-  .btn-sub { font-size: 10.5px; text-align: center; letter-spacing: 0.06em; text-transform: uppercase; color: #d8cdf0; }
+  .btn-sub { font-size: 11.5px; text-align: center; letter-spacing: 0.06em; text-transform: uppercase; color: #d8cdf0; }
   .btn-main {
     grid-column: 1 / -1; order: -1;
     grid-auto-flow: column; gap: var(--space-3);
