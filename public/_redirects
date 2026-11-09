@@ -7,3 +7,24 @@
 /certified  /play?certified  301
 /certified-era-one  /play?certified  301
 /certified-era-two  /play?certified  301
+# Old Wix pages (kept working after the move off Wix)
+/latest  /  301
+/schedule  /services  301
+/event-details  /events  301
+/event-details/*  /events  301
+/carnelianaurafilm  /cinema  301
+/iadd  /cinema  301
+/musesessions  /cinema  301
+/nuradio  /cinema  301
+/copy-of-a-taste-of-phoenix-1  /cinema  301
+/copy-of-a-week-in-nola  /cinema  301
+/copy-of-bluu  /cinema  301
+/copy-of-bluu-1  /cinema  301
+/copy-of-carnelian-aura  /cinema  301
+/copy-of-cause-it-feels-good  /cinema  301
+/copy-of-certified-classics  /cinema  301
+/copy-of-certified-now  /cinema  301
+/copy-of-die-for-you  /cinema  301
+/copy-of-live-from-austin  /cinema  301
+/copy-of-rc-jan-2023-1  /cinema  301
+/copy-of-bluu-2  /services  301

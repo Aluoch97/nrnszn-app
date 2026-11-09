@@ -10,13 +10,14 @@ export const nav = [
   { label: 'Services', href: '/services', icon: 'services' },
   { label: 'Media', href: '/media', icon: 'media', also: ['/gallery', '/cinema'] },
   { label: 'Certified', href: '/play', icon: 'certified' },
+  { label: 'Events', href: '/events', icon: 'events' },
   { label: 'Apps', href: '/apps', icon: 'apps', also: ['/directory'] },
   { label: 'Contact', href: '/contact', icon: 'contact' },
   { label: 'Support', href: '/support', icon: 'support' },
 ];
 
 export const tabs = ['/media', '/services', '/', '/play'];
-export const more = ['/apps', '/contact', '/support'];
+export const more = ['/events', '/apps', '/contact', '/support'];
 
 // The apps on the Apps page. `inApp`: opens inside this site (full screen with a back bar).
 export const apps = [

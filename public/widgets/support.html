@@ -485,6 +485,8 @@
   // low as possible for subscribers coming in from NuDirectory. Just note,
   // name, and email are kept (see the comment above render() for why).
   var state = { note: '', name: '', email: '' };
+  // ?for=... pre-fills "What's this for?" (the Events page links here as /support?for=Certified Lounge ticket ...).
+  try { state.note = (new URLSearchParams(location.search).get('for') || '').replace(/[<>]/g, '').slice(0, 120); } catch (e) {}
 
   function mascotHTML() {
     return '<img class="nrn-mascot" src="' + NURENAISSANCE_LOGO_SRC + '" alt="NuRenaissance Media">';

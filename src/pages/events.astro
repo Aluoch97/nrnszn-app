@@ -1,0 +1,139 @@
+---
+// Events: the next Certified Lounge, from the Lounge app's show guide.
+// Built with the guide as it is at build time, then refreshed in the browser,
+// so a change made in the app's host Settings shows up here right away.
+// Tickets are paid online through the Support page (?for= fills in what it's for).
+import Site from '../layouts/Site.astro';
+import { getShowGuide, SHOW_GUIDE_URL } from '../data/events.js';
+const initial = await getShowGuide();
+---
+<Site
+  title="Events | NuRenaissance"
+  description="The next Certified Lounge: date, venue, lineup and tickets. Live hip-hop and R&B from NuRenaissance in Nashville."
+>
+  <div class="ev">
+    <h1 class="ev-title">Events</h1>
+    <div id="ev-show" aria-live="polite">
+      <p class="ev-note">Loading the next show…</p>
+    </div>
+    <noscript><p class="ev-note">Turn on JavaScript to see the next show, or open the <a href="https://play.nrnszn.com">Certified Lounge app</a>.</p></noscript>
+  </div>
+</Site>
+
+<script is:inline define:vars={{ initial, SHOW_GUIDE_URL }}>
+  (function () {
+    var box = document.getElementById('ev-show');
+    var https = function (u) { return /^https:\/\/[^\s<>"']+$/i.test(String(u || '')); };
+    var okPhoto = function (u) { return https(u) || /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(String(u || '')); };
+    var el = function (tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+    var MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+    // "Sat, Oct 17, 2026 · 7–11 PM" -> that day (end of day), or null if the text has no clear date
+    function showDay(text) {
+      var m = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/i.exec(String(text || ''));
+      return m ? new Date(Number(m[3]), MONTHS.indexOf(m[1].toLowerCase()), Number(m[2]), 23, 59) : null;
+    }
+    function render(g) {
+      box.textContent = '';
+      if (!g) { box.appendChild(el('p', 'ev-note', 'The next show will be announced soon.')); return; }
+      var day = showDay(g.date), past = day && day < new Date();
+      var card = el('section', 'ev-card');
+      card.appendChild(el('p', 'ev-kicker', past ? 'Last show' : 'Next show'));
+      card.appendChild(el('h2', 'ev-name', 'Certified Lounge'));
+      if (g.date) card.appendChild(el('p', 'ev-when', g.date));
+      if (g.venue || g.address) {
+        var where = el('p', 'ev-where');
+        if (g.venue) where.appendChild(el('strong', '', g.venue));
+        if (g.address) {
+          where.appendChild(document.createTextNode((g.venue ? ' · ' : '') + g.address + ' '));
+          var map = el('a', '', 'Directions ↗');
+          map.href = https(g.maps_url) ? g.maps_url : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((g.venue ? g.venue + ' ' : '') + g.address);
+          map.target = '_blank'; map.rel = 'noopener';
+          where.appendChild(map);
+        }
+        card.appendChild(where);
+      }
+      if (g.cover) card.appendChild(el('p', 'ev-cover', 'Tickets: ' + g.cover));
+      if (past) {
+        card.appendChild(el('p', 'ev-note', 'The next date will be announced soon. Follow @nrnszn for updates.'));
+      } else {
+        var acts = el('div', 'ev-actions');
+        var buy = el('a', 'ev-btn', 'Get tickets');
+        buy.href = '/support?for=' + encodeURIComponent('Certified Lounge ticket' + (g.date ? ', ' + g.date.split('·')[0].trim() : ''));
+        acts.appendChild(buy);
+        var app = el('a', 'ev-btn ev-btn-alt', 'Show guide & play along');
+        app.href = '/play';
+        acts.appendChild(app);
+        card.appendChild(acts);
+      }
+      if (g.parking) { var know = el('div', 'ev-know'); know.appendChild(el('h3', '', 'Know before you go')); know.appendChild(el('p', '', g.parking)); card.appendChild(know); }
+      box.appendChild(card);
+
+      var people = (g.people || []).filter(function (p) { return p && p.name; });
+      var perf = people.filter(function (p) { return p.role === 'Performer' || p.role === 'Magic'; });
+      var crew = people.filter(function (p) { return !(p.role === 'Performer' || p.role === 'Magic'); });
+      [['Lineup', perf], ['Hosts & crew', crew]].forEach(function (grp) {
+        if (!grp[1].length) return;
+        var sec = el('section', 'ev-card');
+        sec.appendChild(el('h2', 'ev-sub', grp[0]));
+        var ul = el('ul', 'ev-people');
+        grp[1].forEach(function (p) {
+          var li = el('li', 'ev-person');
+          var av = el('span', 'ev-avatar');
+          if (okPhoto(p.photo)) { var im = el('img'); im.src = p.photo; im.alt = ''; im.loading = 'lazy'; im.width = 56; im.height = 56; av.appendChild(im); }
+          else av.textContent = (p.name.trim()[0] || '?').toUpperCase();
+          li.appendChild(av);
+          var info = el('span', 'ev-pinfo');
+          info.appendChild(el('span', 'ev-pname', p.name));
+          info.appendChild(el('span', 'ev-prole', [p.headliner ? '⭐ Headliner' : p.role, p.time].filter(Boolean).join(' · ')));
+          li.appendChild(info);
+          ul.appendChild(li);
+        });
+        sec.appendChild(ul);
+        box.appendChild(sec);
+      });
+    }
+    render(initial);
+    fetch(SHOW_GUIDE_URL).then(function (r) { return r.json(); }).then(function (r) { if (r && r.ok) render(r.data); }).catch(function () {});
+  })();
+</script>
+
+<style>
+  .ev { max-width: 720px; margin: 0 auto; padding: var(--space-6) var(--space-4); }
+  .ev-title {
+    margin: 0 0 var(--space-4);
+    font-family: var(--font-poster); font-weight: 800; text-transform: uppercase;
+    font-size: clamp(30px, 8vw, 44px); letter-spacing: 0.03em; line-height: 1; color: var(--pink-300);
+  }
+  #ev-show { display: grid; gap: var(--space-4); }
+  #ev-show :global(.ev-card) { padding: var(--space-5) var(--space-4); border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238; }
+  #ev-show :global(.ev-kicker) { margin: 0 0 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a99fc6; }
+  #ev-show :global(.ev-name) { margin: 0; font-family: var(--font-poster); font-weight: 800; font-size: clamp(30px, 9vw, 40px); text-transform: uppercase; line-height: 1; color: var(--gold-300); }
+  #ev-show :global(.ev-when) { margin: var(--space-2) 0 0; font-size: 19px; font-weight: 700; color: #f3f0fa; }
+  #ev-show :global(.ev-where) { margin: 6px 0 0; font-size: 16px; line-height: 1.5; color: #c9c0de; }
+  #ev-show :global(.ev-where a) { color: var(--gold-300); white-space: nowrap; display: inline-block; padding: 4px 0; }
+  #ev-show :global(.ev-cover) { margin: var(--space-2) 0 0; font-size: 16px; font-weight: 600; color: #f3f0fa; }
+  #ev-show :global(.ev-actions) { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); }
+  #ev-show :global(.ev-btn) {
+    display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: var(--radius-pill);
+    background: var(--gold-300); color: var(--purple-900); font-weight: 700; font-size: 16px; text-decoration: none;
+  }
+  #ev-show :global(.ev-btn:hover) { background: #ffe08a; }
+  #ev-show :global(.ev-btn-alt) { background: transparent; color: var(--gold-300); border: 1.5px solid var(--gold-500); }
+  #ev-show :global(.ev-btn-alt:hover) { background: #241d34; }
+  #ev-show :global(.ev-know) { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid #2a2238; }
+  #ev-show :global(.ev-know h3) { margin: 0 0 4px; font-size: 15px; color: #f3f0fa; }
+  #ev-show :global(.ev-know p) { margin: 0; white-space: pre-line; font-size: 15px; line-height: 1.5; color: #c9c0de; }
+  #ev-show :global(.ev-sub) { margin: 0 0 var(--space-3); font-family: var(--font-poster); font-weight: 800; font-size: 24px; text-transform: uppercase; color: var(--pink-300); }
+  #ev-show :global(.ev-people) { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+  @media (min-width: 640px) { #ev-show :global(.ev-people) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  #ev-show :global(.ev-person) { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+  #ev-show :global(.ev-avatar) {
+    flex: 0 0 56px; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; display: grid; place-items: center;
+    background: #2c2440; border: 2px solid var(--purple-500); color: var(--gold-300); font-weight: 800; font-size: 20px;
+  }
+  #ev-show :global(.ev-avatar img) { width: 100%; height: 100%; object-fit: cover; }
+  #ev-show :global(.ev-pinfo) { display: grid; min-width: 0; }
+  #ev-show :global(.ev-pname) { font-weight: 700; font-size: 16px; color: #f3f0fa; overflow-wrap: anywhere; }
+  #ev-show :global(.ev-prole) { font-size: 14px; color: #a99fc6; }
+  .ev-note, #ev-show :global(.ev-note) { margin: var(--space-3) 0 0; font-size: 16px; color: #c9c0de; }
+</style>
