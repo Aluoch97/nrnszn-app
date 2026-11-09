@@ -150,3 +150,8 @@ const isExternal = (href: string) => /^https?:/.test(href);
     if (e.key === 'Escape' && menu && !mq.matches && menu.open) { menu.open = false; menu.querySelector('summary')?.focus(); }
   });
 </script>
+
+<style is:global>
+  /* Main-site pages are dark; keep the page behind them dark too (shows on overscroll). */
+  html:has(.site), html:has(.site) body { background: #0e0b16; }
+</style>
