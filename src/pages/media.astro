@@ -2,7 +2,7 @@
 // Media: the hub for NuGallery (photos) and NuCinema (shows and films). The Media tab lands here.
 import Site from '../layouts/Site.astro';
 const items = [
-  { name: 'NuGallery', href: '/gallery', img: '/img/home-hero-640.webp', w: 640, h: 360,
+  { name: 'NuGallery', href: '/gallery', img: '/img/home-hero-640.webp', big: '/img/home-hero.webp 1280w', w: 640, h: 360,
     text: 'Photos from events, showcases and interviews, shot by the NuRenaissance team.' },
   { name: 'NuCinema', href: '/cinema', img: '/img/cinema/certified-tour-800.webp', w: 800, h: 450,
     text: 'Watch NuRenaissance shows, documentaries and vlogumentaries.' },
@@ -18,7 +18,7 @@ const items = [
       {items.map((m) => (
         <li>
           <a class="card" href={m.href}>
-            <img src={m.img} alt="" width={m.w} height={m.h} loading="lazy" />
+            <img src={m.img} srcset={m.big ? `${m.img} 640w, ${m.big}` : undefined} sizes="(min-width: 720px) 420px, 100vw" alt="" width={m.w} height={m.h} loading="lazy" />
             <span class="card-body">
               <span class="card-name">{m.name}</span>
               <span class="card-text">{m.text}</span>

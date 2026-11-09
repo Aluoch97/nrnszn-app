@@ -480,91 +480,7 @@
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><rect width="400" height="400" fill="#e3d5b8"/><g stroke="#8a6a24" stroke-width="3" fill="none"><rect x="90" y="110" width="220" height="170" rx="6"/><circle cx="150" cy="165" r="18"/><path d="M90 250 L165 190 L230 240 L270 205 L310 250"/></g></svg>'
   );
 
-  const DEMO_DATA = {
-    categories: [
-      {
-        title: "Events",
-        doors: [
-          {
-            title: "The Playlist",
-            videoUrl: "https://youtu.be/kyU51FAnLMM",
-            images: [
-              { name:"The Playlist 1", date:"11/15/2025", credit:"Shot by Nicólas Soul", igUrl:"https://www.soulnicolas.com/",
-                thumbUrl:"https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80&auto=format&fit=crop",
-                fullUrl:"https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1600&q=80&auto=format&fit=crop" },
-              { name:"The Playlist 2", date:"11/15/2025", credit:"Shot by Nicólas Soul", igUrl:"https://www.soulnicolas.com/",
-                thumbUrl:"https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&q=80&auto=format&fit=crop",
-                fullUrl:"https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1600&q=80&auto=format&fit=crop" }
-            ]
-          },
-          {
-            title: "Art After Dark",
-            videoUrl: "https://youtu.be/WlPjqDXKa8Y",
-            images: [
-              { name:"Art After Dark 1", date:"11/22/2025", credit:"Shot by Nicólas Soul", igUrl:"https://www.soulnicolas.com/",
-                thumbUrl:"https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=600&q=80&auto=format&fit=crop",
-                fullUrl:"https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=1600&q=80&auto=format&fit=crop" }
-            ]
-          }
-        ]
-      },
-      {
-        title: "Interviews",
-        doors: [
-          {
-            title: "She 4 The Streets Interview",
-            videoUrl: "https://youtu.be/6kbPdX5o8p8",
-            images: [
-              { name:"She 4 The Streets 1", date:"05/24/2026", credit:"Shot by Nicólas Soul", igUrl:"https://www.soulnicolas.com/",
-                thumbUrl:"https://images.unsplash.com/photo-1478147427282-58a87a120781?w=600&q=80&auto=format&fit=crop",
-                fullUrl:"https://images.unsplash.com/photo-1478147427282-58a87a120781?w=1600&q=80&auto=format&fit=crop" }
-            ]
-          }
-        ]
-      },
-      {
-        title: "Renaissance Certified",
-        certified: true,
-        doors: [
-          {
-            title: "Fall 2025",
-            videoUrl: "https://youtu.be/2vN8oHNPWTA",
-            images: [
-              { name:"Fall 2025 Showcase 1", date:"10/18/2025", credit:"",
-                thumbUrl:"https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=600&q=80&auto=format&fit=crop",
-                fullUrl:"https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=1600&q=80&auto=format&fit=crop" }
-            ]
-          },
-          {
-            title: "Spring 2025",
-            images: [
-              { name:"Spring 2025 Showcase 1", date:"04/12/2025", credit:"",
-                thumbUrl:"https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&q=80&auto=format&fit=crop",
-                fullUrl:"https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1600&q=80&auto=format&fit=crop" }
-            ]
-          },
-          {
-            title: "Fall 2024",
-            videoUrl: "https://youtu.be/Xf4ypDw8fJY",
-            images: [
-              { name:"Fall 2024 Showcase 1", date:"10/19/2024", credit:"",
-                thumbUrl:"https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80&auto=format&fit=crop",
-                fullUrl:"https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1600&q=80&auto=format&fit=crop" }
-            ]
-          },
-          {
-            title: "Spring 2024",
-            videoUrl: "https://youtu.be/A89dPelhL78",
-            images: [
-              { name:"Spring 2024 Showcase 1", date:"04/13/2024", credit:"",
-                thumbUrl:"https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=600&q=80&auto=format&fit=crop",
-                fullUrl:"https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=1600&q=80&auto=format&fit=crop" }
-            ]
-          }
-        ]
-      }
-    ]
-  };
+
   // ----------------------------------------------------------------------
 
   const roman = ['I','II','III','IV','V','VI','VII','VIII','IX','X'];
@@ -1033,8 +949,7 @@
         lobbyDoorsEl.innerHTML = '<div class="empty">The gallery is being restored — please check back shortly.</div>';
       });
   } else {
-    // No live endpoint configured yet — show sample doors for preview only.
-    boot(DEMO_DATA);
+    lobbyDoorsEl.innerHTML = '<div class="empty">The gallery is being restored — please check back shortly.</div>';
   }
 </script>
 </body>
