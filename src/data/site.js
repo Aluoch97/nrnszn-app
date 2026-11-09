@@ -23,7 +23,7 @@ export const apps = [
     text: 'Renaissance Certified in one app: play along at the show, the show guide, and the eras, recaps and videos.' },
   { name: 'NuDirectory', href: '/directory', inApp: true, img: '/img/apps/nudirectory.webp',
     text: 'The Nashville scene board: shows, studios, session players, promo contacts and more, all in one place.' },
-  { name: 'PODI', href: 'http://podi.nrnszn.com', img: '/img/apps/podi.webp',
+  { name: 'PODI', href: 'https://podi.nrnszn.com', img: '/img/apps/podi.webp',
     text: 'A streamlined, browser-based media workflow tool that makes multi-camera editing simple, without heavy desktop software.' },
   { name: 'Soul Vault', href: 'https://script.google.com/macros/s/AKfycbxSXeD5uM1eP7eYR1LVzhxRfa0nx1f_DbsGHdlJeL2YfjK_8JPuurNhGAJ1W5UwwNaW/exec?s=572e3302d272', img: '/img/apps/soul-vault.webp',
     text: 'A direct-to-fan streaming space and living archive for the music of Nicólas Soul: full projects, unreleased cuts, alternate mixes, time-synced lyrics, videos and behind-the-scenes stories. Ad-free.' },
