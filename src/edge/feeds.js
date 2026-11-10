@@ -72,9 +72,10 @@ async function load(feed, env) {
   return JSON.stringify(feed.shape ? feed.shape(data) : data);
 }
 
-function reply(body, state, ageSecs) {
+function reply(body, state, ageSecs, extraHeaders = {}) {
   return new Response(body, {
     headers: {
+      ...extraHeaders,
       'content-type': 'application/json; charset=utf-8',
       'cache-control': 'public, max-age=60',
       'x-feed-cache': state, // HIT, STALE (refreshing in the background) or MISS
@@ -86,30 +87,35 @@ function reply(body, state, ageSecs) {
 export async function serveFeed(name, context, now = Date.now()) {
   const feed = FEEDS[name];
   if (!feed) return new Response('Not found', { status: 404 });
+  return serveCached(name, () => load(feed, context.env || {}), context, now);
+}
+
+// Stale-while-revalidate cache around any loader that returns a JSON string (throws when the answer looks wrong).
+export async function serveCached(name, loadBody, context, now = Date.now(), extraHeaders = {}) {
   const cache = caches.default;
   const key = new Request(new URL(`/__feed-cache/${name}`, context.request.url).toString());
   const hit = await cache.match(key);
   const age = hit ? (now - Number(hit.headers.get('x-fetched-at') || 0)) / 1000 : Infinity;
 
   const refresh = async () => {
-    const body = await load(feed, context.env || {});
+    const body = await loadBody();
     await cache.put(key, new Response(body, {
       headers: { 'content-type': 'application/json', 'x-fetched-at': String(now), 'cache-control': `public, max-age=${KEEP_SECS}` },
     }));
     return body;
   };
 
-  if (hit && age < FRESH_SECS) return reply(await hit.text(), 'HIT', age);
+  if (hit && age < FRESH_SECS) return reply(await hit.text(), 'HIT', age, extraHeaders);
   if (hit && age < KEEP_SECS) {
     context.waitUntil(refresh().catch((e) => console.error(`feed ${name} refresh`, e)));
-    return reply(await hit.text(), 'STALE', age);
+    return reply(await hit.text(), 'STALE', age, extraHeaders);
   }
   try {
-    return reply(await refresh(), 'MISS', 0);
+    return reply(await refresh(), 'MISS', 0, extraHeaders);
   } catch (e) {
     console.error(`feed ${name}`, e);
     return new Response(JSON.stringify({ ok: false, error: 'feed unavailable' }), {
-      status: 502, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      status: 502, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...extraHeaders },
     });
   }
 }

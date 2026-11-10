@@ -94,3 +94,33 @@ test('/api/drive only fetches Google Drive thumbnails, and only images', async (
   const notImg = await serveDrive({ request: new Request('https://www.nrnszn.com/api/drive?id=1bcUbtrzxElWNDzAbkW8KCBsbiiCas3-e&sz=w500') });
   assert.equal(notImg.status, 404);
 });
+
+// ---------- YouTube playlist reader (src/edge/playlist.js) ----------
+import { parsePlaylist, extractInitialData } from '../src/edge/playlist.js';
+
+const lockup = (id, title, duration, parts) => ({ lockupViewModel: {
+  contentId: id, contentType: 'LOCKUP_CONTENT_TYPE_VIDEO',
+  contentImage: { thumbnailViewModel: { overlays: [{ thumbnailBottomOverlayViewModel: { badges: [{ thumbnailBadgeViewModel: { text: duration } }] } }] } },
+  metadata: { lockupMetadataViewModel: { title: { content: title }, metadata: { contentMetadataViewModel: { metadataRows: [{ metadataParts: parts.map((t) => ({ text: { content: t } })) }] } } } },
+} });
+
+test('playlist reader: current YouTube page format', () => {
+  const data = { metadata: { playlistMetadataRenderer: { title: 'Certified Tour' } }, contents: { list: [
+    lockup('akcFv16N6s8', 'SXSW - Live From Austin ', '15:02', ['NuRenaissance', '165', '1y ago']),
+    lockup('x3V8pIsS-Jo', 'A Taste of Phoenix', '14:26', ['NuRenaissance', 'and Underground Music Collective', '133', '11mo ago']),
+    { lockupViewModel: { contentId: 'PLabcdefghijk', contentType: 'LOCKUP_CONTENT_TYPE_PLAYLIST' } },
+  ] } };
+  const r = parsePlaylist(data);
+  assert.equal(r.title, 'Certified Tour');
+  assert.deepEqual(r.videos, [
+    { id: 'akcFv16N6s8', title: 'SXSW - Live From Austin', duration: '15:02', age: '1y ago' },
+    { id: 'x3V8pIsS-Jo', title: 'A Taste of Phoenix', duration: '14:26', age: '11mo ago' },
+  ]);
+});
+
+test('playlist reader: older format, and pages without data', () => {
+  const r = parsePlaylist({ x: [{ playlistVideoRenderer: { videoId: 'KVPq322ZwwY', title: { runs: [{ text: 'Kansas City Blues' }] }, lengthText: { simpleText: '10:58' }, videoInfo: { runs: [{ text: '135 views' }, { text: ' • ' }, { text: '4 months ago' }] } } }] });
+  assert.deepEqual(r.videos, [{ id: 'KVPq322ZwwY', title: 'Kansas City Blues', duration: '10:58', age: '4 months ago' }]);
+  assert.throws(() => extractInitialData('<html>consent</html>'), /ytInitialData/);
+  assert.equal(parsePlaylist({}).videos.length, 0);
+});
