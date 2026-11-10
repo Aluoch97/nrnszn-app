@@ -79,7 +79,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
       </ul>
       <ul class="socials" aria-label="Social links">
         {socials.filter((s) => s.icon !== 'web').map((s) => (
-          <li><a href={s.href} target="_blank" rel="noopener" aria-label={s.label}><Icon name={s.icon} size={18} /></a></li>
+          <li><a href={s.href} target="_blank" rel="noopener" aria-label={s.label}><Icon name={s.icon} size={26} /></a></li>
         ))}
       </ul>
       <p class="sheet-foot"><a href="/privacy-policy">Privacy policy</a> · © {new Date().getFullYear()} NuRenaissance Media</p>
@@ -224,7 +224,9 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
     }
     .sheet-links a[aria-current='page'] { color: var(--gold-300); }
     .sheet-links a:active { background: #2c2440; }
-    .sheet .socials { margin: var(--space-4) 0 var(--space-3); }
+    .sheet .socials { margin: var(--space-4) 0 var(--space-3); gap: var(--space-3); }
+    .sheet .socials a { width: 56px; height: 56px; background: #211b30; }
+    @media (max-width: 359px) { .sheet .socials { gap: var(--space-2); } .sheet .socials a { width: 48px; height: 48px; } }
     .sheet-foot { margin: 0; text-align: center; font-size: 13px; color: var(--shell-muted); }
     .sheet-foot a { color: var(--shell-text); }
   }
