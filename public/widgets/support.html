@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Support NuRenaissance</title>
 <meta name="robots" content="noindex">
-<style>html,body{margin:0;background:#0e0b16;min-height:100%}body{padding:0 12px 28px}</style><link rel="stylesheet" href="/fonts/fonts.css">
+<style>html,body{margin:0;background:#0e0b16;height:100%}body{padding:10px 12px 12px;box-sizing:border-box}main{min-height:100%;display:flex;flex-direction:column}</style><link rel="stylesheet" href="/fonts/fonts.css">
 </head><body>
 <main>
 <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">Support NuRenaissance</h1>
@@ -422,9 +422,15 @@
 
 /* Readability (site rule: no text under 11px; small print 12px). */
 #nrn-pay-root .nrn-eyebrow { font-size: 11px; }
+/* Fill the screen: the card stretches top to bottom and the payment buttons share the space */
+#nrn-pay-root { flex: 1; width: 100%; max-width: 560px; margin: 0 auto; box-sizing: border-box; display: flex; flex-direction: column; padding: 18px 16px 26px; }
+#nrn-pay-root .nrn-methods { flex: 1; min-height: 0; gap: 8px; margin-top: 2px; }
+#nrn-pay-root .nrn-method { flex: 1 1 0; min-height: 48px; max-height: 92px; padding: 6px 14px; }
+#nrn-pay-root .nrn-method-icon { width: 40px; height: 40px; }
+#nrn-pay-root .nrn-footnote { margin-top: 10px; }
 /* Support heading and thank-you message */
 #nrn-pay-root h2 { font-size: 26px; margin: 2px 0 8px; }
-#nrn-pay-root .nrn-sub { font-size: 15px; line-height: 1.55; color: #d8cfee; margin: 0 4px 16px; }
+#nrn-pay-root .nrn-sub { font-size: 15px; line-height: 1.5; color: #d8cfee; margin: 0 4px 12px; }
 #nrn-pay-root .nrn-footnote, #nrn-pay-root .nrn-field label, #nrn-pay-root .nrn-field-hint, #nrn-pay-root .nrn-method-hint, #nrn-pay-root .nrn-copy-btn { font-size: 12px; }
 </style>
 
@@ -546,12 +552,12 @@
       // (Nov 2026); a note can still arrive as ?for= and goes to the
       // Payments log and Cash App's note.
       '<h2>Support</h2>' +
-      '<p class="nrn-sub">Thank you from the bottom of our hearts. Every ticket, merch order and booking keeps independent Nashville art alive. We couldn\u2019t do it without you.</p>' +
+      '<p class="nrn-sub">Thank you from the bottom of our hearts. Every ticket, merch order and booking keeps independent art alive. We couldn\u2019t do it without you.</p>' +
 
       '<div class="nrn-methods">' + methodsHTML() + '</div>' +
 
       '<div class="nrn-toast" id="nrn-toast" role="status" aria-live="polite"></div>' +
-      '<div class="nrn-footnote">Payments are sent directly through each platform. NuRenaissance never collects card or account numbers here.</div>';
+      '<div class="nrn-footnote">Payments go straight through each app. We never see your card or account numbers.</div>';
 
     var toastEl = root.querySelector('#nrn-toast');
 
