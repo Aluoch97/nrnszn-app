@@ -1,7 +1,7 @@
 ---
 // Home: mirrors the NuPortal page from the Wix site. The archway video plays
 // behind the welcome, then the latest interview and music video (from the
-// same playlists and backend as /portal), the main links, and press.
+// same playlists and backend as /portal), press, and the main links at the bottom.
 import Site from '../layouts/Site.astro';
 import VideoCard from '../components/VideoCard.astro';
 import { playlists, playlistUrl } from '../data/portal.js';
@@ -75,12 +75,6 @@ const links = [
       </div>
     </section>
 
-    <section aria-labelledby="links-h">
-      <h2 id="links-h" class="band-title">Links</h2>
-      <ul class="links">
-        {links.map((l) => (<li><a class="link" href={l.href}>{l.label}<span aria-hidden="true">→</span></a></li>))}
-      </ul>
-    </section>
 
     <section aria-labelledby="press-h">
       <h2 id="press-h" class="band-title">Press</h2>
@@ -97,6 +91,13 @@ const links = [
             </a>
           </li>
         ))}
+      </ul>
+    </section>
+
+    <section aria-labelledby="links-h">
+      <h2 id="links-h" class="band-title">Links</h2>
+      <ul class="links">
+        {links.map((l) => (<li><a class="link" href={l.href}>{l.label}<span aria-hidden="true">→</span></a></li>))}
       </ul>
     </section>
   </div>

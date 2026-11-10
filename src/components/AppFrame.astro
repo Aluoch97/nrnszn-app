@@ -16,7 +16,7 @@ const { title, description, name, src, passQuery = false } = Astro.props;
 >
   <div class="dir">
     <header class="dir-bar">
-      <a class="dir-back" href="/" data-back>
+      <a class="dir-back" href="/apps" data-back>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
         <span>Back</span>
@@ -34,14 +34,16 @@ const { title, description, name, src, passQuery = false } = Astro.props;
 <script>
   const frame = document.querySelector<HTMLIFrameElement>('.dir-frame[data-pass]');
   if (frame && location.search) frame.src = frame.src.replace(/\/?$/, '/') + location.search;
-  // Back returns to the page you came from in this app; otherwise it goes Home.
-  document.querySelector('[data-back]')?.addEventListener('click', (e) => {
-    const ref = document.referrer && new URL(document.referrer);
-    if (ref && ref.origin === location.origin && history.length > 1) {
-      e.preventDefault();
-      history.back();
+  // Back is a plain link to the page you came from on this site (Apps if unknown).
+  // Not history.back(): the app inside the frame adds its own history entries as
+  // you move between its screens, so "back" would often stay inside the app.
+  const back = document.querySelector<HTMLAnchorElement>('[data-back]');
+  try {
+    const ref = document.referrer ? new URL(document.referrer) : null;
+    if (back && ref && ref.origin === location.origin && ref.pathname !== location.pathname) {
+      back.href = ref.pathname + ref.search + ref.hash;
     }
-  });
+  } catch { /* keep the default */ }
 </script>
 
 <style>
