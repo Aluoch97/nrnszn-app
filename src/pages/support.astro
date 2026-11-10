@@ -4,13 +4,24 @@
 // to the payment options. Search engines are pointed at /about.
 import Site from '../layouts/Site.astro';
 import AboutSupport from '../components/AboutSupport.astro';
+import PageHero from '../components/PageHero.astro';
 ---
 <Site
   title="About & Support | NuRenaissance"
   description="About NuRenaissance Media: our story and services, ways to pay or support us, and how to get in touch."
   canonicalPath="/about/"
 >
-  <h1 class="sr-only">About and Support NuRenaissance</h1>
+  <PageHero
+    title="About"
+    kicker="Est. 2017 · Nashville"
+    text="A home for bold, independent art. Our story, ways to support us, and how to reach us."
+    images={[
+      { src: '/img/portal-poster-640.webp', srcset: '/img/portal-poster-640.webp 640w, /img/portal-poster.webp 1280w' },
+      { src: '/img/home-hero-640.webp', srcset: '/img/home-hero-640.webp 640w, /img/home-hero.webp 1280w' },
+    ]}
+    mascot
+    accent="#8520cc"
+  />
   <AboutSupport />
 </Site>
 

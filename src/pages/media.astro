@@ -1,53 +1,80 @@
 ---
 // Media: the hub for NuGallery (photos) and NuCinema (shows and films). The Media tab lands here.
+// A moving header that cycles through the posters, then two big full-image doors.
 import Site from '../layouts/Site.astro';
+import PageHero from '../components/PageHero.astro';
 const items = [
-  { name: 'NuGallery', href: '/gallery', img: '/img/home-hero-640.webp', big: '/img/home-hero.webp 1280w', w: 640, h: 360,
+  { name: 'NuGallery', kicker: 'Photos', href: '/gallery', img: '/img/home-hero-640.webp', srcset: '/img/home-hero-640.webp 640w, /img/home-hero.webp 1280w',
     text: 'Photos from events, showcases and interviews, shot by the NuRenaissance team.' },
-  { name: 'NuCinema', href: '/cinema', img: '/img/cinema/certified-tour-800.webp', w: 800, h: 450,
+  { name: 'NuCinema', kicker: 'Shows & films', href: '/cinema', img: '/img/cinema/certified-tour-800.webp', srcset: '/img/cinema/certified-tour-800.webp 800w, /img/cinema/certified-tour.webp 1600w',
     text: 'Watch NuRenaissance shows, documentaries and vlogumentaries.' },
+];
+const slides = [
+  { src: '/img/home-hero-640.webp', srcset: '/img/home-hero-640.webp 640w, /img/home-hero.webp 1280w' },
+  { src: '/img/cinema/certified-tour-800.webp', srcset: '/img/cinema/certified-tour-800.webp 800w, /img/cinema/certified-tour.webp 1600w' },
+  { src: '/img/cinema/carnelian-aura.webp', soft: true },
+  { src: '/img/cinema/muse-sessions.webp', soft: true },
+  { src: '/img/cinema/heal-hop-sessions.webp', soft: true },
 ];
 ---
 <Site
   title="Media | NuRenaissance"
   description="NuRenaissance media: NuGallery photos and NuCinema shows and films from Nashville."
 >
-  <div class="hub">
-    <h1 class="hub-title">Media</h1>
-    <ul class="cards">
-      {items.map((m) => (
-        <li>
-          <a class="card" href={m.href}>
-            <img src={m.img} srcset={m.big ? `${m.img} 640w, ${m.big}` : undefined} sizes="(min-width: 720px) 420px, 100vw" alt="" width={m.w} height={m.h} loading="lazy" />
-            <span class="card-body">
-              <span class="card-name">{m.name}</span>
-              <span class="card-text">{m.text}</span>
-            </span>
-          </a>
-        </li>
-      ))}
-    </ul>
-  </div>
+  <PageHero title="Media" kicker="Watch · Look back" text="Shows, films and photos from the NuRenaissance world." images={slides} accent="#ff6aa6" />
+  <ul class="doors">
+    {items.map((m) => (
+      <li>
+        <a class="door" href={m.href}>
+          <img src={m.img} srcset={m.srcset} sizes="(min-width: 760px) 500px, 100vw" alt="" width="1280" height="720" loading="lazy" />
+          <span class="door-body">
+            <span class="door-kicker">{m.kicker}</span>
+            <span class="door-name">{m.name}</span>
+            <span class="door-text">{m.text}</span>
+            <span class="door-go">Enter <span aria-hidden="true">→</span></span>
+          </span>
+        </a>
+      </li>
+    ))}
+  </ul>
 </Site>
 
 <style>
-  .hub { max-width: 880px; margin: 0 auto; padding: var(--space-6) var(--space-4); }
-  .hub-title {
-    margin: 0 0 var(--space-4);
+  .doors {
+    list-style: none; margin: 0 auto; padding: 0 var(--space-4) var(--space-6);
+    max-width: 1040px; display: grid; gap: var(--space-4);
+  }
+  @media (min-width: 760px) { .doors { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); } }
+  .door {
+    position: relative; isolation: isolate; overflow: hidden;
+    display: grid; align-items: end; min-height: 300px; height: 100%;
+    border-radius: 22px; border: 1px solid #2a2238; color: #f3f0fa; text-decoration: none;
+    transition: transform 260ms var(--ease-out), border-color 260ms, box-shadow 260ms;
+  }
+  @media (min-width: 760px) { .door { min-height: 380px; } }
+  .door img {
+    position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover;
+    transform: scale(1.02); transition: transform 1.2s var(--ease-out);
+  }
+  .door::after {
+    content: ''; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(180deg, rgba(14, 11, 22, 0.05) 0%, rgba(14, 11, 22, 0.55) 45%, rgba(14, 11, 22, 0.95) 100%);
+  }
+  .door:hover, .door:focus-visible { transform: translateY(-4px); border-color: var(--gold-500); box-shadow: 0 20px 50px -14px rgba(255, 106, 166, 0.45); }
+  .door:hover img { transform: scale(1.1); }
+  .door:active { transform: scale(0.985); }
+  .door-body { display: grid; gap: 6px; padding: var(--space-5) var(--space-4); }
+  .door-kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold-300); }
+  .door-name {
     font-family: var(--font-poster); font-weight: 800; text-transform: uppercase;
-    font-size: clamp(30px, 8vw, 44px); letter-spacing: 0.03em; line-height: 1; color: var(--pink-300);
+    font-size: clamp(40px, 11vw, 56px); line-height: 0.92; letter-spacing: 0.02em; color: #fff4dc;
+    text-shadow: 0 0 24px rgba(255, 106, 166, 0.45), 0 4px 20px rgba(0, 0, 0, 0.8);
   }
-  .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
-  @media (min-width: 720px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .card {
-    display: grid; overflow: hidden; height: 100%;
-    border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238;
-    color: #f3f0fa; text-decoration: none;
-    transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-fast);
+  .door-text { max-width: 42ch; font-size: 15px; line-height: 1.5; color: #e4ddf2; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); }
+  .door-go {
+    justify-self: start; margin-top: var(--space-2); display: inline-flex; align-items: center; gap: 8px;
+    min-height: 44px; padding: 0 20px; border-radius: var(--radius-pill);
+    background: var(--gold-300); color: var(--purple-900); font-weight: 700; font-size: 15px;
   }
-  .card:hover { transform: translateY(-3px); border-color: var(--gold-500); }
-  .card img { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
-  .card-body { display: grid; gap: 6px; padding: var(--space-4); }
-  .card-name { font-family: var(--font-poster); font-weight: 800; font-size: 26px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; color: var(--gold-300); }
-  .card-text { font-size: 15px; line-height: 1.5; color: #c9c0de; }
+  @media (prefers-reduced-motion: reduce) { .door, .door img { transition: none; } .door:hover img { transform: scale(1.02); } }
 </style>

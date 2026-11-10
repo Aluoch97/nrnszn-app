@@ -4,42 +4,70 @@
 // so a change made in the app's host Settings shows up here right away.
 // Tickets are paid online through the Support page (?for= fills in what it's for).
 import Site from '../layouts/Site.astro';
+import PageHero from '../components/PageHero.astro';
 import { getShowGuide, SHOW_GUIDE_URL, pastEvents } from '../data/events.js';
 const initial = await getShowGuide();
 const pastDays = pastEvents.map((e) => e.day);
+const flyer = (img) => ({ src: `/img/events/${img}-480.webp`, srcset: `/img/events/${img}-480.webp 480w, /img/events/${img}.webp 900w` });
+const slides = pastEvents.filter((e) => e.img).slice(0, 5).map((e) => flyer(e.img));
+const backdrop = pastEvents[0]?.img ? `/img/events/${pastEvents[0].img}-480.webp` : '';
 ---
 <Site
   title="Events | NuRenaissance"
   description="NuRenaissance events in Nashville: the next Certified Lounge with tickets and lineup, plus past Renaissance Certified showcases."
 >
-  <div class="ev">
-    <h1 class="ev-title">Events</h1>
+  <PageHero title="Events" kicker="Live in Nashville" text="Certified Lounge, Renaissance Certified showcases and screenings. Pull up." images={slides} soft accent="#ff6aa6" />
 
-    <h2 class="ev-section">Upcoming events</h2>
+  <div class="ev" style={backdrop ? `--ev-backdrop:url('${backdrop}')` : undefined}>
+    <h2 class="ev-section">Upcoming</h2>
     <div id="ev-show" aria-live="polite">
       <p class="ev-note">Loading the next show…</p>
     </div>
     <noscript><p class="ev-note">Turn on JavaScript to see the next show, or open the <a href="https://play.nrnszn.com">Certified Lounge app</a>.</p></noscript>
 
     <h2 class="ev-section">Past events</h2>
-    <ul class="ev-past" id="ev-past">
-      {pastEvents.map((e) => (
-        <li class="ev-pcard">
-          <img src={`/img/events/${e.img}.webp`} srcset={`/img/events/${e.img}-480.webp 480w, /img/events/${e.img}.webp 900w`}
-            sizes="(min-width: 760px) 340px, 100vw" alt={e.alt} width="900" height="506" loading="lazy" />
-          <div class="ev-pbody">
-            <h3>{e.title}</h3>
-            <p class="ev-pwhen">{e.when}</p>
-            <p class="ev-pwhere">{e.where}</p>
-            <p class="ev-ptext">{e.text}</p>
-            {e.video && <a class="ev-plink" href={e.video} target="_blank" rel="noopener">Watch on YouTube ↗</a>}
-            {e.watch && <a class="ev-plink" href={e.watch}>Watch on NuCinema →</a>}
-          </div>
+    <p class="ev-hint">Tap a flyer for the details and the recap.</p>
+    <ul class="ev-wall" id="ev-past">
+      {pastEvents.map((e, i) => (
+        <li class="ev-tile">
+          <button type="button" class="ev-tile-btn" data-open={`ev-d-${i}`} aria-haspopup="dialog">
+            <img src={`/img/events/${e.img}-480.webp`} srcset={`/img/events/${e.img}-480.webp 480w, /img/events/${e.img}.webp 900w`}
+              sizes="(min-width: 760px) 340px, 100vw" alt={e.alt} width="900" height="506" loading="lazy" />
+            <span class="ev-tile-cap">
+              <span class="ev-tile-title">{e.title}</span>
+              <span class="ev-tile-when">{e.when.split('·')[0].trim()}</span>
+            </span>
+          </button>
+          <dialog class="ev-dialog" id={`ev-d-${i}`} aria-labelledby={`ev-d-${i}-t`}>
+            <button type="button" class="ev-x" data-close aria-label="Close">✕</button>
+            <img src={`/img/events/${e.img}.webp`} alt={e.alt} width="900" height="506" loading="lazy" />
+            <div class="ev-dbody">
+              <h3 id={`ev-d-${i}-t`}>{e.title}</h3>
+              <p class="ev-pwhen">{e.when}</p>
+              <p class="ev-pwhere">{e.where}</p>
+              <p class="ev-ptext">{e.text}</p>
+              <div class="ev-dlinks">
+                {e.video && <a class="ev-btn" href={e.video} target="_blank" rel="noopener">Watch the recap ↗</a>}
+                {e.watch && <a class="ev-btn ev-btn-alt" href={e.watch}>Watch on NuCinema →</a>}
+              </div>
+            </div>
+          </dialog>
         </li>
       ))}
     </ul>
   </div>
 </Site>
+
+<script>
+  // Past-event flyers open a full view; tap outside, ✕ or Esc to close.
+  for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-open]')) {
+    const dlg = document.getElementById(btn.dataset.open!) as HTMLDialogElement | null;
+    if (!dlg) continue;
+    btn.addEventListener('click', () => dlg.showModal());
+    dlg.querySelector('[data-close]')?.addEventListener('click', () => dlg.close());
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  }
+</script>
 
 <script is:inline define:vars={{ initial, SHOW_GUIDE_URL, pastDays }}>
   (function () {
@@ -53,16 +81,55 @@ const pastDays = pastEvents.map((e) => e.day);
       var m = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/i.exec(String(text || ''));
       return m ? new Date(Number(m[3]), MONTHS.indexOf(m[1].toLowerCase()), Number(m[2]), 23, 59) : null;
     }
+    // "Sat, Oct 17, 2026 · 7–11 PM" -> 7 PM that day (7 PM if no time is given)
+    function showStart(text) {
+      var d = showDay(text); if (!d) return null;
+      var t = /·\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(String(text || ''));
+      var mer = (t && t[3]) || ((/(am|pm)\b/i.exec(String(text || '').split('·')[1] || '') || [])[1]) || 'pm';
+      var h = t ? Number(t[1]) % 12 + (/pm/i.test(mer) ? 12 : 0) : 19;
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, t && t[2] ? Number(t[2]) : 0);
+    }
+    // Live countdown: days, hours, minutes, seconds. Screen readers get a once-a-minute summary.
+    function countdown(at) {
+      var wrap = el('div', 'ev-count');
+      var units = [['d', 'days'], ['h', 'hours'], ['m', 'min'], ['s', 'sec']].map(function (u) {
+        var cell = el('span', 'ev-cell'); var n = el('span', 'ev-num', '0'); cell.appendChild(n); cell.appendChild(el('span', 'ev-unit', u[1])); wrap.appendChild(cell); return n;
+      });
+      wrap.setAttribute('role', 'timer');
+      var tick = function () {
+        var s = Math.max(0, Math.floor((at - new Date()) / 1000));
+        var v = [Math.floor(s / 86400), Math.floor(s % 86400 / 3600), Math.floor(s % 3600 / 60), s % 60];
+        units.forEach(function (n, i) { n.textContent = i ? String(v[i]).padStart(2, '0') : String(v[i]); });
+        wrap.setAttribute('aria-label', 'Starts in ' + v[0] + ' days, ' + v[1] + ' hours, ' + v[2] + ' minutes');
+        if (!s) clearInterval(timer);
+      };
+      var timer = setInterval(tick, 1000); tick();
+      return wrap;
+    }
     function render(g) {
       box.textContent = '';
-      var none = function () { box.appendChild(el('p', 'ev-note', 'No upcoming events right now. The next show will be announced soon. Follow @nrnszn for updates.')); };
+      var none = function () {
+        var c = el('section', 'ev-card ev-feature ev-soon');
+        c.appendChild(el('p', 'ev-kicker', 'Next show'));
+        c.appendChild(el('h3', 'ev-name', 'Coming soon'));
+        c.appendChild(el('p', 'ev-where', 'The next Certified Lounge is being planned. Follow @nrnszn to hear first.'));
+        var acts = el('div', 'ev-actions');
+        var ig = el('a', 'ev-btn', 'Follow @nrnszn ↗'); ig.href = 'https://www.instagram.com/nrnszn'; ig.target = '_blank'; ig.rel = 'noopener';
+        acts.appendChild(ig);
+        var rec = el('a', 'ev-btn ev-btn-alt', 'Watch past shows'); rec.href = '/cinema';
+        acts.appendChild(rec);
+        c.appendChild(acts);
+        box.appendChild(c);
+      };
       if (!g) { none(); return; }
       var day = showDay(g.date), past = day && day < new Date();
       if (past) { none(); addPast(g, day); return; }
-      var card = el('section', 'ev-card');
+      var card = el('section', 'ev-card ev-feature');
       card.appendChild(el('p', 'ev-kicker', 'Next show'));
       card.appendChild(el('h3', 'ev-name', 'Certified Lounge'));
       if (g.date) card.appendChild(el('p', 'ev-when', g.date));
+      var starts = showStart(g.date);
+      if (starts && starts > new Date()) card.appendChild(countdown(starts));
       if (g.venue || g.address) {
         var where = el('p', 'ev-where');
         if (g.venue) where.appendChild(el('strong', '', g.venue));
@@ -118,11 +185,11 @@ const pastDays = pastEvents.map((e) => e.day);
       var iso = day.getFullYear() + '-' + String(day.getMonth() + 1).padStart(2, '0') + '-' + String(day.getDate()).padStart(2, '0');
       var list = document.getElementById('ev-past');
       if (pastDays.indexOf(iso) >= 0 || list.querySelector('[data-day="' + iso + '"]')) return;
-      var li = el('li', 'ev-pcard ev-pcard-plain'); li.dataset.day = iso;
-      var b = el('div', 'ev-pbody');
-      b.appendChild(el('h3', '', 'Certified Lounge'));
-      b.appendChild(el('p', 'ev-pwhen', g.date));
-      if (g.venue || g.address) b.appendChild(el('p', 'ev-pwhere', [g.venue, g.address].filter(Boolean).join(' · ')));
+      var li = el('li', 'ev-tile ev-tile-plain'); li.dataset.day = iso;
+      var b = el('div', 'ev-tile-cap');
+      b.appendChild(el('span', 'ev-tile-title', 'Certified Lounge'));
+      b.appendChild(el('span', 'ev-tile-when', String(g.date || '').split('·')[0].trim()));
+      if (g.venue) b.appendChild(el('span', 'ev-tile-when', g.venue));
       li.appendChild(b); list.insertBefore(li, list.firstChild);
     }
     render(initial);
@@ -131,25 +198,81 @@ const pastDays = pastEvents.map((e) => e.day);
 </script>
 
 <style>
-  .ev { max-width: 720px; margin: 0 auto; padding: var(--space-6) var(--space-4); }
-  .ev-title {
-    margin: 0 0 var(--space-4);
+  .ev { max-width: 880px; margin: 0 auto; padding: 0 var(--space-4) var(--space-6); }
+  .ev-section {
+    margin: var(--space-6) 0 var(--space-3);
     font-family: var(--font-poster); font-weight: 800; text-transform: uppercase;
-    font-size: clamp(30px, 8vw, 44px); letter-spacing: 0.03em; line-height: 1; color: var(--pink-300);
+    font-size: clamp(28px, 8vw, 40px); letter-spacing: 0.03em; line-height: 1; color: var(--pink-300);
   }
-  .ev-section { margin: var(--space-6) 0 var(--space-3); font-size: 15px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #a99fc6; }
-  .ev-title + .ev-section { margin-top: 0; }
+  .ev-section:first-child { margin-top: var(--space-4); }
+  .ev-hint { margin: calc(-1 * var(--space-2)) 0 var(--space-3); font-size: 14px; color: #a99fc6; }
   #ev-show { display: grid; gap: var(--space-4); }
-  .ev-past { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
-  @media (min-width: 760px) { .ev-past { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .ev-pcard { min-width: 0; overflow: hidden; border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238; }
-  .ev-pcard img { width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; background: #000; }
-  .ev-pbody { padding: var(--space-4); display: grid; gap: 4px; }
-  .ev-pbody h3 { margin: 0; font-family: var(--font-poster); font-weight: 800; font-size: 24px; text-transform: uppercase; line-height: 1.05; color: var(--gold-300); }
+
+  /* Past events: a wall of flyers */
+  .ev-wall { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (min-width: 760px) { .ev-wall { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); } }
+  .ev-tile { min-width: 0; }
+  .ev-tile-btn {
+    position: relative; isolation: isolate; overflow: hidden; display: block; width: 100%; padding: 0;
+    aspect-ratio: 4 / 5; border: 1px solid #2a2238; border-radius: 16px; background: #000; cursor: pointer;
+    font: inherit; color: inherit; text-align: left;
+    transition: transform 240ms var(--ease-out), border-color 240ms, box-shadow 240ms;
+  }
+  .ev-tile-btn img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; transition: transform 900ms var(--ease-out); }
+  .ev-tile-btn::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent 40%, rgba(14, 11, 22, 0.92) 100%); }
+  .ev-tile-btn:hover, .ev-tile-btn:focus-visible { transform: translateY(-3px); border-color: var(--gold-500); box-shadow: 0 16px 40px -12px rgba(255, 106, 166, 0.5); }
+  .ev-tile-btn:hover img { transform: scale(1.08); }
+  .ev-tile-btn:active { transform: scale(0.97); }
+  .ev-tile-cap { position: absolute; left: 0; right: 0; bottom: 0; display: grid; gap: 2px; padding: var(--space-3); }
+  .ev-tile-title { font-family: var(--font-poster); font-weight: 800; text-transform: uppercase; font-size: clamp(17px, 4.6vw, 22px); line-height: 1; color: #fff4dc; }
+  .ev-tile-when { font-size: 13px; font-weight: 600; color: #e4ddf2; }
+  .ev-tile-plain { position: relative; aspect-ratio: 4 / 5; border-radius: 16px; border: 1px solid #2a2238; background: radial-gradient(circle at 30% 20%, #3a1a4a, #15111f 70%); }
+
+  /* Flyer full view */
+  .ev-dialog {
+    width: min(560px, calc(100vw - 24px)); max-height: calc(100svh - 32px); padding: 0; overflow: auto;
+    border: 1px solid var(--gold-500); border-radius: 20px; background: #15111f; color: #f3f0fa;
+  }
+  .ev-dialog::backdrop { background: rgba(8, 6, 14, 0.82); backdrop-filter: blur(6px); }
+  .ev-dialog[open] { animation: ev-pop 260ms var(--ease-out); }
+  @keyframes ev-pop { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
+  .ev-dialog > img { display: block; width: 100%; height: auto; }
+  .ev-x {
+    position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(14, 11, 22, 0.75); color: #fff; font-size: 18px; cursor: pointer;
+  }
+  .ev-dbody { padding: var(--space-4); display: grid; gap: 4px; }
+  .ev-dbody h3 { margin: 0; font-family: var(--font-poster); font-weight: 800; font-size: 28px; text-transform: uppercase; line-height: 1.05; color: var(--gold-300); }
   .ev-pwhen { margin: 4px 0 0; font-weight: 700; font-size: 15px; color: #f3f0fa; }
   .ev-pwhere { margin: 0; font-size: 14px; color: #a99fc6; }
   .ev-ptext { margin: 6px 0 0; font-size: 15px; line-height: 1.5; color: #c9c0de; }
-  .ev-plink { justify-self: start; margin-top: 6px; display: inline-block; padding: 10px 0; color: var(--gold-300); font-weight: 700; }
+  .ev-dlinks { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+  .ev-btn {
+    display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: var(--radius-pill);
+    background: var(--gold-300); color: var(--purple-900); font-weight: 700; font-size: 16px; text-decoration: none;
+  }
+  .ev-btn:hover { background: #ffe08a; }
+  .ev-btn-alt { background: transparent; color: var(--gold-300); border: 1.5px solid var(--gold-500); }
+  .ev-btn-alt:hover { background: #241d34; }
+
+  /* Next show: the latest flyer as a moody backdrop, with a live countdown */
+  #ev-show :global(.ev-feature) { position: relative; isolation: isolate; overflow: hidden; padding: var(--space-6) var(--space-4) var(--space-5); border-color: color-mix(in srgb, var(--pink-300) 45%, #2a2238); }
+  #ev-show :global(.ev-feature::before) {
+    content: ''; position: absolute; inset: -20%; z-index: -2;
+    background: var(--ev-backdrop, none) center / cover no-repeat; filter: blur(26px) saturate(1.3); opacity: 0.45;
+    animation: ev-breathe 12s ease-in-out infinite alternate;
+  }
+  #ev-show :global(.ev-feature::after) { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(14, 11, 22, 0.35), rgba(14, 11, 22, 0.88)); }
+  @keyframes ev-breathe { from { transform: scale(1); } to { transform: scale(1.12) rotate(1deg); } }
+  #ev-show :global(.ev-count) { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-4); max-width: 420px; }
+  #ev-show :global(.ev-cell) { display: grid; justify-items: center; padding: 10px 4px; border-radius: 14px; background: rgba(14, 11, 22, 0.6); border: 1px solid rgba(232, 187, 82, 0.35); }
+  #ev-show :global(.ev-num) { font-family: var(--font-poster); font-weight: 800; font-size: clamp(28px, 8vw, 40px); line-height: 1; color: #fff4dc; font-variant-numeric: tabular-nums; text-shadow: 0 0 16px rgba(255, 106, 166, 0.6); }
+  #ev-show :global(.ev-unit) { margin-top: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #c9c0de; }
+  @media (prefers-reduced-motion: reduce) {
+    #ev-show :global(.ev-feature::before) { animation: none; }
+    .ev-tile-btn, .ev-tile-btn img { transition: none; }
+    .ev-dialog[open] { animation: none; }
+  }
   #ev-show :global(.ev-card) { padding: var(--space-5) var(--space-4); border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238; }
   #ev-show :global(.ev-kicker) { margin: 0 0 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a99fc6; }
   #ev-show :global(.ev-name) { margin: 0; font-family: var(--font-poster); font-weight: 800; font-size: clamp(30px, 9vw, 40px); text-transform: uppercase; line-height: 1; color: var(--gold-300); }

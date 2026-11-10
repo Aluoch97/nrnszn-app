@@ -1,5 +1,6 @@
 ---
 import Site from '../layouts/Site.astro';
+import PageHero from '../components/PageHero.astro';
 import { SERVICES_API_URL } from '../data/services.js';
 
 // Ported from the Wix "Service Select Screen" embed. The pricing, booking
@@ -12,6 +13,18 @@ const SCRIPT_URL = SERVICES_API_URL;
   title="Services — NuRenaissance"
   description="Video production, photography, web design, livestream, graphic design and artist admin services in Nashville. Live pricing and booking."
 >
+  <PageHero
+    title="Services"
+    kicker="Book NuRenaissance"
+    text="Video, photo, livestream, web and admin. Pick what you need below. Prices update as you go."
+    images={[
+      { src: '/img/cinema/certified-tour-800.webp', srcset: '/img/cinema/certified-tour-800.webp 800w, /img/cinema/certified-tour.webp 1600w' },
+      { src: '/img/home-hero-640.webp', srcset: '/img/home-hero-640.webp 640w, /img/home-hero.webp 1280w' },
+      { src: '/img/cinema/muse-sessions.webp', soft: true },
+      { src: '/img/cinema/heal-hop-sessions.webp', soft: true },
+    ]}
+    accent="#e8bb52"
+  />
   <div class="services-page">
 
     <noscript>
@@ -22,9 +35,6 @@ const SCRIPT_URL = SERVICES_API_URL;
     </noscript>
 
     <div id="nrn-select">
-      <img class="nrn-logo" src="/icons/logo.webp" alt="" width="96" height="96" />
-      <h1 class="nrn-brand-name">Services</h1>
-      <div class="nrn-form-sub">Pick what you need below. Prices update as you go.</div>
 
       <div id="nrn-viewport">
         <div id="nrn-page-services" class="nrn-page">
@@ -1264,7 +1274,7 @@ const SCRIPT_URL = SERVICES_API_URL;
   /* Light booking panel on the dark site shell. */
   .services-page {
     max-width: 560px;
-    margin: var(--space-5) auto var(--space-6);
+    margin: 0 auto var(--space-6);
     padding: 0 var(--space-3);
   }
   .services-page > #nrn-select, .services-page > noscript > .nrn-noscript {

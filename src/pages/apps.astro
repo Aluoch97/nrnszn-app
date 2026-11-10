@@ -1,53 +1,99 @@
 ---
-// Apps: NuRenaissance's own apps (moved here from the Wix /apps page).
+// Apps: NuRenaissance's own apps. A moving header with the app icons floating in it,
+// then one big card per app, washed in that app's art and glowing in its color.
 import Site from '../layouts/Site.astro';
 import Icon from '../components/Icon.astro';
+import PageHero from '../components/PageHero.astro';
 import { apps } from '../data/site.js';
 ---
 <Site
   title="Apps | NuRenaissance"
-  description="Apps from NuRenaissance Media: NuDirectory, the Nashville scene board; PODI, browser-based multi-camera editing; and Soul Vault, Nicólas Soul's music archive."
+  description="Apps from NuRenaissance Media: Certified, NuDirectory, the Nashville scene board; PODI, browser-based multi-camera editing; and Soul Vault, Nicólas Soul's music archive."
 >
-  <div class="hub">
-    <h1 class="hub-title">Apps</h1>
-    <ul class="apps">
-      {apps.map((a) => (
-        <li class="app">
-          <img src={a.img} alt="" width="160" height="160" loading="lazy" />
-          <div class="app-body">
+  <PageHero
+    title="Apps"
+    kicker="Built by NuRenaissance"
+    text="Tools and worlds for the scene: play along at the show, find your next stage, edit faster, dig through the vault."
+    images={[{ src: '/img/portal-poster-640.webp', srcset: '/img/portal-poster-640.webp 640w, /img/portal-poster.webp 1280w' }]}
+    float={apps.map((a) => a.img)}
+    accent="#8520cc"
+  />
+  <ul class="apps">
+    {apps.map((a, i) => (
+      <li class="app" style={`--accent:${a.accent}; --art:url('${a.img}')`}>
+        <a class="app-link" href={a.href} {...(a.inApp ? {} : { target: '_blank', rel: 'noopener' })}>
+          <span class="app-wash" aria-hidden="true"></span>
+          <img class="app-icon" src={a.img} alt="" width="160" height="160" loading={i < 2 ? 'eager' : 'lazy'} />
+          <span class="app-body">
+            <span class="app-tag">{a.inApp ? 'Opens here' : 'Opens in a new tab'}</span>
             <h2 class="app-name">{a.name}</h2>
-            <p class="app-text">{a.text}</p>
-            <a class="app-open" href={a.href} {...(a.inApp ? {} : { target: '_blank', rel: 'noopener' })}>
-              Open {a.name}{!a.inApp && <Icon name="external" size={16} />}
-            </a>
-          </div>
-        </li>
-      ))}
-    </ul>
-  </div>
+            <span class="app-text">{a.text}</span>
+            <span class="app-open">Open {a.name}{a.inApp ? <span aria-hidden="true">→</span> : <Icon name="external" size={16} />}</span>
+          </span>
+        </a>
+      </li>
+    ))}
+  </ul>
 </Site>
 
 <style>
-  .hub { max-width: 880px; margin: 0 auto; padding: var(--space-6) var(--space-4); }
-  .hub-title {
-    margin: 0 0 var(--space-4);
-    font-family: var(--font-poster); font-weight: 800; text-transform: uppercase;
-    font-size: clamp(30px, 8vw, 44px); letter-spacing: 0.03em; line-height: 1; color: var(--pink-300);
+  .apps {
+    list-style: none; margin: 0 auto; padding: 0 var(--space-4) var(--space-6);
+    max-width: 1040px; display: grid; gap: var(--space-4);
   }
-  .apps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
-  .app {
-    display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--space-4); align-items: start;
-    padding: var(--space-4); border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238;
+  @media (min-width: 760px) { .apps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); } }
+  .app { min-width: 0; }
+  .app-link {
+    position: relative; isolation: isolate; overflow: hidden; height: 100%;
+    display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: var(--space-4); align-items: start;
+    padding: var(--space-5) var(--space-4);
+    border-radius: 22px; text-decoration: none; color: #f3f0fa;
+    background: #15111f;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, #2a2238);
+    box-shadow: 0 0 0 0 transparent;
+    transition: transform 260ms var(--ease-out), box-shadow 260ms, border-color 260ms;
   }
-  @media (min-width: 720px) { .app { grid-template-columns: 140px minmax(0, 1fr); } }
-  .app img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 18px; }
+  @media (min-width: 760px) { .app-link { grid-template-columns: 1fr; padding: var(--space-5); } }
+  /* the app's own art, blown up and blurred into a color wash behind the card */
+  .app-wash {
+    position: absolute; inset: -30%; z-index: -1;
+    background: var(--art) center / cover no-repeat;
+    filter: blur(42px) saturate(1.4); opacity: 0.32;
+    transition: opacity 260ms, transform 600ms var(--ease-out);
+  }
+  .app-link::after {
+    content: ''; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(160deg, transparent 0%, rgba(14, 11, 22, 0.55) 60%, rgba(14, 11, 22, 0.85) 100%);
+  }
+  .app-link:hover, .app-link:focus-visible {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+    box-shadow: 0 18px 50px -12px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  .app-link:hover .app-wash { opacity: 0.5; transform: scale(1.08); }
+  .app-link:active { transform: scale(0.985); }
+  .app-icon {
+    width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 22%;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 26px color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+  @media (min-width: 760px) { .app-icon { width: 120px; } }
   .app-body { min-width: 0; display: grid; gap: var(--space-2); justify-items: start; }
-  .app-name { margin: 0; font-family: var(--font-poster); font-weight: 800; font-size: 26px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; color: var(--gold-300); }
-  .app-text { margin: 0; font-size: 15px; line-height: 1.5; color: #c9c0de; }
-  .app-open {
-    display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 18px; margin-top: var(--space-1);
-    border-radius: var(--radius-pill); background: var(--gold-300); color: var(--purple-900);
-    font-weight: 700; font-size: 15px; text-decoration: none;
+  .app-tag { font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+  .app-name {
+    margin: 0; font-family: var(--font-poster); font-weight: 800; text-transform: uppercase;
+    font-size: clamp(34px, 9vw, 46px); line-height: 0.95; letter-spacing: 0.02em; color: #fff4dc;
+    text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 55%, transparent);
   }
-  .app-open:hover { background: #ffe08a; }
+  .app-text { font-size: 15px; line-height: 1.55; color: #d9d2e9; }
+  .app-open {
+    display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 20px; margin-top: var(--space-1);
+    border-radius: var(--radius-pill); background: var(--gold-300); color: var(--purple-900);
+    font-weight: 700; font-size: 15px;
+  }
+  .app-link:hover .app-open { background: #ffe08a; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .app-link, .app-wash { transition: none; }
+    .app-link:hover { transform: none; }
+  }
 </style>

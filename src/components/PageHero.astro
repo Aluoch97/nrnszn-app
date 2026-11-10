@@ -1,0 +1,172 @@
+---
+// Full-width moving header for each tab, in the same spirit as the home page's archway video:
+// a background that slowly drifts and crossfades, a dark fade into the page, gold sparkles,
+// and a big title. Built from the site's own art for now; give it `video` to use footage instead.
+//
+// images: stills that crossfade with a slow zoom and pan (the first one loads first).
+// video:  { small, large, poster } mp4 loops, same as the home page (small is used on phones).
+// float:  small images that drift in the foreground (the Apps tab uses the app icons).
+// accent: glow color behind the title.
+// soft:   blur and dim the stills (for flyers full of small text, or small images); or set it per image.
+interface Img { src: string; srcset?: string; alt?: string; pos?: string; soft?: boolean }
+interface Props {
+  title: string;
+  kicker?: string;
+  text?: string;
+  images?: Img[];
+  video?: { small: string; large: string; poster: string };
+  float?: string[];
+  mascot?: boolean;
+  accent?: string;
+  size?: 'tall' | 'medium';
+  soft?: boolean;
+  headingTag?: 'h1' | 'p';
+}
+const { title, kicker, text, images = [], video, float = [], mascot = false, accent = '#8520cc', size = 'medium', soft = false, headingTag = 'h1' } = Astro.props;
+const Heading = headingTag;
+---
+<section class:list={['ph', `ph-${size}`]} style={`--ph-accent:${accent}`}>
+  <div class="ph-bg" aria-hidden="true">
+    {video ? (
+      <video class="ph-video" autoplay muted loop playsinline preload="metadata" poster={video.poster}>
+        <source src={video.small} type="video/mp4" media="(max-width: 760px)" />
+        <source src={video.large} type="video/mp4" />
+      </video>
+    ) : images.map((im, i) => (
+      i === 0 ? (
+        <img class:list={['ph-slide on', { 'ph-soft': soft || im.soft }]} src={im.src} srcset={im.srcset} sizes="(max-width: 760px) 60vw, 100vw" alt=""
+          width="1280" height="720" style={im.pos ? `object-position:${im.pos}` : undefined} fetchpriority="high" decoding="async" />
+      ) : (
+        // The rest wait until the page has loaded (see the script), so the first one gets the bandwidth.
+        <img class:list={['ph-slide', { 'ph-soft': soft || im.soft }]} data-src={im.src} data-srcset={im.srcset} sizes="(max-width: 760px) 60vw, 100vw" alt=""
+          width="1280" height="720" style={im.pos ? `object-position:${im.pos}` : undefined} decoding="async" />
+      )
+    ))}
+  </div>
+  {float.length > 0 && (
+    <div class="ph-float" aria-hidden="true">
+      {float.map((src, i) => <img src={src} alt="" width="120" height="120" loading="eager" style={`--i:${i}`} />)}
+    </div>
+  )}
+  <div class="ph-sparkles" aria-hidden="true">
+    {Array.from({ length: 7 }, (_, i) => <span style={`--i:${i}`}></span>)}
+  </div>
+  <div class="ph-inner">
+    {mascot && <img class="ph-mascot" src="/img/mascot.webp" alt="" width="96" height="96" />}
+    {kicker && <p class="ph-kicker">{kicker}</p>}
+    <Heading class="ph-title">{title}</Heading>
+    {text && <p class="ph-text">{text}</p>}
+    <slot />
+  </div>
+</section>
+
+<script>
+  // Crossfade the stills every few seconds while the header is on screen (not with reduced motion).
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  for (const hero of document.querySelectorAll<HTMLElement>('.ph')) {
+    const slides = [...hero.querySelectorAll<HTMLImageElement>('.ph-slide')];
+    if (slides.length < 2 || reduce.matches) continue;
+    // Load the other stills once the page itself has finished loading.
+    const fill = () => slides.forEach((s) => {
+      if (s.dataset.srcset) s.srcset = s.dataset.srcset;
+      if (s.dataset.src) s.src = s.dataset.src;
+    });
+    if (document.readyState === 'complete') fill(); else addEventListener('load', fill, { once: true });
+    let i = 0, timer = 0;
+    const next = () => {
+      slides[i].classList.remove('on');
+      i = (i + 1) % slides.length;
+      slides[i].classList.add('on');
+    };
+    const start = () => { if (!timer) timer = window.setInterval(next, 6500); };
+    const stop = () => { clearInterval(timer); timer = 0; };
+    new IntersectionObserver(([e]) => (e.isIntersecting ? start() : stop())).observe(hero);
+    document.addEventListener('visibilitychange', () => (document.hidden ? stop() : start()));
+  }
+</script>
+
+<style>
+  .ph {
+    position: relative; isolation: isolate; overflow: hidden;
+    display: grid; align-items: end; justify-items: center;
+    padding: var(--space-6) var(--space-4) var(--space-5);
+    background: #0e0b16;
+  }
+  .ph-medium { min-height: min(46svh, 440px); }
+  .ph-tall { min-height: min(62svh, 560px); }
+
+  .ph-bg { position: absolute; inset: 0; z-index: -3; }
+  .ph-video, .ph-slide { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .ph-slide { opacity: 0; transform: scale(1.12); transition: opacity 1.6s ease; }
+  .ph-slide.on { opacity: 1; animation: ph-drift 9s ease-out both; }
+  .ph-soft { filter: blur(5px) brightness(0.75) saturate(1.2); }
+  @keyframes ph-drift {
+    from { transform: scale(1.14) translate3d(-1.5%, 1%, 0); }
+    to { transform: scale(1.02) translate3d(1.5%, -1%, 0); }
+  }
+
+  /* the same dim-and-fade as the home archway, plus a glow in the tab's color */
+  .ph::before {
+    content: ''; position: absolute; inset: 0; z-index: -2;
+    background:
+      radial-gradient(60% 55% at 50% 72%, color-mix(in srgb, var(--ph-accent) 38%, transparent) 0%, transparent 70%),
+      linear-gradient(180deg, rgba(14, 11, 22, 0.45) 0%, rgba(14, 11, 22, 0.7) 55%, #0e0b16 100%);
+  }
+
+  .ph-float { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+  .ph-float img {
+    position: absolute; width: clamp(64px, 17vw, 120px); height: auto; aspect-ratio: 1; object-fit: cover;
+    border-radius: 24%; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 30px color-mix(in srgb, var(--ph-accent) 45%, transparent);
+    opacity: 0.85; animation: ph-bob 7s ease-in-out infinite; animation-delay: calc(var(--i) * -1.7s);
+  }
+  .ph-float img:nth-child(1) { left: 6%; top: 14%; rotate: -10deg; }
+  .ph-float img:nth-child(2) { right: 7%; top: 10%; rotate: 9deg; }
+  .ph-float img:nth-child(3) { left: 14%; top: 46%; rotate: 6deg; width: clamp(52px, 13vw, 96px); }
+  .ph-float img:nth-child(4) { right: 13%; top: 44%; rotate: -7deg; width: clamp(52px, 13vw, 96px); }
+  @media (max-width: 520px) { .ph-float img { opacity: 0.55; } }
+  @keyframes ph-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+
+  /* gold four-point sparkles, like the stars in the archway */
+  .ph-sparkles { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+  .ph-sparkles span {
+    position: absolute; width: 18px; height: 18px; background: #e8bb52; opacity: 0;
+    clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+    filter: drop-shadow(0 0 6px rgba(232, 187, 82, 0.9));
+    animation: ph-twinkle 4.8s ease-in-out infinite; animation-delay: calc(var(--i) * 0.7s);
+  }
+  .ph-sparkles span:nth-child(1) { left: 12%; top: 22%; }
+  .ph-sparkles span:nth-child(2) { left: 82%; top: 18%; scale: 1.3; }
+  .ph-sparkles span:nth-child(3) { left: 30%; top: 58%; scale: 0.7; }
+  .ph-sparkles span:nth-child(4) { left: 68%; top: 52%; }
+  .ph-sparkles span:nth-child(5) { left: 50%; top: 12%; scale: 0.8; }
+  .ph-sparkles span:nth-child(6) { left: 90%; top: 64%; scale: 0.6; }
+  .ph-sparkles span:nth-child(7) { left: 6%; top: 70%; scale: 0.9; }
+  @keyframes ph-twinkle {
+    0%, 100% { opacity: 0; transform: scale(0.4) rotate(0deg); }
+    45% { opacity: 0.95; transform: scale(1) rotate(45deg); }
+    60% { opacity: 0.2; }
+  }
+
+  .ph-inner { width: 100%; max-width: 760px; display: grid; justify-items: center; gap: var(--space-2); text-align: center; }
+  .ph-mascot { width: 84px; height: 84px; filter: drop-shadow(0 0 18px rgba(155, 93, 229, 0.7)); animation: ph-bob 5s ease-in-out infinite; }
+  .ph-kicker {
+    margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--gold-300); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
+  }
+  .ph-title {
+    margin: 0; font-family: var(--font-poster); font-weight: 800; text-transform: uppercase;
+    font-size: clamp(52px, 15vw, 104px); line-height: 0.9; letter-spacing: 0.02em;
+    color: #fff4dc;
+    text-shadow: 0 0 28px color-mix(in srgb, var(--ph-accent) 80%, transparent), 0 2px 0 rgba(0, 0, 0, 0.45), 0 6px 30px rgba(0, 0, 0, 0.8);
+  }
+  .ph-text {
+    margin: var(--space-1) 0 0; max-width: 40ch; font-size: clamp(16px, 4.2vw, 19px); line-height: 1.5;
+    color: #f3f0fa; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.95);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ph-slide.on, .ph-float img, .ph-sparkles span, .ph-mascot { animation: none; }
+    .ph-slide { transition: none; transform: none; }
+    .ph-sparkles span { opacity: 0.6; transform: rotate(45deg); }
+  }
+</style>
