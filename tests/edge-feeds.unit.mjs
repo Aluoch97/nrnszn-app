@@ -172,6 +172,7 @@ test('playlist: falls back to reading the page when the API fails, and without a
     const fb = await loadPlaylist('PLVprhlbgSo1vgKbKRq7c3tsY-Y1tl4D3X', 'k123');
     assert.equal(fb.title, 'From page');
     assert.equal(fb.source, 'page');
+    assert.match(fb.apiError, /quota exceeded/);
     assert.ok(hosts.includes('www.googleapis.com') && hosts.includes('www.youtube.com'));
     hosts.length = 0;
     assert.equal((await loadPlaylist('PLVprhlbgSo1vgKbKRq7c3tsY-Y1tl4D3X', '')).title, 'From page');

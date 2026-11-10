@@ -127,16 +127,20 @@ export async function loadPlaylistViaApi(list, key, now = Date.now()) {
 }
 
 // key: the YouTube API key, if set. Falls back to reading the page when there's no key or the API fails.
+// When it falls back, the answer says why in `apiError` (never the key), so a missing
+// or rejected key shows up in the live answer and the daily check.
 export async function loadPlaylist(list, key) {
   if (!ID.test(list)) throw new Error('bad playlist id');
+  let apiError = 'no YOUTUBE_API_KEY on this deployment';
   if (key) {
     try {
       return await loadPlaylistViaApi(list, key);
     } catch (e) {
+      apiError = String(e?.message || e).replaceAll(key, '***').slice(0, 200);
       console.error(`playlist ${list}: API failed, reading the page instead`, e);
     }
   }
-  return loadPlaylistFromPage(list);
+  return { ...(await loadPlaylistFromPage(list)), apiError };
 }
 
 async function loadPlaylistFromPage(list) {
