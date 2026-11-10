@@ -10,6 +10,7 @@ const CORS = { 'access-control-allow-origin': '*' }; // public data; the Certifi
 export async function onRequestGet(context) {
   const list = new URL(context.request.url).searchParams.get('list') || '';
   if (!isPlaylistId(list)) return new Response(JSON.stringify({ ok: false, error: 'bad playlist id' }), { status: 400, headers: { 'content-type': 'application/json', ...CORS } });
-  const key = context.env?.YOUTUBE_API_KEY || '';
+  // Trim stray spaces, line breaks or quotes that can sneak in when pasting the secret.
+  const key = String(context.env?.YOUTUBE_API_KEY || '').trim().replace(/^['"]+|['"]+$/g, '');
   return serveCached(`playlist-${list}`, async () => JSON.stringify(await loadPlaylist(list, key)), context, Date.now(), CORS, PLAYLIST_FRESH_SECS);
 }
