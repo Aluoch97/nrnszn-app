@@ -422,6 +422,9 @@
 
 /* Readability (site rule: no text under 11px; small print 12px). */
 #nrn-pay-root .nrn-eyebrow { font-size: 11px; }
+/* Support heading and thank-you message */
+#nrn-pay-root h2 { font-size: 26px; margin: 2px 0 8px; }
+#nrn-pay-root .nrn-sub { font-size: 15px; line-height: 1.55; color: #d8cfee; margin: 0 4px 16px; }
 #nrn-pay-root .nrn-footnote, #nrn-pay-root .nrn-field label, #nrn-pay-root .nrn-field-hint, #nrn-pay-root .nrn-method-hint, #nrn-pay-root .nrn-copy-btn { font-size: 12px; }
 </style>
 
@@ -539,39 +542,18 @@
       // No amount field on purpose — it never reached every payment method
       // anyway (PayPal's page has its own amount field, Zelle/Apple Pay are
       // just instructions), so it was giving a false sense that typing it
-      // in "sent" it somewhere. Name/email/note stay, though: even without
-      // being able to confirm a payment completed, having who it was likely
-      // from and what it was for lets you loosely trace a click back to an
-      // invoice in the Payments sheet, which is worth keeping.
-      '<div class="nrn-field">' +
-        '<label for="nrn-note">What\'s this for? <span class="nrn-field-hint">(optional)</span></label>' +
-        '<input type="text" id="nrn-note" placeholder="e.g. logo design, Aug 30 ticket, tour hoodie">' +
-      '</div>' +
-
-      '<div class="nrn-field">' +
-        '<label for="nrn-name">Your name <span class="nrn-field-hint">(optional, helps us match your payment)</span></label>' +
-        '<input type="text" id="nrn-name" placeholder="Full name">' +
-      '</div>' +
-
-      '<div class="nrn-field">' +
-        '<label for="nrn-email">Email <span class="nrn-field-hint">(optional, for a receipt)</span></label>' +
-        '<input type="email" id="nrn-email" placeholder="you@example.com" inputmode="email">' +
-      '</div>' +
+      // in "sent" it somewhere. The name/email/note fields were removed too
+      // (Nov 2026); a note can still arrive as ?for= and goes to the
+      // Payments log and Cash App's note.
+      '<h2>Support</h2>' +
+      '<p class="nrn-sub">Thank you from the bottom of our hearts. Every ticket, every piece of merch and every booking helps keep independent Nashville art alive, and lets us keep lifting up the artists and creatives who make this city sound like home. We couldn\u2019t do it without you.</p>' +
 
       '<div class="nrn-methods">' + methodsHTML() + '</div>' +
 
       '<div class="nrn-toast" id="nrn-toast" role="status" aria-live="polite"></div>' +
       '<div class="nrn-footnote">Payments are sent directly through each platform. NuRenaissance never collects card or account numbers here.</div>';
 
-    var noteEl = root.querySelector('#nrn-note');
-    var nameEl = root.querySelector('#nrn-name');
-    var emailEl = root.querySelector('#nrn-email');
     var toastEl = root.querySelector('#nrn-toast');
-
-    // Restore whatever was typed if render() is ever called again.
-    noteEl.value = state.note;
-    nameEl.value = state.name;
-    emailEl.value = state.email;
 
     // buildLink() below only ever produces safe URLs today (numeric amounts,
     // encodeURIComponent'd note text), but its output gets concatenated into
@@ -607,9 +589,9 @@
             token: WIDGET_TOKEN,
             brand: 'nurenaissance',
             platform: platform,
-            name: nameEl.value.trim(),
-            email: emailEl.value.trim(),
-            note: noteEl.value.trim(),
+            name: state.name.trim(),
+            email: state.email.trim(),
+            note: state.note.trim(),
             page: window.location.href
           })
         });
@@ -628,7 +610,7 @@
           return HANDLES.cashapp;
         case 'venmo':
           var url = HANDLES.venmo;
-          if (noteEl.value.trim()) url += '?note=' + encodeURIComponent(noteEl.value.trim());
+          if (state.note.trim()) url += '?note=' + encodeURIComponent(state.note.trim());
           return url;
         default:
           return '#';
@@ -722,9 +704,6 @@
     });
 
     // Keep the typed value around in state in case render() ever runs again.
-    noteEl.addEventListener('input', function () { state.note = noteEl.value; });
-    nameEl.addEventListener('input', function () { state.name = nameEl.value; });
-    emailEl.addEventListener('input', function () { state.email = emailEl.value; });
   }
 
   render();
