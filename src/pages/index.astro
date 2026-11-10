@@ -65,12 +65,12 @@ const links = [
     <section class="videos" aria-label="Latest videos">
       <div class="vid">
         <h2 class="band-title">Latest interview</h2>
-        <VideoCard slot="interview" label="Watch on YouTube" playlistId={playlists.interview.id} video={latest.interview} />
+        <VideoCard slot="interview" label="Tap to play" playlistId={playlists.interview.id} video={latest.interview} />
         <a class="more" href={playlistUrl(playlists.interview.id)} target="_blank" rel="noopener">More interviews ↗</a>
       </div>
       <div class="vid">
         <h2 class="band-title">Latest music video</h2>
-        <VideoCard slot="music" label="Watch on YouTube" playlistId={playlists.music.id} video={latest.music} />
+        <VideoCard slot="music" label="Tap to play" playlistId={playlists.music.id} video={latest.music} />
         <a class="more" href={playlistUrl(playlists.music.id)} target="_blank" rel="noopener">More music videos ↗</a>
       </div>
     </section>

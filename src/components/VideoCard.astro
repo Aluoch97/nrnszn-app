@@ -28,6 +28,46 @@ const title = video?.title ?? 'Watch the playlist on YouTube';
   </div>
 </a>
 
+<script>
+  // Tap to play right here: the thumbnail turns into the YouTube player (the rest of the
+  // playlist follows). Without JavaScript, or with ⌘/Ctrl-click, it still opens YouTube.
+  for (const card of document.querySelectorAll<HTMLAnchorElement>('a.card[data-video-slot]')) {
+    card.addEventListener('click', (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      const url = new URL(card.href);
+      const id = url.searchParams.get('v');
+      const list = card.dataset.playlist || url.searchParams.get('list') || '';
+      if (!id && !list) return;
+      e.preventDefault();
+      // Copy the card's attributes (including Astro's style scope) so the player is styled the same.
+      const scope = [...card.attributes].find((a) => a.name.startsWith('data-astro-cid'));
+      const scoped = <T extends Element>(el: T) => { if (scope) el.setAttribute(scope.name, ''); return el; };
+      const player = document.createElement('div');
+      for (const a of [...card.attributes]) if (!['href', 'target', 'rel'].includes(a.name)) player.setAttribute(a.name, a.value);
+      player.classList.add('playing');
+      const frame = scoped(document.createElement('iframe'));
+      frame.className = 'player';
+      // One video (then the rest of its playlist), or the whole playlist if no single video is known.
+      frame.src = id
+        ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&playsinline=1&rel=0` + (list ? `&list=${encodeURIComponent(list)}` : '')
+        : `https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(list)}&autoplay=1&playsinline=1&rel=0`;
+      frame.title = card.querySelector('[data-title]')?.textContent || 'Video';
+      frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+      frame.allowFullscreen = true;
+      const thumb = card.querySelector('.thumb')!.cloneNode(false) as HTMLElement;
+      thumb.appendChild(frame);
+      const meta = card.querySelector('.meta')!.cloneNode(true) as HTMLElement;
+      const yt = scoped(document.createElement('a'));
+      yt.className = 'yt-link'; yt.href = card.href; yt.target = '_blank'; yt.rel = 'noopener';
+      yt.textContent = 'Open in YouTube ↗';
+      meta.appendChild(yt);
+      player.append(thumb, meta);
+      card.replaceWith(player);
+      frame.focus();
+    });
+  }
+</script>
+
 <style>
   .card {
     display: block;
@@ -39,6 +79,9 @@ const title = video?.title ?? 'Watch the playlist on YouTube';
     transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast);
   }
   .card:hover { transform: translateY(-2px); background: var(--purple-500); }
+  .card.playing, .card.playing:hover { transform: none; background: var(--purple-700); }
+  .player { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .yt-link { justify-self: start; display: inline-flex; align-items: center; min-height: 32px; font-size: 14px; font-weight: 600; color: var(--gold-300); }
   .card:active { transform: translateY(0) scale(0.99); }
 
   .thumb { position: relative; aspect-ratio: 16 / 9; background: var(--purple-900); overflow: hidden; }
