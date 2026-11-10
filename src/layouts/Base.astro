@@ -9,11 +9,12 @@ interface Props {
   title: string;
   description: string;
   image?: string;
+  canonicalPath?: string; // when two URLs show the same page (e.g. /support and /about)
 }
-const { title, description, image = '/icons/icon-512.png' } = Astro.props;
+const { title, description, image = '/icons/icon-512.png', canonicalPath } = Astro.props;
 // Shared links (iMessage, Instagram, etc.) show the app icon with the same line on every page.
 const shareText = 'The NuRenaissance is a Nashville-based media company empowering creatives & celebrating bold individuality.';
-const canonical = new URL(Astro.url.pathname, Astro.site);
+const canonical = new URL(canonicalPath ?? Astro.url.pathname, Astro.site);
 const ogImage = new URL(image, Astro.site);
 ---
 <!doctype html>

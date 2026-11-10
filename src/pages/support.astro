@@ -1,11 +1,19 @@
 ---
+// Same page as /about. Kept as its own address because invoice emails, the
+// Events ticket buttons (?for=...) and /shop all link here; it opens scrolled
+// to the payment options. Search engines are pointed at /about.
 import Site from '../layouts/Site.astro';
-import WidgetFrame from '../components/WidgetFrame.astro';
+import AboutSupport from '../components/AboutSupport.astro';
 ---
 <Site
-  title="Support | NuRenaissance"
-  description="Pay for NuServices, tickets and merch with PayPal, Cash App, Venmo, Zelle or Apple Pay."
+  title="About & Support | NuRenaissance"
+  description="About NuRenaissance Media: our story and services, ways to pay or support us, and how to get in touch."
+  canonicalPath="/about/"
 >
-  <h1 class="sr-only">Support NuRenaissance</h1>
-  <WidgetFrame src="/widgets/support.html" title="NuRenaissance payment options" passParams screen />
+  <h1 class="sr-only">About and Support NuRenaissance</h1>
+  <AboutSupport />
 </Site>
+
+<script>
+  if (!location.hash) document.getElementById('support')?.scrollIntoView();
+</script>

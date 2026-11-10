@@ -10,8 +10,8 @@ import Icon from '../components/Icon.astro';
 import { nav, tabs, more, footer } from '../data/site.js';
 import { socials } from '../data/portal.js';
 
-interface Props { title: string; description: string; back?: { href: string; label: string }; }
-const { title, description, back } = Astro.props;
+interface Props { title: string; description: string; back?: { href: string; label: string }; canonicalPath?: string; }
+const { title, description, back, canonicalPath } = Astro.props;
 const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 const inSection = (href: string) => href === path || (href !== '/' && path.startsWith(href + '-'));
 const isCurrent = (href: string) => inSection(href) || (nav.find((n) => n.href === href)?.also ?? []).some(inSection);
@@ -19,7 +19,7 @@ const tabLinks = tabs.map((t) => nav.find((n) => n.href === t)!).filter(Boolean)
 const moreLinks = more.map((m) => nav.find((n) => n.href === m)!).filter(Boolean);
 const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) => isCurrent(f.href));
 ---
-<Base title={title} description={description}>
+<Base title={title} description={description} canonicalPath={canonicalPath}>
   <div class="site">
     <a class="skip" href="#content">Skip to content</a>
     <header class:list={['bar', { 'has-back': back }]}>
