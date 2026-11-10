@@ -124,3 +124,76 @@ test('playlist reader: older format, and pages without data', () => {
   assert.throws(() => extractInitialData('<html>consent</html>'), /ytInitialData/);
   assert.equal(parsePlaylist({}).videos.length, 0);
 });
+
+// ---------- Playlist reader: YouTube Data API path ----------
+import { loadPlaylist, loadPlaylistViaApi, formatDuration, timeAgo } from '../src/edge/playlist.js';
+import { onRequestGet as playlistRoute } from '../functions/api/playlist.js';
+
+const apiItem = (id, title, published, privacy = 'public') => ({
+  snippet: { title, resourceId: { videoId: id } }, contentDetails: { videoId: id, videoPublishedAt: published }, status: { privacyStatus: privacy },
+});
+const fakeYoutube = (u) => {
+  const url = new URL(u);
+  if (url.hostname !== 'www.googleapis.com') throw new Error('unexpected ' + u);
+  assert.equal(url.searchParams.get('key'), 'k123');
+  if (url.pathname.endsWith('/playlists')) return json({ items: [{ snippet: { title: 'Certified Tour' } }] });
+  if (url.pathname.endsWith('/playlistItems')) {
+    return url.searchParams.get('pageToken') === 'P2'
+      ? json({ items: [apiItem('x3V8pIsS-Jo', 'A Taste of Phoenix', '2025-12-01T00:00:00Z'), apiItem('dddddddddd1', 'Deleted video', '')] })
+      : json({ items: [apiItem('akcFv16N6s8', 'SXSW - Live From Austin ', '2025-11-01T00:00:00Z'), apiItem('ppppppppppp', 'Secret', '2025-11-01T00:00:00Z', 'private')], nextPageToken: 'P2' });
+  }
+  if (url.pathname.endsWith('/videos')) {
+    assert.equal(url.searchParams.get('id'), 'akcFv16N6s8,x3V8pIsS-Jo');
+    return json({ items: [{ id: 'akcFv16N6s8', contentDetails: { duration: 'PT15M2S' } }, { id: 'x3V8pIsS-Jo', contentDetails: { duration: 'PT1H4M26S' } }] });
+  }
+  throw new Error('unexpected ' + u);
+};
+
+test('playlist API: same shape as the page reader, private and deleted videos left out', async () => {
+  upstream = fakeYoutube;
+  const r = await loadPlaylistViaApi('PLVprhlbgSo1vgKbKRq7c3tsY-Y1tl4D3X', 'k123', Date.parse('2026-11-10T00:00:00Z'));
+  assert.equal(r.title, 'Certified Tour');
+  assert.equal(r.source, 'api');
+  assert.deepEqual(r.videos, [
+    { id: 'akcFv16N6s8', title: 'SXSW - Live From Austin', duration: '15:02', age: '1 year ago' },
+    { id: 'x3V8pIsS-Jo', title: 'A Taste of Phoenix', duration: '1:04:26', age: '11 months ago' },
+  ]);
+});
+
+test('playlist: falls back to reading the page when the API fails, and without a key', async () => {
+  const page = `<script>var ytInitialData = ${JSON.stringify({ metadata: { playlistMetadataRenderer: { title: 'From page' } }, x: [lockup('akcFv16N6s8', 'SXSW', '15:02', ['1y ago'])] })};</script>`;
+  const hosts = [];
+  upstream = (u) => {
+    hosts.push(new URL(u).hostname);
+    return new URL(u).hostname === 'www.googleapis.com' ? json({ error: { message: 'quota exceeded' } }, 403) : new Response(page);
+  };
+  const quiet = console.error; console.error = () => {};
+  try {
+    const fb = await loadPlaylist('PLVprhlbgSo1vgKbKRq7c3tsY-Y1tl4D3X', 'k123');
+    assert.equal(fb.title, 'From page');
+    assert.equal(fb.source, 'page');
+    assert.ok(hosts.includes('www.googleapis.com') && hosts.includes('www.youtube.com'));
+    hosts.length = 0;
+    assert.equal((await loadPlaylist('PLVprhlbgSo1vgKbKRq7c3tsY-Y1tl4D3X', '')).title, 'From page');
+    assert.deepEqual(hosts, ['www.youtube.com']);
+  } finally { console.error = quiet; }
+});
+
+test('playlist route: uses the Cloudflare secret, keeps copies fresh for 30 minutes', async () => {
+  upstream = fakeYoutube;
+  const req = (t) => playlistRoute({ request: new Request('https://www.nrnszn.com/api/playlist?list=PLVprhlbgSo1vgKbKRq7c3tsY-Y1tl4D3X'), env: { YOUTUBE_API_KEY: 'k123' }, waitUntil: (p) => waits.push(p) });
+  const a = await req();
+  assert.equal(a.headers.get('x-feed-cache'), 'MISS');
+  assert.equal(a.headers.get('access-control-allow-origin'), '*');
+  assert.equal((await a.json()).videos.length, 2);
+  const realNow = Date.now;
+  Date.now = () => realNow() + 20 * 60 * 1000; // 20 minutes later: still fresh
+  try { assert.equal((await req()).headers.get('x-feed-cache'), 'HIT'); } finally { Date.now = realNow; }
+});
+
+test('duration and age formatting', () => {
+  assert.equal(formatDuration('PT45S'), '0:45');
+  assert.equal(formatDuration('P0D'), '');
+  assert.equal(timeAgo('2026-11-09T22:00:00Z', Date.parse('2026-11-10T00:00:00Z')), '2 hours ago');
+  assert.equal(timeAgo('', 0), '');
+});

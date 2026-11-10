@@ -91,7 +91,9 @@ export async function serveFeed(name, context, now = Date.now()) {
 }
 
 // Stale-while-revalidate cache around any loader that returns a JSON string (throws when the answer looks wrong).
-export async function serveCached(name, loadBody, context, now = Date.now(), extraHeaders = {}) {
+// freshSecs: how long a copy counts as fresh (default FRESH_SECS). The playlist reader uses longer,
+// to stay well inside the YouTube API's free daily allowance.
+export async function serveCached(name, loadBody, context, now = Date.now(), extraHeaders = {}, freshSecs = FRESH_SECS) {
   const cache = caches.default;
   const key = new Request(new URL(`/__feed-cache/${name}`, context.request.url).toString());
   const hit = await cache.match(key);
@@ -105,7 +107,7 @@ export async function serveCached(name, loadBody, context, now = Date.now(), ext
     return body;
   };
 
-  if (hit && age < FRESH_SECS) return reply(await hit.text(), 'HIT', age, extraHeaders);
+  if (hit && age < freshSecs) return reply(await hit.text(), 'HIT', age, extraHeaders);
   if (hit && age < KEEP_SECS) {
     context.waitUntil(refresh().catch((e) => console.error(`feed ${name} refresh`, e)));
     return reply(await hit.text(), 'STALE', age, extraHeaders);
