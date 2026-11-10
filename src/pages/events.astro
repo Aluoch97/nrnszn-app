@@ -116,8 +116,6 @@ const backdrop = pastEvents[0]?.img ? `/img/events/${pastEvents[0].img}-480.webp
         var acts = el('div', 'ev-actions');
         var ig = el('a', 'ev-btn', 'Follow @nrnszn ↗'); ig.href = 'https://www.instagram.com/nrnszn'; ig.target = '_blank'; ig.rel = 'noopener';
         acts.appendChild(ig);
-        var rec = el('a', 'ev-btn ev-btn-alt', 'Watch past shows'); rec.href = '/cinema';
-        acts.appendChild(rec);
         c.appendChild(acts);
         box.appendChild(c);
       };
