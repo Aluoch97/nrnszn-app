@@ -67,6 +67,7 @@ function onOpen(){
     .addItem("Move Certified Tour to Shows (one-time)", "migrateCertifiedTourToShows")
     .addItem("Import Episodes for a Show...", "importShowEpisodesPrompt")
     .addItem("Set Up Daily Check Trigger", "setupDailyTrigger")
+    .addItem("Test YouTube Connection", "testYoutubeConnection")
     .addToUi();
 }
 
@@ -106,22 +107,86 @@ function buildRow_(fields){
   return row;
 }
 
-function fetchPlaylistEntries_(playlistId){
-  const feedUrl = "https://www.youtube.com/feeds/videos.xml?playlist_id=" + playlistId;
-  const xml = UrlFetchApp.fetch(feedUrl).getContentText();
-  const doc = XmlService.parse(xml);
-  const root = doc.getRootElement();
-  const ns = XmlService.getNamespace("http://www.w3.org/2005/Atom");
-  const ytNs = XmlService.getNamespace("yt", "http://www.youtube.com/xml/schemas/2015");
-  return root.getChildren("entry", ns).map(entry => ({
-    videoId: entry.getChild("videoId", ytNs).getText(),
-    title: entry.getChild("title", ns).getText()
-  }));
+// ---------------------------------------------------------------------
+// YouTube Data API. YouTube's old RSS feeds (feeds/videos.xml) stopped
+// working, so everything here asks the official API instead.
+//
+// The API key is NOT in this file. Add it once in the Apps Script editor:
+// Project Settings (gear icon) > Script properties > Add script property
+//   Property: YOUTUBE_API_KEY   Value: your key (the same one the Survey script uses)
+// Then run "Test YouTube Connection" from the Cinema Admin menu.
+//
+// Cost: 1 unit of the free 10,000/day quota per 50 videos read. A daily
+// check uses 1 unit.
+// ---------------------------------------------------------------------
+
+function getYoutubeApiKey_(){
+  const key = PropertiesService.getScriptProperties().getProperty("YOUTUBE_API_KEY");
+  if(!key){
+    throw new Error("No YouTube API key yet. In the Apps Script editor: Project Settings > Script properties > add YOUTUBE_API_KEY.");
+  }
+  return key.trim();
+}
+
+// Returns [{videoId, title}] newest-first for any playlist, skipping
+// private and deleted videos. maxPages limits how far back it reads
+// (50 videos per page); leave it out to read the whole playlist.
+function fetchPlaylistEntries_(playlistId, maxPages){
+  const key = getYoutubeApiKey_();
+  const entries = [];
+  let pageToken = "";
+  let pages = 0;
+  do {
+    const url = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,status&maxResults=50" +
+      "&playlistId=" + encodeURIComponent(playlistId) +
+      (pageToken ? "&pageToken=" + encodeURIComponent(pageToken) : "") +
+      "&key=" + encodeURIComponent(key);
+    const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const data = JSON.parse(res.getContentText());
+    if(data.error){
+      throw new Error("YouTube API error for playlist " + playlistId + ": " + (data.error.message || JSON.stringify(data.error)));
+    }
+    (data.items || []).forEach(item => {
+      const sn = item.snippet || {};
+      const videoId = sn.resourceId && sn.resourceId.videoId;
+      const privacy = item.status && item.status.privacyStatus;
+      if(!videoId) return;
+      if(privacy === "private" || privacy === "privacyStatusUnspecified") return;
+      if(sn.title === "Private video" || sn.title === "Deleted video") return;
+      entries.push({ videoId: videoId, title: sn.title || "" });
+    });
+    pageToken = data.nextPageToken || "";
+    pages++;
+  } while(pageToken && (!maxPages || pages < maxPages));
+  return entries;
+}
+
+// Every channel has a hidden "all uploads" playlist: same ID as the
+// channel, with the leading "UC" swapped for "UU".
+function uploadsPlaylistId_(){
+  return "UU" + CHANNEL_ID.slice(2);
+}
+
+// Run from the Cinema Admin menu after adding the key. Reads the newest
+// upload and reports back without changing the sheet.
+function testYoutubeConnection(){
+  let msg;
+  try {
+    const latest = fetchPlaylistEntries_(uploadsPlaylistId_(), 1)[0];
+    msg = latest
+      ? "Working. Newest upload: \"" + latest.title + "\" (youtu.be/" + latest.videoId + ")"
+      : "The key works, but the channel's uploads list came back empty.";
+  } catch(err){
+    msg = "Not working yet: " + err.message;
+  }
+  Logger.log(msg);
+  try { SpreadsheetApp.getUi().alert(msg); } catch(e){ /* run from the editor: see the log */ }
+  return msg;
 }
 
 // ---------------------------------------------------------------------
-// RSS ingestion — new channel uploads only. Status "New" so they land
-// in the sheet for you to sort; nothing here is Approved automatically.
+// New channel uploads. Status "New" so they land in the sheet for you
+// to sort; nothing here is Approved automatically. Reads the newest 50.
 // ---------------------------------------------------------------------
 
 function checkForNewUploads(){
@@ -129,24 +194,14 @@ function checkForNewUploads(){
     throw new Error("Set CHANNEL_ID at the top of the script first.");
   }
 
-  const feedUrl = "https://www.youtube.com/feeds/videos.xml?channel_id=" + CHANNEL_ID;
-  const xml = UrlFetchApp.fetch(feedUrl).getContentText();
-  const doc = XmlService.parse(xml);
-  const root = doc.getRootElement();
-  const ns = XmlService.getNamespace("http://www.w3.org/2005/Atom");
-  const ytNs = XmlService.getNamespace("yt", "http://www.youtube.com/xml/schemas/2015");
-
-  const entries = root.getChildren("entry", ns);
+  const entries = fetchPlaylistEntries_(uploadsPlaylistId_(), 1);
   const sheet = getSheet_();
   const data = sheet.getDataRange().getValues();
   const existingIds = new Set(data.slice(1).map(r => r[0]));
 
   let added = 0;
-  entries.forEach(entry => {
-    const videoId = entry.getChild("videoId", ytNs).getText();
+  entries.forEach(({videoId, title}) => {
     if(existingIds.has(videoId)) return;
-
-    const title = entry.getChild("title", ns).getText();
     const url = "https://youtu.be/" + videoId;
     const thumb = "https://img.youtube.com/vi/" + videoId + "/hqdefault.jpg";
 
@@ -154,6 +209,7 @@ function checkForNewUploads(){
       VideoID: videoId, Title: title, Type: "video", SourceURL: url,
       Thumbnail: thumb, Status: "New"
     }));
+    existingIds.add(videoId);
     added++;
   });
 
