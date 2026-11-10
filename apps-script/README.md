@@ -7,7 +7,7 @@ Google's editor is still where the code runs. This folder is the backup and the 
 |---|---|---|---|
 | Portal API (latest videos, Publish button) | `Code.gs`, `appsscript.json` | Sheet **NuRenaissance Site** → Extensions → Apps Script | Yes |
 | NuGallery | `gallery/` | Drive file **NuGallery** (in the NuGallery folder) | Yes (matches the live copy) |
-| Services (prices + booking) | `services/` | Attached to the Services sheet | Yes (`appsscript.json` not yet; it needs the Google Calendar API service turned on) |
+| Services (prices + booking) | `services/` | Attached to the Services sheet | Yes. Uses the Google Calendar API advanced service (turned on in `appsscript.json`). |
 | NuCinema catalog | `cinema/` | Attached to the Cinema_Catalog sheet | Yes. Reads YouTube through the YouTube Data API; the key goes in Script properties as `YOUTUBE_API_KEY`. |
 | Support (payment logger) | `support/` | Sheet **NuRenaissance Payments Log** | Yes (`WIDGET_TOKEN` is a placeholder here; the real one is in `public/widgets/support.html`) |
 | Survey | `survey/` | Its own Apps Script project (writes to the **NuRenaissance Surveys** sheet) | Yes. `YOUTUBE_API_KEY` and `UNSUB_SECRET` are placeholders here; the live script has the real ones. Its `index` page is `public/widgets/survey.html`. |
