@@ -8,7 +8,7 @@ Google's editor is still where the code runs. This folder is the backup and the 
 | Portal API (latest videos, Publish button) | `Code.gs`, `appsscript.json` | Sheet **NuRenaissance Site** → Extensions → Apps Script | Yes |
 | NuGallery | `gallery/` | Drive file **NuGallery** (in the NuGallery folder) | Yes (matches the live copy) |
 | Services (prices + booking) | `services/` | Attached to the Services sheet | Yes (`appsscript.json` not yet; it needs the Google Calendar API service turned on) |
-| NuCinema catalog | `cinema/` | Attached to its sheet | Not yet |
+| NuCinema catalog | `cinema/` | Attached to the Cinema_Catalog sheet | Yes (`appsscript.json` not yet) |
 | Support (payment logger) | `support/` | Attached to its sheet | Not yet |
 | Survey | `survey/` | Attached to its sheet | Not yet |
 
