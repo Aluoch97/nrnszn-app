@@ -3,14 +3,15 @@
 // Computers: top bar with every link, footer at the bottom.
 // Phones: works like an app: slim top bar, tab bar along the bottom, and a
 // "More" sheet for the links that don't fit in the tabs.
+// `back`: a page inside a section (Gallery, Cinema) shows "‹ Media" at the left of the phone top bar.
 // The Portal keeps its own standalone link-in-bio look and doesn't use this.
 import Base from './Base.astro';
 import Icon from '../components/Icon.astro';
 import { nav, tabs, more, footer } from '../data/site.js';
 import { socials } from '../data/portal.js';
 
-interface Props { title: string; description: string; }
-const { title, description } = Astro.props;
+interface Props { title: string; description: string; back?: { href: string; label: string }; }
+const { title, description, back } = Astro.props;
 const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 const inSection = (href: string) => href === path || (href !== '/' && path.startsWith(href + '-'));
 const isCurrent = (href: string) => inSection(href) || (nav.find((n) => n.href === href)?.also ?? []).some(inSection);
@@ -21,7 +22,13 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
 <Base title={title} description={description}>
   <div class="site">
     <a class="skip" href="#content">Skip to content</a>
-    <header class="bar">
+    <header class:list={['bar', { 'has-back': back }]}>
+      {back && (
+        <a class="bar-back" href={back.href}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+          <span>{back.label}</span>
+        </a>
+      )}
       <a class="brand" href="/" aria-label="NuRenaissance home">
         <img src="/img/mascot.webp" alt="" width="34" height="34" />
         <span>NuRenaissance</span>
@@ -135,10 +142,19 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
   .tabbar { display: none; }
   .sheet { display: none; }
 
+  .bar-back { display: none; }
   @media (max-width: 1023px) {
     .site { --tab-h: calc(60px + env(safe-area-inset-bottom)); padding-bottom: var(--tab-h); }
     .topnav { display: none; }
     .bar { justify-content: center; }
+    /* inside a section: ‹ Back on the left, the logo on the right */
+    .bar.has-back { justify-content: space-between; }
+    .bar .bar-back {
+      display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 10px 0 2px; margin-left: -4px;
+      border-radius: var(--radius-sm); color: var(--gold-300); text-decoration: none; font-size: 17px; font-weight: 600;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .bar-back:active { opacity: 0.6; }
 
     .tabbar {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
