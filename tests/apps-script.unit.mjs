@@ -18,7 +18,9 @@ const SECRET_PATTERNS = [
   [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, 'private key'],
   [/hooks\.slack\.com\/services\//, 'Slack webhook'],
   [/api\.cloudflare\.com\/client\/v4\/pages\/webhooks\/deploy_hooks\/[0-9a-f-]{20,}/, 'Cloudflare deploy hook'],
-  [/\b(HOST_KEY|API_KEY|SECRET|PASSWORD|TOKEN)\s*=\s*['"][^'"]{6,}['"]/i, 'hardcoded key'],
+  // Any NAME ending in TOKEN / SECRET / PASSWORD / API_KEY / HOST_KEY / PRIVATE_KEY set to a literal,
+  // unless it's an obvious placeholder (CHANGE-ME..., SAME-AS..., YOUR-..., PASTE...).
+  [/\b[A-Z0-9_]*(TOKEN|SECRET|PASSWORD|API_KEY|HOST_KEY|PRIVATE_KEY)\s*=\s*['"](?!CHANGE-ME|SAME-AS|YOUR-|PASTE)[^'"]{6,}['"]/, 'hardcoded key'],
 ];
 
 test('Apps Script backups exist', () => {
