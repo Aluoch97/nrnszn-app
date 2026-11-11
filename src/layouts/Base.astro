@@ -11,8 +11,8 @@ interface Props {
   image?: string;
   canonicalPath?: string; // when two URLs show the same page (e.g. /support and /about)
 }
-const { title, description, image = '/icons/icon-512.png', canonicalPath } = Astro.props;
-// Shared links (iMessage, Instagram, etc.) show the app icon with the same line on every page.
+const { title, description, image = '/img/share.jpg', canonicalPath } = Astro.props;
+// Shared links (iMessage, Instagram, etc.) show the wide NuRenaissance card (1200x630) with the same line on every page.
 const shareText = 'The NuRenaissance is a Nashville-based media company empowering creatives & celebrating bold individuality.';
 const canonical = new URL(canonicalPath ?? Astro.url.pathname, Astro.site);
 const ogImage = new URL(image, Astro.site);
@@ -32,10 +32,11 @@ const ogImage = new URL(image, Astro.site);
     <meta property="og:description" content={shareText} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={ogImage} />
-    <meta property="og:image:width" content="512" />
-    <meta property="og:image:height" content="512" />
-    <meta property="og:image:alt" content="NuRenaissance app icon" />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="NuRenaissance: Empowering creatives. The NuRenaissance mascot in the archway." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={ogImage} />
     <meta name="twitter:description" content={shareText} />
 
     <meta name="theme-color" content="#0e0b16" />
