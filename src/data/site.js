@@ -25,7 +25,7 @@ export const apps = [
     text: 'The Nashville scene board: shows, studios, session players, promo contacts and more, all in one place.' },
   { name: 'PODI', accent: '#c77dd8', href: 'https://podi.nrnszn.com', img: '/img/apps/podi.webp',
     text: 'A streamlined, browser-based media workflow tool that makes multi-camera editing simple, without heavy desktop software.' },
-  { name: 'Soul Vault', accent: '#cfd2dc', href: 'https://script.google.com/macros/s/AKfycbxSXeD5uM1eP7eYR1LVzhxRfa0nx1f_DbsGHdlJeL2YfjK_8JPuurNhGAJ1W5UwwNaW/exec?s=572e3302d272', img: '/img/apps/soul-vault.webp',
+  { name: 'Soul Vault', accent: '#cfd2dc', href: 'https://soulnicolas.com', img: '/img/apps/soul-vault.webp',
     text: 'A direct-to-fan streaming space and living archive for the music of Nicólas Soul: full projects, unreleased cuts, alternate mixes, time-synced lyrics, videos and behind-the-scenes stories. Ad-free.' },
 ];
 
