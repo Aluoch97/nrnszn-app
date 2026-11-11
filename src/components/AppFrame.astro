@@ -1,5 +1,5 @@
 ---
-// Shows one of NuRenaissance's own web apps (NuDirectory, Certified Lounge)
+// Shows one of NuRenaissance's own web apps (NuDirectory, Certified Lounge, Soul Vault)
 // full screen inside this site. Those apps have their own bottom menus, so
 // instead of the site menu and tabs there's a slim bar: Back, the app's name,
 // and open-in-new-tab.
@@ -27,7 +27,7 @@ const { title, description, name, src, passQuery = false } = Astro.props;
       </a>
     </header>
     <iframe class="dir-frame" src={src} title={name} data-pass={passQuery ? '' : undefined}
-      allow="fullscreen; clipboard-write; geolocation" allowfullscreen></iframe>
+      allow="fullscreen; clipboard-write; geolocation; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
   </div>
 </Base>
 
