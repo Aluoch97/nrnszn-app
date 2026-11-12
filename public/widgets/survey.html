@@ -746,6 +746,7 @@ body{
 <script>
 (function(){
   // ---- CONFIGURE: paste your deployed Apps Script Web App URL here ----
+  var EDGE_URL = /(^|\.)nrnszn\.com$/.test(location.hostname) ? '/api/survey' : 'https://www.nrnszn.com/api/survey';
   var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzEigyj8nDLW4XtUANXkX8dCsWNgt0kb8Uc6gWp2vhC12g3lTke2XeX_eot1RXLYeyB/exec';
 
   // Fail fast and obviously if that URL was never set (or got mangled somewhere along the
@@ -1100,12 +1101,17 @@ body{
     backBtn.disabled = true;
     nextBtn.textContent = 'Sending…';
 
-    fetch(APPS_SCRIPT_URL, {
+    // The site's own endpoint first (it saves the response itself once switched over, otherwise hands it to the Apps Script above).
+    // Only if that request cannot be made, or comes back as something that is not an answer (a page that is not live yet),
+    // is the Apps Script asked directly. A real answer from the endpoint, even an error, is never sent a second time.
+    var sendOptions = {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
-    })
+    };
+    fetch(EDGE_URL, sendOptions)
       .then(function(res){ return res.json(); })
+      .catch(function(){ return fetch(APPS_SCRIPT_URL, sendOptions).then(function(res){ return res.json(); }); })
       .then(function(data){
         if (data && data.error) throw new Error(data.error);
 
