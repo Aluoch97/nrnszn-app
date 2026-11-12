@@ -8,7 +8,7 @@ each proven identical to the old code before it is switched on, with the old App
 | 1 | **The rules and the e-mails**: what counts as a real submission, the row saved for a show or service response, the thank-you e-mail with the one-time discount code, your notification e-mail for every response, the tamper-proof unsubscribe links, and sending through Resend | **Done** (`src/edge/survey.js`, `tests/survey.unit.mjs`). Not connected to anything yet: the survey still runs on Apps Script. |
 | 2 | **Saving to the Sheet**: the response row, the subscriber lists (add / reactivate), the discount-code list, the thank-you and notification e-mails, the Summary tab | **Done** (`src/edge/survey-sheets.js`, `tests/survey-sheets.unit.mjs`). Still not connected to any URL. |
 | 3 | **The live endpoint** `/api/survey` that the survey page posts to, falling back to Apps Script when its secrets are missing or Google refuses | **Built** (`src/edge/survey-api.js`, `functions/api/survey.js`, `tests/survey-api.unit.mjs`). Does nothing until you add the three secrets below; the page already posts to it first and the old Apps Script keeps answering until then. |
-| 4 | **The unsubscribe page** (`?unsub=1` links in the e-mails) | After 3. Until then the links in e-mails go to the Apps Script address, which keeps working. |
+| 4 | **The unsubscribe page** (`?unsub=1` links in the e-mails) | **Built** (`handleUnsubscribe` in `src/edge/survey-api.js`, `tests/survey-unsub.unit.mjs`). Lives at `https://www.nrnszn.com/api/survey?unsub=1&…`; switches on with the same three secrets as stage 3. New thank-you e-mails link to it; links already sent point at the Apps Script, which keeps working. |
 | 5 | **The daily recap newsletter** (finds the recap video on YouTube and e-mails the people who attended) | Probably stays in Apps Script: it runs on a Google timer and does not serve visitors. Moving it needs a scheduler plus a bulk-email budget. |
 
 ## What stage 2 proved
@@ -40,3 +40,8 @@ unsubscribe tokens and links (so links already sent keep working).
 - A response goes to exactly one backend. If Google refuses before the row is written, the old Apps Script takes it. If a timeout means nobody can tell whether the row was written, it is NOT sent again (no double rows). Once the row is saved, a failing e-mail, subscriber update or summary can never lose it.
 - The hidden-field and too-fast traps and the 60-a-minute flood guard behave like the old script (dropped quietly, answered "ok").
 - The survey page (`public/widgets/survey.html`) posts to `/api/survey` first and only asks the Apps Script directly if that request cannot be made.
+
+## How stage 4 behaves
+- The signed link is checked first (same secret, same token as before), then the person is set to Unsubscribed (with the date) in the right list (show or service), and a small confirmation page says so. Same words as the old page. A forged or mistyped link gets the "doesn't look right" message without touching Google.
+- Unsubscribing is safe to repeat, so if anything goes wrong on the new side (a secret missing, Google sign-in or the Sheet failing) the link is passed on to the old Apps Script page instead of showing an error.
+- The daily recap e-mails (stage 5, still Apps Script) keep their Apps Script unsubscribe links, which work as before.

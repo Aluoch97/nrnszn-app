@@ -125,8 +125,8 @@ test('if the old backend is also down, the answer is a plain error, never a cras
 });
 
 test('GET says it is alive and which backend would answer; OPTIONS allows the embed', async () => {
-  const on = await (await onRequestGet({ env: ENV() })).json(); assert.deepEqual([on.status, on.mode], ['ok', 'sheet']);
-  const off = await (await onRequestGet({ env: {} })).json(); assert.deepEqual([off.status, off.mode], ['ok', 'apps-script']);
+  const on = await (await onRequestGet({ request: new Request('https://www.nrnszn.com/api/survey'), env: ENV() })).json(); assert.deepEqual([on.status, on.mode], ['ok', 'sheet']);
+  const off = await (await onRequestGet({ request: new Request('https://www.nrnszn.com/api/survey'), env: {} })).json(); assert.deepEqual([off.status, off.mode], ['ok', 'apps-script']);
   assert.equal(onRequestOptions().status, 204); assert.equal(calls.length, 0);
 });
 
@@ -134,4 +134,12 @@ test('the widget posts to the site endpoint first and only asks the Apps Script 
   assert.match(WIDGET, /var EDGE_URL = [^;]*'\/api\/survey'[^;]*'https:\/\/www\.nrnszn\.com\/api\/survey'/);
   assert.match(WIDGET, /fetch\(EDGE_URL, sendOptions\)\s*\.then\(function\(res\)\{ return res\.json\(\); \}\)\s*\.catch\(function\(\)\{ return fetch\(APPS_SCRIPT_URL, sendOptions\)/);
   assert.match(WIDGET, /var APPS_SCRIPT_URL = '([^']+)'/); assert.equal(/var APPS_SCRIPT_URL = '([^']+)'/.exec(WIDGET)[1], SURVEY_APPS_SCRIPT_URL);
+});
+
+test('the thank-you e-mail in a service response links to the unsubscribe page on this site, not the Apps Script', async () => {
+  await post({ _kind: 'service', service: 'Video', rating: 5, email: 'zed@example.com', subscribed: true, name: 'Zed', loadedAt: Date.now() - MIN_SUBMIT_MS - 5000 });
+  const thanks = mails.find((m) => m.to[0] === 'zed@example.com');
+  assert.ok(thanks, 'thank-you e-mail sent');
+  assert.match(thanks.html, /href="https:\/\/www\.nrnszn\.com\/api\/survey\?unsub=1&amp;kind=service&amp;email=zed%40example\.com&amp;t=[0-9a-f]{24}"|href="https:\/\/www\.nrnszn\.com\/api\/survey\?unsub=1&kind=service&email=zed%40example\.com&t=[0-9a-f]{24}"/);
+  assert.ok(!thanks.html.includes('script.google.com'));
 });

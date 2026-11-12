@@ -85,6 +85,29 @@ export async function buildUnsubscribeUrl(email, kind, secret, base = SURVEY_APP
   return base + '?unsub=1&kind=' + (kind === 'service' ? 'service' : 'show') + '&email=' + encodeURIComponent(email) + '&t=' + (await makeUnsubToken(email, secret));
 }
 
+/** The little confirmation page shown after a click on an unsubscribe link (same look and words as unsubscribePageHtml in Code.gs). */
+export function unsubscribePageHtml(message) {
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<meta name="robots" content="noindex"><title>Certified Lounge — Unsubscribed</title>' +
+    '<style>' +
+    'body{ margin:0; background:#14121B; color:#F5F1E8; font-family:Georgia,serif; ' +
+    'display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px; box-sizing:border-box; }' +
+    '.card{ max-width:420px; text-align:center; }' +
+    'h1{ font-size:20px; margin:0 0 14px; }' +
+    'p{ font-size:16px; line-height:1.6; color:#A69FC0; }' +
+    '</style></head><body><div class="card">' +
+    '<h1>Certified Lounge</h1><p>' + escapeHtml(message) + '</p>' +
+    '</div></body></html>';
+}
+
+/** What the page says for each outcome (the words of handleUnsubscribeRequest in Code.gs). */
+export function unsubscribeMessage(kind, email, outcome) {
+  if (outcome === 'bad-link') return "That unsubscribe link doesn't look right (or has already been used). Email " + NOTIFY_EMAIL + " and we'll take care of it by hand.";
+  if (outcome === 'unsubscribed') return email + ' is unsubscribed — no more ' + (kind === 'service' ? 'NuRenaissance service' : 'Certified Lounge or NuRenaissance') + ' emails. Sorry to see you go, and thanks for coming out.';
+  return "We couldn't find that email on the list — you may already be unsubscribed.";
+}
+
 // ---------------------------------------------------------------- the e-mails
 export function shopBannerHtml() {
   return '<p style="margin:20px 0;"><a href="' + SHOP_URL + '"><img src="' + SHOP_BANNER_URL + '" ' +
