@@ -104,14 +104,15 @@ const links = [
 
   <script define:vars={{ API_URL }}>
     // Freshest videos: the build already has them; this updates them between builds.
-    if (API_URL) {
-      const url = new URL(API_URL);
-      url.searchParams.set('action', 'latestVideos');
-      // Cached copy at Cloudflare first; straight to the API if that fails.
+    {
+      const url = API_URL ? new URL(API_URL) : null;
+      url?.searchParams.set('action', 'latestVideos');
+      // Cached copy at Cloudflare first (read from YouTube there); the old API only if that fails and it is set.
+      // Runs on every visit now, so the cards fill in even when the old API address is not configured.
       fetch('/api/feed/latest')
         .then((r) => { if (!r.ok) throw new Error(r.status); return r; })
-        .catch(() => fetch(url))
-        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => (url ? fetch(url) : null))
+        .then((r) => (r && r.ok ? r.json() : null))
         .then((data) => {
           if (!data || !data.ok) return;
           for (const slot of ['interview', 'music']) {

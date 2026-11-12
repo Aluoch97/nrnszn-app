@@ -26,3 +26,4 @@ Owner: Nick (NuRenaissance Media). He reviews on his phone, so mobile comes firs
 - Colors, fonts, spacing: `src/styles/tokens.css`. Fonts are self-hosted via @fontsource (no Google Fonts).
 - Old Wix URLs: keep the same paths, or add a redirect in `public/_redirects`.
 - Backends are Google Apps Script web apps (URLs inside each widget and `src/data/*.js`); never commit API keys.
+- Moving off Apps Script, one backend at a time (strangler style: the new edge code is preferred when its secret exists, the old backend stays the fallback until Nick has checked it live). First done: the site API's **latest videos** (`src/edge/latest.js`, feed `/api/feed/latest`, tests in `tests/latest.unit.mjs`); it uses the Cloudflare secret `YOUTUBE_API_KEY`, the same one `/api/playlist` uses. The Apps Script `Code.gs` (Portal API) and `PUBLIC_API_URL` can be retired after checking `/api/feed/latest` answers from YouTube.
