@@ -773,7 +773,11 @@ const SCRIPT_URL = SERVICES_API_URL;
       delete selected[id];
     } else {
       selected[id] = defaultConfig(s);
-      fetch(SCRIPT_URL + '?action=click&id=' + encodeURIComponent(id)).catch(function () {});
+      // The site's own counter first (it counts in the Sheet itself once switched over, otherwise hands the click to the Apps Script);
+      // only if that request cannot be made is the Apps Script asked directly. Counting must never get in the way of picking a service.
+      fetch('/api/service-click?id=' + encodeURIComponent(id), { method: 'POST' }).catch(function () {
+        try { fetch(SCRIPT_URL + '?action=click&id=' + encodeURIComponent(id)).catch(function () {}); } catch (e) { /* ignore */ }
+      });
     }
     saveSelection();
     renderGrid();

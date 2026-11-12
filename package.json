@@ -6,9 +6,9 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro build && node --test tests/edge-feeds.unit.mjs tests/latest.unit.mjs tests/gallery.unit.mjs tests/cinema.unit.mjs tests/services.unit.mjs tests/payments.unit.mjs tests/survey.unit.mjs tests/survey-sheets.unit.mjs tests/survey-api.unit.mjs tests/survey-unsub.unit.mjs tests/apps-script.unit.mjs tests/cinema-script.unit.mjs && playwright test",
+    "check": "astro build && node --test tests/edge-feeds.unit.mjs tests/latest.unit.mjs tests/gallery.unit.mjs tests/cinema.unit.mjs tests/services.unit.mjs tests/service-click.unit.mjs tests/payments.unit.mjs tests/survey.unit.mjs tests/survey-sheets.unit.mjs tests/survey-api.unit.mjs tests/survey-unsub.unit.mjs tests/apps-script.unit.mjs tests/cinema-script.unit.mjs && playwright test",
     "check:quick": "playwright test",
-    "test:edge": "node --test tests/edge-feeds.unit.mjs tests/latest.unit.mjs tests/gallery.unit.mjs tests/cinema.unit.mjs tests/services.unit.mjs tests/payments.unit.mjs tests/survey.unit.mjs tests/survey-sheets.unit.mjs tests/survey-api.unit.mjs tests/survey-unsub.unit.mjs tests/apps-script.unit.mjs"
+    "test:edge": "node --test tests/edge-feeds.unit.mjs tests/latest.unit.mjs tests/gallery.unit.mjs tests/cinema.unit.mjs tests/services.unit.mjs tests/service-click.unit.mjs tests/payments.unit.mjs tests/survey.unit.mjs tests/survey-sheets.unit.mjs tests/survey-api.unit.mjs tests/survey-unsub.unit.mjs tests/apps-script.unit.mjs"
   },
   "author": "",
   "dependencies": {
