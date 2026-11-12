@@ -111,6 +111,28 @@ export async function upsertToSubscriberSheet(sheets, email, tab, now = new Date
   await sheets.append(tab, newRow, tsCol > -1 ? tsCol + 1 : 0);
   return 'added';
 }
+/** Sets the first row with this e-mail to Unsubscribed (+ date): 'unsubscribed' | 'not-found' | 'no-subscribers-sheet' | 'no-email-column' (like unsubscribeFromSheet in Code.gs). */
+export async function unsubscribeFromSheet(sheets, email, tab, now = new Date()) {
+  if (!(await sheets.tabs()).has(tab)) return 'no-subscribers-sheet';
+  const data = await sheets.read(tab);
+  const headers = (data[0] || []).map((h) => h.toString().trim());
+  const emailIdx = headers.findIndex((h) => h.toLowerCase() === 'email');
+  const statusIdx = headers.findIndex((h) => h.toLowerCase() === 'status');
+  const unsubIdx = headers.findIndex((h) => h.toLowerCase() === 'unsubscribed date');
+  if (emailIdx === -1) return 'no-email-column';
+  const normalized = email.toLowerCase();
+  for (let r = 1; r < data.length; r++) {
+    if (((data[r] || [])[emailIdx] || '').toString().trim().toLowerCase() === normalized) {
+      const cells = [];
+      if (statusIdx > -1) cells.push({ row: r + 1, col: statusIdx + 1, value: 'Unsubscribed' });
+      if (unsubIdx > -1) cells.push({ row: r + 1, col: unsubIdx + 1, value: dateToSerial(now) });
+      if (cells.length) await sheets.setCells(tab, cells);
+      if (unsubIdx > -1) { try { await sheets.dateTimeFormat(tab, r + 1, unsubIdx + 1); } catch { /* cosmetic: the date is already saved */ } }
+      return 'unsubscribed';
+    }
+  }
+  return 'not-found';
+}
 export const upsertSubscriber = (sheets, email, now) => upsertToSubscriberSheet(sheets, email, TABS.subscribers, now);
 export const upsertServiceSubscriber = (sheets, email, now) => upsertToSubscriberSheet(sheets, email, TABS.serviceSubscribers, now);
 
@@ -205,7 +227,7 @@ export async function recordSubmission(body, env, { sheets, now = new Date(), uu
       subscribeResult = await upsertServiceSubscriber(sheets, sub.email, now);
       await mail('thank-you e-mail', async () => {
         const info = await issueDiscountCode(sheets, sub.email, sub.name, now, uuid);
-        const m = await buildServiceThankYouEmail(sub.email, sub.name, info.code, { alreadyRedeemed: info.alreadyRedeemed, redeemedDate: info.redeemedDate }, env.SURVEY_UNSUB_SECRET);
+        const m = await buildServiceThankYouEmail(sub.email, sub.name, info.code, { alreadyRedeemed: info.alreadyRedeemed, redeemedDate: info.redeemedDate }, env.SURVEY_UNSUB_SECRET, env.SURVEY_UNSUB_BASE);
         return { to: sub.email, ...m };
       });
     }
