@@ -22,6 +22,7 @@ const checks = [
     ok: json((d) => !d.error && Array.isArray(d.categories) && d.categories.length > 0) },
   { name: 'Support (payment logger)', url: fromFile('public/widgets/support.html', 'SCRIPT_URL'),
     ok: json((d) => d.status === 'ok') },
+  { name: 'Payment logger (site endpoint)', url: 'https://www.nrnszn.com/api/payment', ok: json((d) => d.status === 'ok') },
   { name: 'Survey', url: fromFile('public/widgets/survey.html', 'APPS_SCRIPT_URL'),
     ok: async (res) => /Feedback Survey/.test(await res.text()) },
   { name: 'Website home', url: 'https://app.nrnszn.com/', ok: async (res) => /NuRenaissance/.test(await res.text()) },

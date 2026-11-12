@@ -584,10 +584,15 @@
       }, duration || 3500);
     }
 
+    // Clicks go to the site's own logger first (/api/payment, which writes to the same Payments sheet or, until it is
+    // switched over, hands the click to the Apps Script above). Only if that request cannot even be made does the
+    // widget send it to the Apps Script itself.
+    var EDGE_URL = /(^|\.)nrnszn\.com$/.test(location.hostname) ? '/api/payment' : 'https://www.nrnszn.com/api/payment';
+
     function logClick(platform) {
       if (!SCRIPT_URL || SCRIPT_URL.indexOf('PASTE_YOUR') === 0) return;
       try {
-        fetch(SCRIPT_URL, {
+        var options = {
           method: 'POST',
           mode: 'no-cors',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -600,6 +605,9 @@
             note: state.note.trim(),
             page: window.location.href
           })
+        };
+        fetch(EDGE_URL, options).catch(function () {
+          try { fetch(SCRIPT_URL, options); } catch (err2) { /* logging must never block paying */ }
         });
       } catch (err) {
         // Fail silently — logging should never block a customer from paying.
