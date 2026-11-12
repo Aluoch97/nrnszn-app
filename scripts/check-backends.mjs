@@ -35,6 +35,7 @@ const checks = [
   // YouTube playlist reader for the Certified Lounge app (fails if YouTube changes its playlist page).
   { name: 'Playlist reader: Certified Interviews', url: 'https://www.nrnszn.com/api/playlist?list=PLVprhlbgSo1vN-wkuvFDjabBQ85XURyTd', ok: json((d) => d.ok === true && Array.isArray(d.videos) && d.videos.length > 0) },
   { name: 'Services click counter (site endpoint)', url: 'https://www.nrnszn.com/api/service-click', ok: json((d) => d.status === 'ok') },
+  { name: 'Survey recap endpoint (site)', url: 'https://www.nrnszn.com/api/survey-recap', ok: json((d) => d.status === 'ok') },
   { name: 'Website services page', url: 'https://app.nrnszn.com/services', ok: async (res) => /Services/.test(await res.text()) },
 ];
 
