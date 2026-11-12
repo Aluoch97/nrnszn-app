@@ -4,6 +4,7 @@
 
 export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 export const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+export const SHEETS_WRITE_SCOPE = 'https://www.googleapis.com/auth/spreadsheets'; // only the payments logger uses this, with its own service account
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 
 /** The secret pasted into Cloudflare is the key file's JSON. Tolerates a paste with real line breaks inside the key. */
