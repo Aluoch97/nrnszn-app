@@ -10,6 +10,7 @@
 // the pages send those straight to Google.
 import { SERVICES_API_URL } from '../data/services.js';
 import { cleanKey, loadLatestVideos } from './latest.js';
+import { loadGallery, GALLERY_ROOT_FOLDER_ID } from './gallery.js';
 
 export const FRESH_SECS = 300; // 5 minutes
 export const KEEP_SECS = 7 * 24 * 3600; // a week
@@ -31,6 +32,15 @@ export function viaDrive(url) {
   }
 }
 
+function galleryOk(d) { return !d.error && Array.isArray(d.categories) && d.categories.length > 0; }
+function shapeGallery(d) {
+  for (const c of d.categories) for (const door of c.doors || []) for (const im of door.images || []) {
+    if (im.thumbUrl) im.thumbUrl = viaDrive(im.thumbUrl);
+    if (im.fullUrl) im.fullUrl = viaDrive(im.fullUrl);
+  }
+  return d;
+}
+
 export const FEEDS = {
   services: {
     url: () => `${SERVICES_API_URL}?action=data`,
@@ -42,13 +52,20 @@ export const FEEDS = {
   },
   gallery: {
     url: () => GALLERY_URL,
-    ok: (d) => !d.error && Array.isArray(d.categories) && d.categories.length > 0,
-    shape: (d) => {
-      for (const c of d.categories) for (const door of c.doors || []) for (const im of door.images || []) {
-        if (im.thumbUrl) im.thumbUrl = viaDrive(im.thumbUrl);
-        if (im.fullUrl) im.fullUrl = viaDrive(im.fullUrl);
+    ok: galleryOk,
+    shape: shapeGallery,
+    // Read from Google Drive at the edge when the Cloudflare secret GOOGLE_SERVICE_ACCOUNT_JSON is set (src/edge/gallery.js);
+    // until then, or if Drive fails, the old Apps Script backend.
+    load: async (env) => {
+      const secret = String(env.GOOGLE_SERVICE_ACCOUNT_JSON || '').trim();
+      if (secret) {
+        try {
+          const d = await loadGallery(secret, env.GALLERY_ROOT_FOLDER_ID || GALLERY_ROOT_FOLDER_ID);
+          if (!galleryOk(d)) throw new Error('Drive gave an empty gallery');
+          return JSON.stringify({ ...shapeGallery(d), source: 'drive' }); // lets you see at a glance that Drive (not the old backend) answered
+        } catch (e) { console.error('gallery via Drive failed, using Apps Script', e); }
       }
-      return d;
+      return loadJson(GALLERY_URL, galleryOk, shapeGallery);
     },
   },
   // Latest interview + music video for Home and Portal. Read from YouTube at the edge when the Cloudflare secret

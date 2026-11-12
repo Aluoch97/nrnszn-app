@@ -6,7 +6,7 @@ Google's editor is still where the code runs. This folder is the backup and the 
 | Backend | Folder | Where it lives in Google | Backed up |
 |---|---|---|---|
 | Portal API (latest videos, Publish button) | `Code.gs`, `appsscript.json` | Sheet **NuRenaissance Site** → Extensions → Apps Script | Yes. **Being replaced:** the site now reads the latest videos from YouTube at the edge (`src/edge/latest.js`) once the Cloudflare secret `YOUTUBE_API_KEY` is set; this script is only the fallback until then. |
-| NuGallery | `gallery/` | Drive file **NuGallery** (in the NuGallery folder) | Yes (matches the live copy) |
+| NuGallery | `gallery/` | Drive file **NuGallery** (in the NuGallery folder) | Yes (matches the live copy). **Being replaced:** the site reads the gallery from Drive at the edge (`src/edge/gallery.js`) once the Cloudflare secret `GOOGLE_SERVICE_ACCOUNT_JSON` is set; this script is only the fallback until then. Setup: `docs/gallery-drive-setup.md`. |
 | Services (prices + booking) | `services/` | Attached to the Services sheet | Yes. Uses the Google Calendar API advanced service (turned on in `appsscript.json`). |
 | NuCinema catalog | `cinema/` | Attached to the Cinema_Catalog sheet | Yes. Reads YouTube through the YouTube Data API; the key goes in Script properties as `YOUTUBE_API_KEY`. |
 | Support (payment logger) | `support/` | Sheet **NuRenaissance Payments Log** | Yes (`WIDGET_TOKEN` is a placeholder here; the real one is in `public/widgets/support.html`) |
