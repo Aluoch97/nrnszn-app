@@ -11,6 +11,7 @@
 import { SERVICES_API_URL } from '../data/services.js';
 import { cleanKey, loadLatestVideos } from './latest.js';
 import { loadGallery, GALLERY_ROOT_FOLDER_ID } from './gallery.js';
+import { loadCinema, CINEMA_SHEET_ID } from './cinema.js';
 
 export const FRESH_SECS = 300; // 5 minutes
 export const KEEP_SECS = 7 * 24 * 3600; // a week
@@ -32,6 +33,7 @@ export function viaDrive(url) {
   }
 }
 
+function cinemaOk(d) { return Array.isArray(d.films) && d.films.length > 0; }
 function galleryOk(d) { return !d.error && Array.isArray(d.categories) && d.categories.length > 0; }
 function shapeGallery(d) {
   for (const c of d.categories) for (const door of c.doors || []) for (const im of door.images || []) {
@@ -48,7 +50,20 @@ export const FEEDS = {
   },
   cinema: {
     url: () => CINEMA_URL,
-    ok: (d) => Array.isArray(d.films) && d.films.length > 0,
+    ok: cinemaOk,
+    // Read from the NuCinema Sheet at the edge when the Cloudflare secret GOOGLE_SERVICE_ACCOUNT_JSON is set (src/edge/cinema.js);
+    // until then, or if Google fails, the old Apps Script backend.
+    load: async (env) => {
+      const secret = String(env.GOOGLE_SERVICE_ACCOUNT_JSON || '').trim();
+      if (secret) {
+        try {
+          const d = await loadCinema(secret, env.CINEMA_SHEET_ID || CINEMA_SHEET_ID);
+          if (!cinemaOk(d)) throw new Error('the Sheet gave an empty catalog');
+          return JSON.stringify({ ...d, source: 'sheet' }); // lets you see at a glance that the Sheet (not the old backend) answered
+        } catch (e) { console.error('cinema via the Sheet failed, using Apps Script', e); }
+      }
+      return loadJson(CINEMA_URL, cinemaOk);
+    },
   },
   gallery: {
     url: () => GALLERY_URL,

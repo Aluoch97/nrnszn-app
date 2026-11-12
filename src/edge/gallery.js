@@ -5,12 +5,12 @@
 // account's JSON key) is needed, and the Gallery Root folder must be shared with the account's e-mail address (Viewer).
 // Photos themselves are still served through /api/drive (public Drive thumbnails, cached at Cloudflare), as before.
 
+import { parseServiceAccount, getAccessToken as googleToken, DRIVE_SCOPE } from './google.js';
+
 export const GALLERY_ROOT_FOLDER_ID = '1e3JOe1YPrZQz5wxUqDOpsEbStteNBiQs'; // NuGallery root folder (same as Code.gs; an address, not a secret)
 export const DEFAULT_CREDIT = 'Shot by Nicólas Soul';
 export const DEFAULT_CREDIT_URL = 'https://www.soulnicolas.com/'; // link used whenever the credit is the default one
 const TIMEZONE = 'America/Chicago';
-const SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
-const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const FILES_URL = 'https://www.googleapis.com/drive/v3/files';
 const FOLDER = 'application/vnd.google-apps.folder';
 const ID = /^[A-Za-z0-9_-]{10,100}$/;
@@ -72,52 +72,9 @@ export function imageFrom(file, credit, igUrl) {
   };
 }
 
-// ---------------------------------------------------------------- signing in as the service account
-
-/** The secret pasted into Cloudflare is the key file's JSON. Tolerates a paste with real line breaks inside the key. */
-export function parseServiceAccount(text) {
-  const raw = String(text || '').trim();
-  let email = '', key = '';
-  try { const j = JSON.parse(raw); email = j.client_email; key = j.private_key; }
-  catch {
-    email = (/"client_email"\s*:\s*"([^"]+)"/.exec(raw) || [])[1];
-    key = (/"private_key"\s*:\s*"([\s\S]*?)"\s*(?:,|\})/.exec(raw) || [])[1];
-  }
-  key = String(key || '').replace(/\\n/g, '\n').trim();
-  if (!email || !/BEGIN PRIVATE KEY/.test(key)) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON is missing client_email or private_key');
-  return { email, key };
-}
-
-const b64url = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-const textB64url = (obj) => b64url(new TextEncoder().encode(JSON.stringify(obj)));
-const pemToDer = (pem) => Uint8Array.from(atob(pem.replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, '')), (c) => c.charCodeAt(0));
-
-export async function signJwt({ email, key }, nowSecs) {
-  const head = textB64url({ alg: 'RS256', typ: 'JWT' });
-  const claims = textB64url({ iss: email, scope: SCOPE, aud: TOKEN_URL, iat: nowSecs, exp: nowSecs + 3600 });
-  const k = await crypto.subtle.importKey('pkcs8', pemToDer(key), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
-  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', k, new TextEncoder().encode(`${head}.${claims}`));
-  return `${head}.${claims}.${b64url(sig)}`;
-}
-
-let tokenCache = { email: '', token: '', until: 0 };
-/** An access token, kept for about 55 minutes inside a warm instance. */
-export async function getAccessToken(account, now = Date.now()) {
-  if (tokenCache.email === account.email && tokenCache.token && now < tokenCache.until) return tokenCache.token;
-  const assertion = await signJwt(account, Math.floor(now / 1000));
-  const res = await fetch(TOKEN_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion }).toString(),
-    signal: AbortSignal.timeout(10000),
-  });
-  if (!res.ok) throw new Error(`Google sign-in answered ${res.status}`);
-  const data = await res.json();
-  if (!data.access_token) throw new Error('Google sign-in gave no access token');
-  tokenCache = { email: account.email, token: data.access_token, until: now + Math.min(Number(data.expires_in) || 3600, 3600) * 1000 - 5 * 60 * 1000 };
-  return data.access_token;
-}
-export const forgetToken = () => { tokenCache = { email: '', token: '', until: 0 }; };
+// ---------------------------------------------------------------- signing in as the service account (shared, see google.js)
+export { parseServiceAccount, signJwt, forgetToken } from './google.js';
+export const getAccessToken = (account, now = Date.now()) => googleToken(account, now, DRIVE_SCOPE);
 
 // ---------------------------------------------------------------- reading Drive
 
