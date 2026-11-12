@@ -28,6 +28,7 @@ const checks = [
   // The Cloudflare copies of the read-only feeds (functions/api/feed): fast path the pages use first.
   { name: 'Cached feed: services', url: 'https://www.nrnszn.com/api/feed/services', ok: json((d) => Array.isArray(d.services) && d.services.length > 0) },
   { name: 'Cached feed: NuCinema', url: 'https://www.nrnszn.com/api/feed/cinema', ok: json((d) => Array.isArray(d.films) && d.films.length > 0) },
+  { name: 'Cached feed: latest videos', url: 'https://www.nrnszn.com/api/feed/latest', ok: json((d) => d.ok === true && Boolean(d.interview?.id || d.music?.id)) },
   { name: 'Cached feed: NuGallery', url: 'https://www.nrnszn.com/api/feed/gallery', ok: json((d) => Array.isArray(d.categories) && d.categories.length > 0) },
   // YouTube playlist reader for the Certified Lounge app (fails if YouTube changes its playlist page).
   { name: 'Playlist reader: Certified Interviews', url: 'https://www.nrnszn.com/api/playlist?list=PLVprhlbgSo1vN-wkuvFDjabBQ85XURyTd', ok: json((d) => d.ok === true && Array.isArray(d.videos) && d.videos.length > 0) },

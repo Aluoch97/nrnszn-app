@@ -9,6 +9,7 @@
 // Writes (bookings, payments, survey answers, click counts) never come here:
 // the pages send those straight to Google.
 import { SERVICES_API_URL } from '../data/services.js';
+import { cleanKey, loadLatestVideos } from './latest.js';
 
 export const FRESH_SECS = 300; // 5 minutes
 export const KEEP_SECS = 7 * 24 * 3600; // a week
@@ -50,26 +51,36 @@ export const FEEDS = {
       return d;
     },
   },
-  // Latest interview + music video for Home and Portal (the site's own API, PUBLIC_API_URL).
+  // Latest interview + music video for Home and Portal. Read from YouTube at the edge when the Cloudflare secret
+  // YOUTUBE_API_KEY is set (src/edge/latest.js); until then, or if YouTube fails, the old Apps Script API (PUBLIC_API_URL).
   latest: {
-    url: (env) => {
-      if (!env.PUBLIC_API_URL) return null;
+    load: async (env) => {
+      const key = cleanKey(env.YOUTUBE_API_KEY);
+      if (key) {
+        try { return JSON.stringify(await loadLatestVideos(key)); }
+        catch (e) { if (!env.PUBLIC_API_URL) throw e; console.error('latest videos via YouTube failed, using the old API', e); }
+      }
+      if (!env.PUBLIC_API_URL) throw new Error('feed not configured');
       const u = new URL(env.PUBLIC_API_URL);
       u.searchParams.set('action', 'latestVideos');
-      return u.toString();
+      return loadJson(u.toString(), (d) => d && d.ok === true);
     },
-    ok: (d) => d && d.ok === true,
   },
 };
 
-async function load(feed, env) {
-  const url = feed.url(env);
-  if (!url) throw new Error('feed not configured');
+async function loadJson(url, ok, shape) {
   const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(20000) });
   if (!res.ok) throw new Error(`upstream ${res.status}`);
   const data = await res.json(); // an HTML error/quota page fails here and is never cached
-  if (!feed.ok(data)) throw new Error('upstream answered without the expected data');
-  return JSON.stringify(feed.shape ? feed.shape(data) : data);
+  if (!ok(data)) throw new Error('upstream answered without the expected data');
+  return JSON.stringify(shape ? shape(data) : data);
+}
+
+async function load(feed, env) {
+  if (feed.load) return feed.load(env);
+  const url = feed.url(env);
+  if (!url) throw new Error('feed not configured');
+  return loadJson(url, feed.ok, feed.shape);
 }
 
 function reply(body, state, ageSecs, extraHeaders = {}) {
