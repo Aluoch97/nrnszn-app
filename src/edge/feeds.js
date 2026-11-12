@@ -12,6 +12,7 @@ import { SERVICES_API_URL } from '../data/services.js';
 import { cleanKey, loadLatestVideos } from './latest.js';
 import { loadGallery, GALLERY_ROOT_FOLDER_ID } from './gallery.js';
 import { loadCinema, CINEMA_SHEET_ID } from './cinema.js';
+import { loadServices, SERVICES_SHEET_ID } from './services.js';
 
 export const FRESH_SECS = 300; // 5 minutes
 export const KEEP_SECS = 7 * 24 * 3600; // a week
@@ -33,6 +34,7 @@ export function viaDrive(url) {
   }
 }
 
+function servicesOk(d) { return Array.isArray(d.services) && d.services.length > 0; }
 function cinemaOk(d) { return Array.isArray(d.films) && d.films.length > 0; }
 function galleryOk(d) { return !d.error && Array.isArray(d.categories) && d.categories.length > 0; }
 function shapeGallery(d) {
@@ -46,7 +48,20 @@ function shapeGallery(d) {
 export const FEEDS = {
   services: {
     url: () => `${SERVICES_API_URL}?action=data`,
-    ok: (d) => Array.isArray(d.services) && d.services.length > 0,
+    ok: servicesOk,
+    // Read from the NuServices Sheet at the edge when the Cloudflare secret GOOGLE_SERVICE_ACCOUNT_JSON is set (src/edge/services.js);
+    // until then, or if Google fails, the old Apps Script backend.
+    load: async (env) => {
+      const secret = String(env.GOOGLE_SERVICE_ACCOUNT_JSON || '').trim();
+      if (secret) {
+        try {
+          const d = await loadServices(secret, env.SERVICES_SHEET_ID || SERVICES_SHEET_ID);
+          if (!servicesOk(d)) throw new Error('the Sheet gave no services');
+          return JSON.stringify({ ...d, source: 'sheet' }); // lets you see at a glance that the Sheet (not the old backend) answered
+        } catch (e) { console.error('services via the Sheet failed, using Apps Script', e); }
+      }
+      return loadJson(`${SERVICES_API_URL}?action=data`, servicesOk);
+    },
   },
   cinema: {
     url: () => CINEMA_URL,
