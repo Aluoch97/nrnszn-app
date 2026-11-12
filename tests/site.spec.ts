@@ -25,6 +25,10 @@ async function open(page: Page, route: string) {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(`page error: ${e.message}`));
   page.on('console', (m) => {
+    // Only this site's own pages count. Apps shown in a frame (NuDirectory, Certified, Soul Vault)
+    // are separate sites, and their own console errors aren't this site's to fix.
+    const from = m.location()?.url || '';
+    if (from && !from.startsWith('http://localhost') && !from.startsWith('http://127.0.0.1')) return;
     if (m.type() === 'error' && !EXTERNAL_NOISE.test(m.text())) errors.push(`console: ${m.text()}`);
   });
   // Keep checks fast and offline-safe: don't wait on third-party media.
