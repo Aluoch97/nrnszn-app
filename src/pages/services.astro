@@ -95,6 +95,16 @@ const SCRIPT_URL = SERVICES_API_URL;
     });
   }
 
+  // The intake form goes to the site's own lead endpoint first (it saves the row in the Sheet itself once switched over, otherwise hands the
+  // lead to the Apps Script). Only if that request cannot be made is the Apps Script asked directly. A lead is never sent to both.
+  function postLead(payload) {
+    return fetch('/api/service-lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).catch(function () { return postAction(payload); });
+  }
+
   var PAGE_IDS = ['nrn-page-services', 'nrn-page-about', 'nrn-page-actions', 'nrn-page-flow'];
   function showPage(activeId) {
     PAGE_IDS.forEach(function (id) {
@@ -931,7 +941,7 @@ const SCRIPT_URL = SERVICES_API_URL;
 
     var summary = selectionSummary();
     var total = selectionTotal();
-    postAction({
+    postLead({
       action: 'lead',
       name: leadName,
       email: leadEmail,
