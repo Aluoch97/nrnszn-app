@@ -1,0 +1,54 @@
+---
+// The template for events added in /admin. Opened directly it says the event was not found (and is kept out of search).
+// functions/events/[slug].js fills in the title, description, share picture and a JSON copy of the event; the script below draws the details.
+import Site from '../layouts/Site.astro';
+import '../styles/event-page.css';
+---
+<Site
+  title="Event | NuRenaissance"
+  description="NuRenaissance event details: date, place, flyer, tickets and links."
+  back={{ href: '/events', label: 'Events' }}
+  noindex={true}
+>
+  <article class="evp" id="evp">
+    <p class="evp-kicker" id="evp-kicker">Event</p>
+    <h1 class="evp-title" id="evp-title">Event not found</h1>
+    <p class="evp-when" id="evp-when" hidden></p>
+    <p class="evp-where" id="evp-where" hidden></p>
+    <figure class="evp-flyer" id="evp-flyer" hidden><img id="evp-img" alt="" width="900" /></figure>
+    <div class="evp-text" id="evp-text" hidden></div>
+    <div class="evp-actions" id="evp-actions" hidden></div>
+    <p class="evp-note" id="evp-note">We could not find that event. It may have been removed.</p>
+    <p class="evp-back"><a href="/events">← All events</a></p>
+  </article>
+</Site>
+
+<script>
+  // Draws the event from the JSON copy that the server put in the page. Everything is set as plain text.
+  const box = document.getElementById('event-data');
+  const $ = (id: string) => document.getElementById(id) as HTMLElement;
+  let e: any = null;
+  try { e = box ? JSON.parse(box.textContent || 'null') : null; } catch { e = null; }
+  if (e && e.title && /^\d{4}-\d{2}-\d{2}$/.test(e.day)) {
+    const https = (u: string) => /^https:\/\/[^\s<>"']+$/i.test(String(u || ''));
+    const local = (u: string) => /^\/[A-Za-z0-9\-_/#?=&.]*$/.test(String(u || '')) && !String(u).startsWith('//');
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date()), upcoming = e.day >= today;
+    const d = new Date(+e.day.slice(0, 4), +e.day.slice(5, 7) - 1, +e.day.slice(8, 10));
+    const set = (id: string, text: string) => { const el = $(id); el.textContent = text; el.hidden = !text; };
+    set('evp-kicker', upcoming ? 'Upcoming event' : 'Past event');
+    $('evp-title').textContent = e.title;
+    set('evp-when', d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + (e.time ? ' · ' + e.time : ''));
+    set('evp-where', e.where || '');
+    if (e.flyer) { const im = $('evp-img') as HTMLImageElement; im.src = `/api/flyer?id=${encodeURIComponent(e.flyer)}&size=900`; im.srcset = `/api/flyer?id=${encodeURIComponent(e.flyer)}&size=480 480w, /api/flyer?id=${encodeURIComponent(e.flyer)}&size=900 900w`; im.sizes = '(min-width: 760px) 720px, 100vw'; im.alt = `${e.title} flyer`; $('evp-flyer').hidden = false; }
+    const text = $('evp-text'); text.textContent = '';
+    String(e.details || '').split(/\n+/).filter(Boolean).forEach((t) => { const p = document.createElement('p'); p.textContent = t; text.appendChild(p); });
+    text.hidden = !text.children.length;
+    const acts = $('evp-actions'); acts.textContent = '';
+    const add = (label: string, href: string, cls: string, ext: boolean) => { const a = document.createElement('a'); a.className = 'evp-btn' + (cls ? ' ' + cls : ''); a.textContent = label; a.href = href; if (ext) { a.target = '_blank'; a.rel = 'noopener'; } acts.appendChild(a); };
+    if (upcoming && https(e.tickets)) add('Get tickets', e.tickets, '', true);
+    if (https(e.video)) add('Watch the recap ↗', e.video, upcoming && https(e.tickets) ? 'alt' : '', true);
+    if (local(e.watch)) add('Watch on this site →', e.watch, 'alt', false);
+    acts.hidden = !acts.children.length;
+    set('evp-note', upcoming ? (https(e.tickets) ? '' : 'Tickets and updates: follow @nrnszn on Instagram.') : 'This event has passed. Follow @nrnszn on Instagram to hear about the next one.');
+  }
+</script>

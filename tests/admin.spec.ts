@@ -1,13 +1,21 @@
 // The /admin page: sign-in, the folders, the counts, sign-out. The real /api is not available in the test server, so every answer is faked here.
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import zlib from 'node:zlib';
 
+// A real (small, solid colour) PNG made on the spot, so the browser can decode it like a real flyer.
+function makePng(w: number, h: number) {
+  const chunk = (type: string, data: Buffer) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const body = Buffer.concat([Buffer.from(type), data]); const crc = Buffer.alloc(4); crc.writeUInt32BE(zlib.crc32(body) >>> 0); return Buffer.concat([len, body, crc]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+  const row = Buffer.concat([Buffer.from([0]), Buffer.alloc(w * 3, 0x9c)]);
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(Buffer.concat(Array(h).fill(row)))), chunk('IEND', Buffer.alloc(0))]);
+}
 const PASSWORD = 'correct horse battery staple';
 const TOKEN = 'fake-session-token';
 type Mode = 'not-set-up' | 'ready';
 
 async function fakeApi(page: Page, opts: { mode?: Mode; backupLast?: boolean } = {}) {
-  const state = { mode: (opts.mode || 'ready') as Mode, logins: 0, backups: 0 };
+  const state = { mode: (opts.mode || 'ready') as Mode, logins: 0, backups: 0, events: [] as any[], saves: [] as any[], ranges: [] as string[] };
   const json = (body: unknown, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
   await page.route('**/api/**', async (route) => {
     const req = route.request(), url = new URL(req.url()), path = url.pathname;
@@ -16,11 +24,22 @@ async function fakeApi(page: Page, opts: { mode?: Mode; backupLast?: boolean } =
       if (req.method() === 'POST') {
         const body = JSON.parse(req.postData() || '{}');
         if (body.action === 'login') { state.logins += 1; return route.fulfill(body.password === PASSWORD ? json({ ok: true, token: TOKEN, days: 30 }) : json({ ok: false, message: 'That password is not right.' }, 401)); }
+        if (body.action === 'event-save') { state.saves.push(body.event); const id = body.event.id || ('ab12cd34ef' + String(state.events.length).padStart(2, '0')); const e = { id, slug: 'winter-showcase-' + id, title: body.event.title, day: body.event.day, time: body.event.time || '', where: body.event.where || '', details: body.event.details || '', tickets: body.event.tickets || '', video: body.event.video || '', watch: body.event.watch || '', flyer: body.event.flyer ? 'f1f1f1f1f1f1' : '', published: body.event.published !== false };
+          const at = state.events.findIndex((x) => x.id === e.id); if (at >= 0) state.events[at] = e; else state.events.unshift(e); return route.fulfill(json({ ok: true, id: e.id })); }
+        if (body.action === 'event-delete') { state.events = state.events.filter((x) => x.id !== body.id); return route.fulfill(json({ ok: true })); }
         if (body.action === 'backup') { state.backups += 1; return route.fulfill(json({ ok: true, result: 'saved', saved: { surveys: { tabs: 3, rows: 40 }, payments: { tabs: 2, rows: 12 } }, failed: {}, skipped: { cinema: 'no key' } })); }
       }
       if (state.mode === 'not-set-up') return route.fulfill(json({ status: 'ok', mode: 'not-set-up' }));
       if (!auth) return route.fulfill(json({ status: 'ok', mode: 'ready' }));
       if (auth !== `Bearer ${TOKEN}`) return route.fulfill(json({ ok: false }, 401));
+      const section = url.searchParams.get('section');
+      if (section === 'events') return route.fulfill(json({ ok: true, events: state.events }));
+      if (section === 'analytics') {
+        const days = Number(url.searchParams.get('days') || 30); state.ranges.push(String(days));
+        return route.fulfill(json({ ok: true, days, from: '2026-11-01', to: '2026-11-30', views: 120, visitors: 80, viewsPerVisitor: 1.5, previous: { views: 100, visitors: 90 },
+          daily: Array.from({ length: days }, (_, i) => ({ day: `2026-11-${String((i % 28) + 1).padStart(2, '0')}`, views: i % 5, visitors: i % 3 })),
+          pages: [{ name: '/', views: 60 }, { name: '/events', views: 30 }], referrers: [{ name: 'l.instagram.com', views: 20 }], devices: [{ name: 'phone', views: 90 }, { name: 'computer', views: 30 }], cities: [{ name: 'Nashville, Tennessee', views: 70 }], countries: [] }));
+      }
       return route.fulfill(json({ status: 'ok', mode: 'ready', signedIn: true, setup: [
         { group: 'Survey and e-mails', items: [{ name: 'RESEND_API_KEY', label: 'E-mail sending key (Resend)', present: true }, { name: 'RECAP_CRON_TOKEN', label: 'Daily recap job password', present: false }] },
         { group: 'Backups and sign-in', items: [{ name: 'BACKUPS', label: 'Backup storage bucket (R2 binding)', present: false }, { name: 'ADMIN_PASSWORD', label: 'Admin password (this page)', present: true }] },
@@ -75,15 +94,15 @@ test('a session the server no longer accepts sends you back to the password box'
   expect(await page.evaluate(() => localStorage.getItem('nrn_admin'))).toBeNull();
 });
 
-test('the settings: five folders, honest counts, the setup checklist, back up now, and sign out', async ({ page }, info) => {
+test('the settings: seven folders, honest counts, the setup checklist, back up now, and sign out', async ({ page }, info) => {
   only(info);
   const state = await fakeApi(page);
   await page.addInitScript((t) => localStorage.setItem('nrn_admin', t), TOKEN);
   await page.goto('/admin/');
   await expect(page.locator('#banner')).toContainText('3 of 10 need attention', { timeout: 10000 });
   await expect(page.locator('#banner')).toContainText('Services, Service requests, Nightly sheet backup');
-  await expect.poll(async () => page.locator('.strip b').allTextContents()).toEqual(['7', '2', '1']);   // new, old fallback, to do
-  expect(await page.locator('details.folder').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.folder))).toEqual(['feeds', 'send', 'keep', 'setup', 'account']);
+  await expect.poll(async () => page.locator('#n-ok, #n-old, #n-todo').allTextContents()).toEqual(['7', '2', '1']);   // new, old fallback, to do
+  expect(await page.locator('details.folder').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.folder))).toEqual(['feeds', 'send', 'keep', 'events', 'analytics', 'setup', 'account']);
   await expect(page.locator('#b-feeds')).toHaveText('1'); await expect(page.locator('#b-send')).toHaveText('1'); await expect(page.locator('#b-keep')).toHaveText('1');
   // the setup checklist says Set / Missing, never a value
   await page.locator('details[data-folder="setup"] > summary').click();
@@ -107,7 +126,7 @@ test('signed in: fits the screen, big enough to tap, and passes the accessibilit
   await page.addInitScript((t) => localStorage.setItem('nrn_admin', t), TOKEN);
   await page.goto('/admin/');
   await expect(page.locator('#banner')).toContainText('need attention', { timeout: 10000 });
-  for (const f of ['keep', 'setup', 'account']) await page.locator(`details[data-folder="${f}"] > summary`).click();
+  for (const f of ['keep', 'events', 'analytics', 'setup', 'account']) await page.locator(`details[data-folder="${f}"] > summary`).click();
   const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(over, 'sideways scrolling').toBeLessThanOrEqual(0);
   const small = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>('.admin button, .admin summary, .admin input')].filter((e) => e.offsetParent !== null).map((e) => ({ t: (e.textContent || e.id).trim().slice(0, 30), h: Math.round(e.getBoundingClientRect().height) })).filter((x) => x.h < 44));
@@ -116,4 +135,64 @@ test('signed in: fits the screen, big enough to tap, and passes the accessibilit
   const serious = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => `${v.id}: ${v.help} — ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`);
   expect(serious, 'serious accessibility problems').toEqual([]);
   if (process.env.SHOT_ADMIN) await page.screenshot({ path: process.env.SHOT_ADMIN, fullPage: true });
+});
+
+test('events: add one with a flyer, see it listed, edit it, hide it, delete it', async ({ page }, info) => {
+  only(info);
+  const state = await fakeApi(page);
+  await page.addInitScript((t) => localStorage.setItem('nrn_admin', t), TOKEN);
+  await page.goto('/admin/');
+  await page.locator('details[data-folder="events"] > summary').click();
+  await expect(page.locator('#ev-msg')).toContainText('No events added here yet');
+  await page.click('#ev-add');
+  await expect(page.locator('#ev-form')).toBeVisible();
+  // a name and a date are needed
+  await page.fill('#ev-title', 'Winter Showcase <b>1</b>'); await page.fill('#ev-day', '2027-02-13'); await page.fill('#ev-time', '7–11 PM'); await page.fill('#ev-where', 'HOME Studios');
+  await page.fill('#ev-details', 'Doors at 6.'); await page.fill('#ev-tickets', 'https://www.nrnszn.com/support');
+  // a flyer picture: made into two sizes in the browser before it is sent
+  const png = makePng(40, 30);
+  await page.setInputFiles('#ev-flyer', { name: 'flyer.png', mimeType: 'image/png', buffer: png });
+  await expect(page.locator('#ev-preview')).toBeVisible();
+  await page.click('#ev-save');
+  await expect(page.locator('#ev-list')).toContainText('Winter Showcase <b>1</b>');   // shown as plain text, never as markup
+  expect(await page.locator('#ev-list b').count(), 'event names are shown as text, not HTML').toBe(0);
+  expect(state.saves[0].flyer.big).toMatch(/^data:image\/(webp|jpeg);base64,/); expect(state.saves[0].flyer.small).toMatch(/^data:image\/(webp|jpeg);base64,/);
+  expect(state.saves[0]).toMatchObject({ day: '2027-02-13', tickets: 'https://www.nrnszn.com/support', published: true });
+  await expect(page.locator('#b-events')).toHaveText('1');
+  await expect(page.locator('#ev-list a', { hasText: 'View page' })).toHaveAttribute('href', /^\/events\/winter-showcase-ab12cd34ef00\/$/);
+  // edit: rename and hide
+  await page.click('#ev-list [data-edit]'); await expect(page.locator('#ev-form-title')).toHaveText('Edit event'); await expect(page.locator('#ev-title')).toHaveValue('Winter Showcase <b>1</b>');
+  await page.fill('#ev-title', 'Winter Showcase (moved)'); await page.uncheck('#ev-pub'); await page.click('#ev-save');
+  await expect(page.locator('#ev-list')).toContainText('Winter Showcase (moved)'); await expect(page.locator('#ev-list .tag')).toHaveText('Hidden'); await expect(page.locator('#ev-list a', { hasText: 'View page' }), 'a hidden event has no public page to view').toHaveCount(0);
+  expect(state.saves[1].id).toBeTruthy(); expect(state.saves[1].flyer, 'a text edit does not re-send the flyer').toBeUndefined(); expect(state.saves[1].published).toBe(false);
+  // delete (asks first)
+  page.once('dialog', (d) => d.dismiss()); await page.click('#ev-list [data-edit]'); await page.click('#ev-delete'); expect(state.events.length, 'cancelled: still there').toBe(1);
+  page.once('dialog', (d) => d.accept()); await page.click('#ev-delete');
+  await expect(page.locator('#ev-msg')).toContainText('Saved'); await expect.poll(() => state.events.length).toBe(0);
+});
+
+test('analytics: the numbers, the comparison, the lists, and a different time range', async ({ page }, info) => {
+  only(info);
+  const state = await fakeApi(page);
+  await page.addInitScript((t) => localStorage.setItem('nrn_admin', t), TOKEN);
+  await page.goto('/admin/');
+  await page.locator('details[data-folder="analytics"] > summary').click();
+  await expect(page.locator('#an-out .strip b').first()).toHaveText('120');
+  await expect(page.locator('#an-out')).toContainText('+20% vs the period before');
+  await expect(page.locator('#an-out')).toContainText('Top pages'); await expect(page.locator('#an-out')).toContainText('/events'); await expect(page.locator('#an-out')).toContainText('l.instagram.com'); await expect(page.locator('#an-out')).toContainText('Phone'); await expect(page.locator('#an-out')).toContainText('Nashville, Tennessee');
+  await expect(page.locator('#an-out')).toContainText('counted once per day');
+  expect(await page.locator('#an-out .bars i').count()).toBe(30);
+  await page.selectOption('#an-days', '90'); await expect.poll(() => page.locator('#an-out .bars i').count()).toBe(90);
+  expect(state.ranges).toContain('90'); await expect(page.locator('#b-analytics')).toHaveText('120');
+});
+
+test('without the database, events and analytics explain how to connect it instead of failing', async ({ page }, info) => {
+  only(info);
+  await fakeApi(page);
+  await page.route('**/api/admin?section=*', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, result: 'no-db', message: 'not connected' }) }));
+  await page.addInitScript((t) => localStorage.setItem('nrn_admin', t), TOKEN);
+  await page.goto('/admin/');
+  await page.locator('details[data-folder="events"] > summary').click(); await page.locator('details[data-folder="analytics"] > summary').click();
+  await expect(page.locator('#ev-msg')).toContainText('database is not connected'); await expect(page.locator('#ev-add')).toBeHidden();
+  await expect(page.locator('#an-out')).toContainText('database is not connected');
 });

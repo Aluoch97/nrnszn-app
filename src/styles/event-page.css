@@ -1,0 +1,20 @@
+/* One event's own page (/events/<slug>/): flyer, when and where, details, and the buttons (tickets, recap, watch). Shared by the pages made at build time
+   (src/pages/events/[slug].astro) and the template for events added in /admin (src/pages/event-live.astro), whose content is drawn by script. */
+.evp { max-width: 760px; margin: 0 auto; padding: var(--space-5) var(--space-4) var(--space-6); color: #f3f0fa; }
+.evp-kicker { margin: 0 0 var(--space-2); font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--pink-300); }
+.evp-title { margin: 0; font-family: var(--font-poster); font-weight: 800; text-transform: uppercase; font-size: clamp(34px, 9vw, 56px); line-height: 1.02; color: var(--gold-300); overflow-wrap: anywhere; }
+.evp-when { margin: var(--space-3) 0 0; font-size: 18px; font-weight: 700; color: #fff; }
+.evp-where { margin: var(--space-1) 0 0; font-size: 16px; color: #cfc7e0; overflow-wrap: anywhere; }
+.evp-flyer { margin: var(--space-4) 0 0; }
+.evp-flyer img { display: block; width: 100%; height: auto; border-radius: 18px; border: 1px solid #2a2238; background: #15111f; }
+.evp-text { margin: var(--space-4) 0 0; font-size: 17px; line-height: 1.65; color: #d9d2ea; }
+.evp-text p { margin: 0 0 var(--space-3); overflow-wrap: anywhere; }
+.evp-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0 0; }
+.evp-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 24px; border-radius: var(--radius-pill); background: var(--gold-300); color: var(--purple-900); font-weight: 700; font-size: 16px; text-decoration: none; }
+.evp-btn:hover { background: #ffe08a; }
+.evp-btn.alt { background: transparent; color: var(--gold-300); border: 1.5px solid var(--gold-500); }
+.evp-btn.alt:hover { background: #241d34; }
+.evp-note { margin: var(--space-3) 0 0; font-size: 15px; color: #b9b0cf; }
+.evp-back { margin: var(--space-5) 0 0; }
+.evp-back a { display: inline-flex; align-items: center; min-height: 44px; color: var(--gold-300); font-weight: 600; }
+.evp [hidden] { display: none !important; }

@@ -54,6 +54,40 @@ import Site from '../layouts/Site.astro';
           <p id="backup-result" class="result" role="status" aria-live="polite"></p>
         </div>
       </details>
+      <details class="folder" data-folder="events">
+        <summary><span class="ft"><b>Events</b><span>Add and edit the events on the Events page</span></span><span class="badge" id="b-events">…</span></summary>
+        <div id="ev-box">
+          <p id="ev-msg" class="result" role="status" aria-live="polite"></p>
+          <ul class="rows" id="ev-list"></ul>
+          <div class="actions"><button type="button" class="btn primary" id="ev-add">Add an event</button></div>
+          <form id="ev-form" class="evform" hidden>
+            <h3 id="ev-form-title">New event</h3>
+            <label for="ev-title">Event name</label><input id="ev-title" type="text" maxlength="120" autocomplete="off" required />
+            <label for="ev-day">Date</label><input id="ev-day" type="date" required />
+            <label for="ev-time">Time <span class="hint">(optional, for example 7–11 PM)</span></label><input id="ev-time" type="text" maxlength="40" autocomplete="off" />
+            <label for="ev-where">Where <span class="hint">(optional)</span></label><input id="ev-where" type="text" maxlength="160" autocomplete="off" />
+            <label for="ev-details">Details <span class="hint">(optional)</span></label><textarea id="ev-details" rows="4" maxlength="2000"></textarea>
+            <label for="ev-tickets">Tickets link <span class="hint">(optional, starts with https://)</span></label><input id="ev-tickets" type="url" maxlength="500" autocomplete="off" />
+            <label for="ev-video">Recap video link <span class="hint">(optional, starts with https://)</span></label><input id="ev-video" type="url" maxlength="500" autocomplete="off" />
+            <label for="ev-watch">Watch on this site <span class="hint">(optional, a page like /cinema)</span></label><input id="ev-watch" type="text" maxlength="100" autocomplete="off" />
+            <label for="ev-flyer">Flyer picture <span class="hint">(optional, JPG, PNG or WebP)</span></label>
+            <input id="ev-flyer" type="file" accept="image/jpeg,image/png,image/webp" />
+            <img id="ev-preview" alt="Flyer preview" hidden />
+            <label class="check" id="ev-rm-wrap" hidden><input id="ev-rm" type="checkbox" /> Remove the current flyer</label>
+            <label class="check"><input id="ev-pub" type="checkbox" checked /> Show on the Events page</label>
+            <div class="actions"><button type="submit" class="btn primary" id="ev-save">Save event</button><button type="button" class="btn" id="ev-cancel">Cancel</button><button type="button" class="btn danger" id="ev-delete" hidden>Delete this event</button></div>
+            <p id="ev-error" class="error" role="alert"></p>
+          </form>
+        </div>
+      </details>
+      <details class="folder" data-folder="analytics">
+        <summary><span class="ft"><b>Website analytics</b><span>Visitors, pages, where people come from</span></span><span class="badge" id="b-analytics">…</span></summary>
+        <div id="an-box">
+          <div class="actions"><label for="an-days" class="inline">Show</label>
+            <select id="an-days"><option value="7">the last 7 days</option><option value="30" selected>the last 30 days</option><option value="90">the last 90 days</option></select></div>
+          <div id="an-out" aria-live="polite"><p class="result">Loading…</p></div>
+        </div>
+      </details>
       <details class="folder" data-folder="setup">
         <summary><span class="ft"><b>Setup checklist</b><span>Which secrets and connections exist (yes or no, never the value)</span></span><span class="badge" id="b-setup">…</span></summary>
         <div id="setup-list"></div>
@@ -113,9 +147,9 @@ import Site from '../layouts/Site.astro';
 
   const show = (which: 'loading' | 'gate' | 'dash') => { $('loading').hidden = which !== 'loading'; $('gate').hidden = which !== 'gate'; $('dash').hidden = which !== 'dash'; };
 
-  async function api(init?: RequestInit) {
+  async function api(init?: RequestInit, query = '') {
     const token = store.get();
-    return fetch('/api/admin', { cache: 'no-store', signal: AbortSignal.timeout(20000), ...init, headers: { ...(init && init.headers), ...(token ? { authorization: `Bearer ${token}` } : {}) } });
+    return fetch('/api/admin' + query, { cache: 'no-store', signal: AbortSignal.timeout(20000), ...init, headers: { ...(init && init.headers), ...(token ? { authorization: `Bearer ${token}` } : {}) } });
   }
 
   // ---- the dashboard -------------------------------------------------------------------------------------------------------------
@@ -179,7 +213,7 @@ import Site from '../layouts/Site.astro';
   async function openDash(data: any) {
     show('dash');
     drawSetup(data.setup || []);
-    runChecks();
+    runChecks(); loadEvents(); loadAnalytics();
     fetch('/version.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { $('ver-line').textContent = j && j.version ? `Version: ${String(j.version).replace(/^nrn-/, '')}` : 'Version: unknown'; }).catch(() => { $('ver-line').textContent = 'Version: unknown'; });
   }
 
@@ -221,6 +255,144 @@ import Site from '../layouts/Site.astro';
     } catch { out.textContent = 'Could not reach the site. Try again.'; }
     btn.disabled = false;
   });
+
+  // ---- events ---------------------------------------------------------------------------------------------------------------------
+  type Ev = { id: string; slug: string; title: string; day: string; time: string; where: string; details: string; tickets: string; video: string; watch: string; flyer: string; published: boolean };
+  let events: Ev[] = [], flyerData: { big: string; small: string } | null = null, editing: Ev | null = null;
+  const todayIso = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
+  const nice = (day: string) => new Date(+day.slice(0, 4), +day.slice(5, 7) - 1, +day.slice(8, 10)).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  const fld = <T extends HTMLElement = HTMLInputElement>(id: string) => $(id) as T;
+
+  function drawEvents() {
+    const ul = $('ev-list'); ul.textContent = '';
+    if (!events.length) { $('ev-msg').textContent = 'No events added here yet. The Events page still shows the Certified Lounge show guide and the older past events.'; }
+    else $('ev-msg').textContent = '';
+    const today = todayIso();
+    for (const e of events) {
+      const li = document.createElement('li'); li.className = 'row'; li.dataset.tone = e.published ? (e.day >= today ? 'ok' : 'wait') : 'todo';
+      li.innerHTML = '<span class="name"></span><span class="tag"></span><span class="note"></span><span class="rowact"><button type="button" class="btn small" data-edit></button></span>';
+      (li.querySelector('.name') as HTMLElement).textContent = e.title;
+      (li.querySelector('.tag') as HTMLElement).textContent = !e.published ? 'Hidden' : e.day >= today ? 'Upcoming' : 'Past';
+      (li.querySelector('.note') as HTMLElement).textContent = `${nice(e.day)}${e.time ? ' · ' + e.time : ''}${e.where ? ' · ' + e.where : ''}`;
+      const b = li.querySelector('[data-edit]') as HTMLButtonElement; b.textContent = 'Edit'; b.setAttribute('aria-label', `Edit ${e.title}`);
+      b.addEventListener('click', () => openForm(e));
+      if (e.published && e.slug) { const v = document.createElement('a'); v.className = 'btn small'; v.textContent = 'View page'; v.href = `/events/${e.slug}/`; v.target = '_blank'; v.rel = 'noopener'; v.setAttribute('aria-label', `View the page for ${e.title}`); (li.querySelector('.rowact') as HTMLElement).appendChild(v); }
+      ul.appendChild(li);
+    }
+    const up = events.filter((e) => e.published && e.day >= today).length, badge = $('b-events');
+    badge.textContent = String(up); badge.dataset.tone = up ? 'ok' : 'warn';
+  }
+  async function loadEvents() {
+    try {
+      const res = await api(undefined, '?section=events');
+      if (res.status === 401) { signedOut('Please sign in again.'); return; }
+      const j = await res.json().catch(() => ({}));
+      if (j.ok) { events = j.events || []; drawEvents(); }
+      else { $('ev-msg').textContent = j.result === 'no-db' ? 'The site database is not connected yet, so events cannot be saved. See the Setup checklist below.' : (j.message || 'Could not load the events.'); $('ev-add').hidden = true; $('b-events').textContent = '!'; $('b-events').dataset.tone = 'warn'; }
+    } catch { $('ev-msg').textContent = 'Could not reach the site. Reload this page to try again.'; }
+  }
+  function openForm(e: Ev | null) {
+    editing = e; flyerData = null;
+    $('ev-form').hidden = false; $('ev-add').hidden = true;
+    $('ev-form-title').textContent = e ? 'Edit event' : 'New event';
+    fld('ev-title').value = e ? e.title : ''; fld('ev-day').value = e ? e.day : ''; fld('ev-time').value = e ? e.time : ''; fld('ev-where').value = e ? e.where : '';
+    fld<HTMLTextAreaElement>('ev-details').value = e ? e.details : ''; fld('ev-tickets').value = e ? e.tickets : ''; fld('ev-video').value = e ? e.video : ''; fld('ev-watch').value = e ? e.watch : '';
+    fld('ev-flyer').value = ''; fld('ev-rm').checked = false; fld('ev-pub').checked = e ? e.published : true;
+    const prev = fld<HTMLImageElement>('ev-preview');
+    if (e && e.flyer) { prev.src = `/api/flyer?id=${encodeURIComponent(e.flyer)}&size=480`; prev.hidden = false; $('ev-rm-wrap').hidden = false; } else { prev.removeAttribute('src'); prev.hidden = true; $('ev-rm-wrap').hidden = true; }
+    $('ev-delete').hidden = !e; $('ev-error').textContent = '';
+    fld('ev-title').focus();
+  }
+  function closeForm() { $('ev-form').hidden = true; $('ev-add').hidden = false; editing = null; flyerData = null; }
+  // Make the two flyer sizes in the browser (900 px and 480 px wide), the same way Soul Vault does for covers.
+  async function makeFlyer(file: File) {
+    const bmp = await createImageBitmap(file);
+    const draw = (w: number, type: string, q: number) => {
+      const k = Math.min(1, w / bmp.width), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+      const g = c.getContext('2d') as CanvasRenderingContext2D; g.drawImage(bmp, 0, 0, c.width, c.height); return c.toDataURL(type, q);
+    };
+    let big = draw(900, 'image/webp', 0.82), small = draw(480, 'image/webp', 0.82);
+    if (!big.startsWith('data:image/webp') || !small.startsWith('data:image/webp')) { big = draw(900, 'image/jpeg', 0.85); small = draw(480, 'image/jpeg', 0.85); }
+    return { big, small };
+  }
+  fld('ev-flyer').addEventListener('change', async () => {
+    const f = fld('ev-flyer').files && fld('ev-flyer').files![0], err = $('ev-error'); err.textContent = '';
+    if (!f) { flyerData = null; return; }
+    try { flyerData = await makeFlyer(f); const prev = fld<HTMLImageElement>('ev-preview'); prev.src = flyerData.small; prev.hidden = false; fld('ev-rm').checked = false; }
+    catch { flyerData = null; err.textContent = 'That picture could not be read. Use a JPG, PNG or WebP.'; }
+  });
+  $('ev-add').addEventListener('click', () => openForm(null));
+  $('ev-cancel').addEventListener('click', closeForm);
+  async function sendEvent(body: object, btn: HTMLButtonElement) {
+    const err = $('ev-error'); btn.disabled = true; err.textContent = '';
+    try {
+      const res = await api({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      if (res.status === 401) { signedOut('Please sign in again.'); return; }
+      const j = await res.json().catch(() => ({}));
+      if (j.ok) { closeForm(); await loadEvents(); $('ev-msg').textContent = 'Saved. It shows on the Events page within a minute.'; }
+      else err.textContent = j.error || j.message || 'Could not save. Try again.';
+    } catch { err.textContent = 'Could not reach the site. Try again.'; }
+    btn.disabled = false;
+  }
+  $('ev-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const ev: any = { title: fld('ev-title').value, day: fld('ev-day').value, time: fld('ev-time').value, where: fld('ev-where').value, details: fld<HTMLTextAreaElement>('ev-details').value, tickets: fld('ev-tickets').value, video: fld('ev-video').value, watch: fld('ev-watch').value, published: fld('ev-pub').checked };
+    if (editing) ev.id = editing.id;
+    if (flyerData) ev.flyer = flyerData; else if (editing && fld('ev-rm').checked) ev.removeFlyer = true;
+    sendEvent({ action: 'event-save', event: ev }, $('ev-save') as HTMLButtonElement);
+  });
+  $('ev-delete').addEventListener('click', () => {
+    if (!editing) return;
+    if (!confirm(`Delete "${editing.title}"? This cannot be undone.`)) return;
+    sendEvent({ action: 'event-delete', id: editing.id }, $('ev-delete') as HTMLButtonElement);
+  });
+
+  // ---- website analytics ----------------------------------------------------------------------------------------------------------
+  const change = (now: number, before: number) => (!before ? (now ? 'new' : '') : `${now >= before ? '+' : '−'}${Math.round((Math.abs(now - before) / before) * 100)}% vs the period before`);
+  function list(title: string, rows: { name: string; views: number }[], total: number, label = 'views') {
+    const box = document.createElement('section'); const h = document.createElement('h3'); h.textContent = title; box.appendChild(h);
+    if (!rows.length) { const p = document.createElement('p'); p.className = 'result'; p.textContent = 'Nothing yet.'; box.appendChild(p); return box; }
+    const ul = document.createElement('ul'); ul.className = 'bar-list';
+    for (const r of rows) {
+      const li = document.createElement('li'); li.innerHTML = '<span class="bn"></span><span class="bv"></span><span class="bb" aria-hidden="true"><i></i></span>';
+      (li.querySelector('.bn') as HTMLElement).textContent = r.name === 'phone' || r.name === 'tablet' || r.name === 'computer' ? r.name[0].toUpperCase() + r.name.slice(1) : r.name;
+      (li.querySelector('.bv') as HTMLElement).textContent = `${r.views} ${label}`;
+      (li.querySelector('.bb i') as HTMLElement).style.width = `${total ? Math.max(2, Math.round((r.views / total) * 100)) : 0}%`;
+      ul.appendChild(li);
+    }
+    box.appendChild(ul); return box;
+  }
+  function drawAnalytics(a: any) {
+    const out = $('an-out'); out.textContent = '';
+    const kpis = document.createElement('div'); kpis.className = 'strip';
+    for (const [n, label, sub] of [[String(a.views), 'Page views', change(a.views, a.previous.views)], [String(a.visitors), 'Visitors', change(a.visitors, a.previous.visitors)], [a.viewsPerVisitor == null ? '–' : String(a.viewsPerVisitor), 'Views per visitor', '']]) {
+      const d = document.createElement('div'); d.innerHTML = '<b></b><span></span><small></small>';
+      (d.querySelector('b') as HTMLElement).textContent = n; (d.querySelector('span') as HTMLElement).textContent = label; (d.querySelector('small') as HTMLElement).textContent = sub; kpis.appendChild(d);
+    }
+    out.appendChild(kpis);
+    if (!a.views) { const p = document.createElement('p'); p.className = 'result'; p.textContent = 'No visits recorded in this time yet. Counting starts once the site is updated with the counter and the database is connected.'; out.appendChild(p); }
+    const max = Math.max(1, ...a.daily.map((d: any) => d.views)), bars = document.createElement('div'); bars.className = 'bars'; bars.setAttribute('role', 'img');
+    bars.setAttribute('aria-label', `Page views per day, ${a.daily[0].day} to ${a.daily[a.daily.length - 1].day}. Busiest day: ${max} views.`);
+    for (const d of a.daily) { const i = document.createElement('i'); i.style.height = `${Math.max(2, Math.round((d.views / max) * 100))}%`; i.title = `${d.day}: ${d.views} views, ${d.visitors} visitors`; bars.appendChild(i); }
+    out.appendChild(bars);
+    const total = a.views;
+    out.appendChild(list('Top pages', a.pages, total)); out.appendChild(list('Where people come from', a.referrers, total, 'visits')); out.appendChild(list('Devices', a.devices, total)); out.appendChild(list('Cities', a.cities, total));
+    const note = document.createElement('p'); note.className = 'result';
+    note.textContent = 'Visitors are counted once per day. The site deliberately cannot tell that it is the same person on two different days, so someone who visits on three days counts three times. No cookies, no IP addresses stored; visits from you while signed in, robots and people who send Do Not Track are left out.';
+    out.appendChild(note);
+    const b = $('b-analytics'); b.textContent = String(a.views); b.dataset.tone = a.views ? 'ok' : 'warn';
+  }
+  async function loadAnalytics() {
+    const out = $('an-out'); out.innerHTML = '<p class="result">Loading…</p>';
+    try {
+      const res = await api(undefined, `?section=analytics&days=${(fld<HTMLSelectElement>('an-days')).value}`);
+      if (res.status === 401) { signedOut('Please sign in again.'); return; }
+      const j = await res.json().catch(() => ({}));
+      if (j.ok) drawAnalytics(j);
+      else { out.innerHTML = ''; const p = document.createElement('p'); p.className = 'result'; p.textContent = j.result === 'no-db' ? 'The site database is not connected yet. See the Setup checklist below.' : (j.message || 'Could not load the numbers.'); out.appendChild(p); $('b-analytics').textContent = '!'; $('b-analytics').dataset.tone = 'warn'; }
+    } catch { out.innerHTML = '<p class="result">Could not reach the site. Reload this page to try again.</p>'; }
+  }
+  fld<HTMLSelectElement>('an-days').addEventListener('change', loadAnalytics);
 
   async function start() {
     show('loading');
@@ -285,4 +457,26 @@ import Site from '../layouts/Site.astro';
   .admin .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
   .admin .result { margin: 0; flex: 1 1 100%; font-size: 14px; color: #cfc7e0; } .result:empty { display: none; }
   .admin .foot-note { margin: var(--space-4) 0 0; font-size: 14px; color: #b9b0cf; }
+  .admin .evform { display: grid; gap: var(--space-2); margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid #2e2640; }
+  .admin .evform h3 { margin-top: 0; }
+  .admin .hint { font-weight: 400; color: #b9b0cf; font-size: 14px; }
+  .admin input[type='text'], .admin input[type='url'], .admin input[type='date'], .admin textarea, .admin select { min-height: 48px; padding: 8px var(--space-3); font: inherit; font-size: 16px; color: #fff; background: #211b30; border: 1px solid #5a4c78; border-radius: var(--radius-sm); width: 100%; box-sizing: border-box; }
+  .admin textarea { min-height: 96px; resize: vertical; }
+  .admin input[type='file'] { color: #e6e0f2; font-size: 16px; }
+  .admin #ev-preview { max-width: 240px; width: 100%; height: auto; border-radius: var(--radius-sm); border: 1px solid #2e2640; }
+  .admin label.check { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; font-weight: 600; }
+  .admin label.check input { width: 22px; height: 22px; flex: none; }
+  .admin label.inline { margin-right: var(--space-2); }
+  .admin #an-days { width: auto; min-width: 200px; }
+  .admin .btn.small { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--space-3); text-decoration: none; margin-right: var(--space-2); }
+  .admin .btn.danger { color: #ffd0da; background: #3a1620; border-color: #a33a55; }
+  .admin .rowact { grid-column: 1 / -1; margin-top: var(--space-1); }
+  .admin .strip small { font-size: 12px; color: #b9b0cf; text-align: center; min-height: 1.2em; padding: 0 var(--space-1); }
+  .admin .bars { display: flex; align-items: flex-end; gap: 2px; height: 120px; margin: var(--space-3) 0; padding: var(--space-2); border-radius: var(--radius-sm); background: #211b30; }
+  .admin .bars i { flex: 1; min-width: 2px; background: var(--gold-300); border-radius: 2px 2px 0 0; }
+  .admin .bar-list { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: grid; gap: var(--space-2); }
+  .admin .bar-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--space-3); overflow-wrap: anywhere; }
+  .admin .bar-list .bv { color: #cfc7e0; font-size: 14px; }
+  .admin .bar-list .bb { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: #2c2440; overflow: hidden; }
+  .admin .bar-list .bb i { display: block; height: 100%; background: #c8175f; }
 </style>
