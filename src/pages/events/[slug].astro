@@ -1,0 +1,43 @@
+---
+// The page for one of the older (past) events that live in src/data/events.js: made when the site is built.
+// Events added in /admin get their page from functions/events/[slug].js, using the template page /event-live/.
+import Site from '../../layouts/Site.astro';
+import '../../styles/event-page.css';
+import { pastEvents } from '../../data/events.js';
+import { staticSlug, eventJsonLd } from '../../edge/eventpage.js';
+
+export function getStaticPaths() {
+  return pastEvents.map((e) => ({ params: { slug: staticSlug(e) }, props: { e } }));
+}
+const { e } = Astro.props;
+const slug = staticSlug(e);
+const url = `https://www.nrnszn.com/events/${slug}/`;
+const image = `/img/events/${e.img}.webp`;
+const ld = eventJsonLd({ title: e.title, day: e.day, where: e.where, details: e.text }, url, `https://www.nrnszn.com${image}`);
+const paragraphs = String(e.text || '').split(/\n+/).filter(Boolean);
+---
+<Site
+  title={`${e.title} | NuRenaissance`}
+  description={`${e.title}: ${e.when}${e.where ? ', ' + e.where : ''}. ${String(e.text || '').slice(0, 110)}`.trim()}
+  canonicalPath={`/events/${slug}`}
+  image={image}
+  back={{ href: '/events', label: 'Events' }}
+>
+  <article class="evp">
+    <p class="evp-kicker">Past event</p>
+    <h1 class="evp-title">{e.title}</h1>
+    <p class="evp-when">{e.when}</p>
+    {e.where && <p class="evp-where">{e.where}</p>}
+    <figure class="evp-flyer">
+      <img src={`/img/events/${e.img}-480.webp`} srcset={`/img/events/${e.img}-480.webp 480w, /img/events/${e.img}.webp 900w`} sizes="(min-width: 760px) 720px, 100vw" alt={e.alt} width="900" height="506" />
+    </figure>
+    <div class="evp-text">{paragraphs.map((t) => <p>{t}</p>)}</div>
+    <div class="evp-actions">
+      {e.video && <a class="evp-btn" href={e.video} target="_blank" rel="noopener">Watch the recap ↗</a>}
+      {e.watch && <a class="evp-btn alt" href={e.watch}>Watch on NuCinema →</a>}
+    </div>
+    <p class="evp-note">This event has passed. Follow <a href="https://www.instagram.com/nrnszn" target="_blank" rel="noopener">@nrnszn</a> to hear about the next one.</p>
+    <p class="evp-back"><a href="/events">← All events</a></p>
+  </article>
+  <script type="application/ld+json" set:html={JSON.stringify(ld)} />
+</Site>

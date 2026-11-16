@@ -8,6 +8,8 @@ Inside, once signed in:
   service clicks and service requests, each marked **New** (the site itself does the job) or **Old fallback** (the previous Google script still does).
 - **Backups**: whether the nightly sheet backup ran, and a **Back up now** button.
 - **Setup checklist**: which secrets and connections exist (yes or no, never the value).
+- **Events**: add, edit, hide and delete the events on the Events page, with a flyer picture (needs the database below).
+- **Website analytics**: page views, visitors, top pages, where people come from, devices and cities for the last 7, 30 or 90 days (needs the database below).
 - **Account**: **Sign out on this device**, **Refresh the app**, and the site version.
 
 ## Switch it on (about 3 minutes)
@@ -25,3 +27,27 @@ Until step 2 and 3 are done the page says "Sign-in is not set up yet" and explai
 - **Sign out on a shared or borrowed device** with Account → **Sign out on this device**.
 - The page can only read; the one thing it can do is **Back up now** (which only reads your sheets and writes a copy to the private backup bucket).
 - The page never shows a secret's value, only whether it is set.
+
+## Switch on Events and Website analytics: connect the database (about 5 minutes)
+Both need one small Cloudflare database. It stays empty and free until you use it; the tables are created automatically the first time they are needed.
+1. Cloudflare dashboard → **Storage & databases** → **D1 SQL database** → **Create database** → name `nrnszn-db` → **Create**.
+2. **Workers & Pages** → the nrnszn project → **Settings** → **Bindings** → **Add** → **D1 database** → variable name exactly `DB` → database `nrnszn-db` → **Save**.
+3. **Deployments** → the latest → **⋯** → **Retry deployment**.
+4. Open `/admin` → **Setup checklist**: "Site database (D1 binding)" should say **Set**. The Events and Website analytics folders now work.
+
+## Events: how they show on the site
+- Add an event with a name and a date. Everything else is optional: time, where, details, a tickets link (https), a recap video link (https), a page on this site to watch it, and a flyer picture.
+- **Upcoming** events (today or later) show as cards at the top of the Events page, above the Certified Lounge show guide. **Past** events join the flyer wall, in date order, next to the older ones that were typed into the site.
+- Untick **Show on the Events page** to keep an event as a draft. Changes show on the page within about a minute.
+- The Certified Lounge show guide still comes from the Certified Lounge app, exactly as before. The older past events are still in the site's code.
+- Flyers are made into two sizes in your browser before they are saved, so a big photo from your phone is fine.
+
+## Website analytics: what is counted
+- The site counts page views itself: **no cookies, no Google Analytics, no IP addresses stored**. The page `privacy-policy` says so.
+- **Visitors** are counted once per day, on purpose: the anonymous code changes every day, so the site cannot tell it is the same person on two days (someone who visits on three days counts three times).
+- Not counted: visits from you while signed in to `/admin` on that device, robots, and people who send "Do Not Track" or "Global Privacy Control".
+- Counting starts the day the database is connected. Rows older than about 13 months are deleted.
+- Visitor counts need `ADMIN_PASSWORD` to be set (it is part of the anonymous code's secret key). Without it, page views are still counted but visitors show 0.
+
+## Event pages
+Each event (old and new) has its own page at `/events/<name>/`. Events you add in /admin get theirs automatically; in the Events list tap **View page** to open it. A hidden (unpublished) event has no page.

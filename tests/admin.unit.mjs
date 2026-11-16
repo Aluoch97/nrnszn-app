@@ -85,3 +85,45 @@ test('the checklist lists every secret the site uses, grouped, yes/no only', () 
   const names = list.flatMap((g) => g.items.map((i) => i.name));
   for (const n of ['SURVEY_SERVICE_ACCOUNT_JSON', 'RESEND_API_KEY', 'SURVEY_UNSUB_SECRET', 'RECAP_CRON_TOKEN', 'PAYMENTS_SERVICE_ACCOUNT_JSON', 'SERVICES_SERVICE_ACCOUNT_JSON', 'GOOGLE_SERVICE_ACCOUNT_JSON', 'YOUTUBE_API_KEY', 'BACKUPS', 'BACKUP_CRON_TOKEN', 'ADMIN_PASSWORD']) assert.ok(names.includes(n), n);
 });
+
+// ---- events and analytics inside /admin (they need the D1 database binding) ----
+import { fakeD1 } from './_d1.mjs';
+const getSection = (section, opts = {}) => adminGet({ request: new Request(`https://www.nrnszn.com/api/admin?section=${section}${opts.query || ''}`, { headers: { ...(opts.token ? { authorization: `Bearer ${opts.token}` } : {}) } }), env: opts.e || env() });
+const postAs = (token, body, e) => call(adminPost, { body, token, e });
+
+test('events and analytics need a sign-in first, then the database; without the database they say how to connect it', async () => {
+  for (const s of ['events', 'analytics']) {
+    assert.equal((await getSection(s, { token: 'junk' })).status, 401);
+    const token = await makeToken(env());
+    const noDb = await getSection(s, { token }); assert.equal(noDb.status, 503); assert.equal((await noDb.json()).result, 'no-db');
+  }
+  const token = await makeToken(env());
+  for (const body of [{ action: 'event-save', event: { title: 'x', day: '2027-01-01' } }, { action: 'event-delete', id: 'deadbeefdead' }]) {
+    assert.equal((await postAs(null, body)).status, 401, 'no sign-in'); assert.equal((await postAs(token, body)).status, 503, 'no database');
+  }
+});
+
+test('add, list, edit and delete an event through /admin; a bad event is refused with a plain message; the public list only has published ones', async () => {
+  const e = env({ DB: fakeD1() }), token = await makeToken(e);
+  const saved = await (await postAs(token, { action: 'event-save', event: { title: 'Winter Showcase', day: '2027-02-13', time: '7 PM', where: 'HOME Studios', details: 'Doors at 6.', tickets: 'https://www.nrnszn.com/support', published: true } }, e)).json();
+  assert.equal(saved.ok, true); assert.match(saved.id, /^[a-f0-9]{12}$/);
+  await postAs(token, { action: 'event-save', event: { title: 'Secret', day: '2027-03-01', published: false } }, e);
+  const list = await (await getSection('events', { token, e })).json(); assert.deepEqual(list.events.map((x) => x.title), ['Secret', 'Winter Showcase']); assert.equal(list.events[0].published, false);
+  const edited = await (await postAs(token, { action: 'event-save', event: { id: saved.id, title: 'Winter Showcase (moved)', day: '2027-02-20', published: true } }, e)).json(); assert.equal(edited.id, saved.id);
+  const bad = await postAs(token, { action: 'event-save', event: { title: '', day: '2027-02-13' } }, e); assert.equal(bad.status, 400); assert.match((await bad.json()).error, /name/);
+  const bad2 = await postAs(token, { action: 'event-save', event: { title: 'x', day: '2027-02-13', tickets: 'javascript:alert(1)' } }, e); assert.equal(bad2.status, 400);
+  const { listPublic } = await import('../src/edge/events.js'); assert.deepEqual((await listPublic(e.DB)).map((x) => x.title), ['Winter Showcase (moved)']);
+  assert.equal((await postAs(token, { action: 'event-delete', id: saved.id }, e)).status, 200); assert.equal((await postAs(token, { action: 'event-delete', id: saved.id }, e)).status, 400);
+  assert.equal((await (await getSection('events', { token, e })).json()).events.length, 1);
+});
+
+test('the analytics section returns the numbers for 7, 30 or 90 days', async () => {
+  const e = env({ DB: fakeD1() }), token = await makeToken(e);
+  for (const days of [7, 30, 90]) { const out = await (await getSection('analytics', { token, e, query: `&days=${days}` })).json(); assert.equal(out.ok, true); assert.equal(out.days, days); assert.equal(out.daily.length, days); assert.equal(out.views, 0); }
+  assert.equal((await (await getSection('analytics', { token, e, query: '&days=5' })).json()).days, 30);
+});
+
+test('the setup checklist also says whether the database is connected', () => {
+  const flat = Object.fromEntries(setupChecklist(env({ DB: fakeD1() })).flatMap((g) => g.items.map((i) => [i.name, i.present])));
+  assert.equal(flat.DB, true); assert.equal(setupChecklist(env()).flatMap((g) => g.items).find((i) => i.name === 'DB').present, false);
+});

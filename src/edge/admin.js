@@ -5,11 +5,16 @@
 //                                                address lock that address out for 15 minutes (best effort: counted per Cloudflare data centre).
 //   GET  /api/admin   + Authorization: Bearer <token>   the setup checklist: which secrets and bindings exist (yes/no only, never a value).
 //   POST /api/admin {action:'backup'} + token             "Back up now": runs the sheet backup (src/edge/backup.js) once.
+//   GET  /api/admin?section=events | analytics&days=7|30|90  + token   the events list / the website numbers (need the D1 database binding DB).
+//   POST /api/admin {action:'event-save', event} | {action:'event-delete', id}  + token   add, edit or delete an event.
 //
 // Switches on only when the Cloudflare secret ADMIN_PASSWORD exists (at least 10 characters). The session token is signed with a key made
 // from that password, so changing the password signs every device out. The token lives in the browser's localStorage, like Soul Vault's owner key.
 import { sameToken } from './survey-recap-api.js';
 import { runBackup, backupStatus } from './backup.js';
+import { hasDb } from './db.js';
+import { listAll, saveEvent, deleteEvent } from './events.js';
+import { summary } from './analytics.js';
 
 const reply = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json;charset=utf-8', 'cache-control': 'no-store' } });
 export const SESSION_MS = 30 * 24 * 3600 * 1000;
@@ -66,6 +71,9 @@ export function setupChecklist(env) {
       { name: 'GOOGLE_SERVICE_ACCOUNT_JSON', label: 'Gallery, cinema and prices read key', present: has('GOOGLE_SERVICE_ACCOUNT_JSON') },
       { name: 'YOUTUBE_API_KEY', label: 'YouTube key', present: has('YOUTUBE_API_KEY') },
     ] },
+    { group: 'Events and analytics', items: [
+      { name: 'DB', label: 'Site database (D1 binding)', present: hasDb(env) },
+    ] },
     { group: 'Backups and sign-in', items: [
       { name: 'BACKUPS', label: 'Backup storage bucket (R2 binding)', present: !!(env.BACKUPS && typeof env.BACKUPS.put === 'function') },
       { name: 'BACKUP_CRON_TOKEN', label: 'Nightly backup job password', present: has('BACKUP_CRON_TOKEN') },
@@ -83,6 +91,13 @@ export async function adminGet({ request, env }) {
   if (!adminReady(env)) return reply({ status: 'ok', message: 'NuRenaissance admin.', mode: 'not-set-up' });
   if (!request.headers.get('authorization')) return reply({ status: 'ok', message: 'NuRenaissance admin.', mode: 'ready' });
   if (!(await authed(request, env))) return reply({ ok: false, message: 'Please sign in again.' }, 401);
+  const url = new URL(request.url), section = url.searchParams.get('section');
+  if (section === 'events' || section === 'analytics') {
+    if (!hasDb(env)) return reply({ ok: false, result: 'no-db', message: 'The site database is not connected yet (see docs/admin-setup.md).' }, 503);
+    try {
+      return reply(section === 'events' ? { ok: true, events: await listAll(env.DB) } : { ok: true, ...(await summary(env.DB, Number(url.searchParams.get('days')))) });
+    } catch (e) { console.error('admin section', section, e); return reply({ ok: false, message: 'The database did not answer. Try again in a minute.' }, 502); }
+  }
   let backup = null; try { backup = await (await backupStatus(env)).json(); } catch { /* the page shows its own backup row */ }
   return reply({ status: 'ok', mode: 'ready', signedIn: true, setup: setupChecklist(env), backup });
 }
@@ -103,6 +118,13 @@ export async function adminPost({ request, env }) {
     if (!(env.BACKUPS && typeof env.BACKUPS.put === 'function')) return reply({ ok: false, result: 'not-set-up', message: 'The backup bucket is not connected yet (see docs/backup-setup.md).' }, 503);
     try { const out = await runBackup(env); return reply(out, out.ok ? 200 : 502); }
     catch (e) { return reply({ ok: false, result: 'failed', error: String((e && e.message) || e).slice(0, 200) }, 502); }
+  }
+  if (body && (body.action === 'event-save' || body.action === 'event-delete')) {
+    if (!hasDb(env)) return reply({ ok: false, result: 'no-db', message: 'The site database is not connected yet (see docs/admin-setup.md).' }, 503);
+    try {
+      const out = body.action === 'event-save' ? await saveEvent(env.DB, body.event) : await deleteEvent(env.DB, body.id);
+      return reply(out, out.ok ? 200 : 400);
+    } catch (e) { console.error('admin event', e); return reply({ ok: false, message: 'The database did not answer. Try again in a minute.' }, 502); }
   }
   return reply({ ok: false, message: 'Unknown request.' }, 400);
 }
