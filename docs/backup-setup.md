@@ -21,7 +21,7 @@ Until the steps below are done nothing runs and nothing breaks (`https://www.nrn
 1. Open `https://www.nrnszn.com/api/backup`. It should say `"mode":"r2"` (it says `"mode":"not-set-up"` until steps 1 to 5 are done).
 2. GitHub → **Actions** → **Daily sheet backup** → **Run workflow**. In a minute the log should show `"result":"saved"` with a row count for each sheet
    (`surveys`, `payments`, `services`, `cinema`). If one says `failed` or `skipped`, the reason is next to it.
-3. Open `https://www.nrnszn.com/api/backup` again: it now shows `last` with the file name and time. The same information is on the `/status` page.
+3. Open `https://www.nrnszn.com/api/backup` again: it now shows `last` with the file name and time. The same information, and a **Back up now** button, are on the `/admin` page (see `docs/admin-setup.md`).
 4. Cloudflare → **R2** → `nrnszn-backups` → you should see `sheets/<today's date>.json.gz`.
 
 ## Which key reads which sheet

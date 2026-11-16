@@ -1,0 +1,288 @@
+---
+import Site from '../layouts/Site.astro';
+---
+<Site
+  title="Admin | NuRenaissance"
+  description="Owner sign-in for the NuRenaissance site: live status of every feed and form, backups, and the setup checklist."
+  noindex={true}
+>
+  <article class="admin">
+    <h1>Admin</h1>
+    <p id="loading" class="lead" role="status">Loading…</p>
+
+    <!-- Sign-in (shown until you are signed in) -->
+    <section id="gate" hidden aria-labelledby="gate-title">
+      <h2 id="gate-title">Sign in</h2>
+      <form id="login" class="login">
+        <label for="pw">Admin password</label>
+        <input id="pw" name="password" type="password" autocomplete="current-password" required />
+        <button type="submit" class="btn primary">Sign in</button>
+        <p id="login-error" class="error" role="alert"></p>
+      </form>
+      <div id="not-set-up" hidden class="callout">
+        <p><strong>Sign-in is not set up yet.</strong> To switch it on:</p>
+        <ol>
+          <li>Make up a long password (at least 10 characters).</li>
+          <li>Cloudflare → <strong>Workers &amp; Pages</strong> → the nrnszn project → <strong>Settings</strong> → <strong>Variables and Secrets</strong> → <strong>Add</strong> → type <strong>Secret</strong>, name <code>ADMIN_PASSWORD</code>, value = your password → <strong>Save</strong>.</li>
+          <li><strong>Deployments</strong> → the latest → <strong>⋯</strong> → <strong>Retry deployment</strong>, then reload this page.</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- The settings page (shown once signed in): a summary, then folders, like Soul Vault's Settings -->
+    <section id="dash" hidden aria-label="Admin settings">
+      <p class="banner" id="banner" role="status" aria-live="polite" data-tone="wait">Checking everything…</p>
+      <div class="strip" aria-label="Summary">
+        <div><b id="n-ok">0</b><span>New</span></div>
+        <div><b id="n-old">0</b><span>Old fallback</span></div>
+        <div><b id="n-todo">0</b><span>To do</span></div>
+      </div>
+
+      <details class="folder" data-folder="feeds" open>
+        <summary><span class="ft"><b>What visitors see</b><span>Gallery, cinema, services, latest videos</span></span><span class="badge" id="b-feeds">…</span></summary>
+        <ul class="rows" data-group="feeds"></ul>
+      </details>
+      <details class="folder" data-folder="send">
+        <summary><span class="ft"><b>What visitors send</b><span>Survey, recap e-mail, payments, services</span></span><span class="badge" id="b-send">…</span></summary>
+        <ul class="rows" data-group="send"></ul>
+      </details>
+      <details class="folder" data-folder="keep">
+        <summary><span class="ft"><b>Backups</b><span>Nightly copy of your Google Sheets</span></span><span class="badge" id="b-keep">…</span></summary>
+        <ul class="rows" data-group="keep"></ul>
+        <div class="actions">
+          <button type="button" class="btn" id="backup-now">Back up now</button>
+          <p id="backup-result" class="result" role="status" aria-live="polite"></p>
+        </div>
+      </details>
+      <details class="folder" data-folder="setup">
+        <summary><span class="ft"><b>Setup checklist</b><span>Which secrets and connections exist (yes or no, never the value)</span></span><span class="badge" id="b-setup">…</span></summary>
+        <div id="setup-list"></div>
+      </details>
+      <details class="folder" data-folder="account">
+        <summary><span class="ft"><b>Account</b><span>Sign out, refresh this device</span></span></summary>
+        <div class="actions">
+          <button type="button" class="btn" data-refresh>Refresh the app</button>
+          <button type="button" class="btn" id="sign-out">Sign out on this device</button>
+          <p class="result" id="ver-line">Version: checking…</p>
+        </div>
+      </details>
+      <p class="foot-note" id="foot-note">&nbsp;</p>
+    </section>
+  </article>
+</Site>
+
+<script>
+  type Tone = 'ok' | 'old' | 'todo' | 'bad';
+  type Result = { tone: Tone; text: string; note?: string };
+  const KEY = 'nrn_admin', OPEN = 'nrn_admin_open';
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  const count = (a: unknown) => (Array.isArray(a) ? a.length : 0);
+  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  const when = (iso: string) => new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const store = {
+    get: () => { try { return localStorage.getItem(KEY) || ''; } catch { return ''; } },
+    set: (v: string) => { try { localStorage.setItem(KEY, v); } catch { /* private window */ } },
+    clear: () => { try { localStorage.removeItem(KEY); } catch { /* ignore */ } },
+  };
+
+  // A write endpoint says which backend answers: "sheet" or "edge" = the site itself, "apps-script" = the old fallback.
+  const mode = (what: string) => (j: any): Result => {
+    if (j && (j.mode === 'sheet' || j.mode === 'edge')) return { tone: 'ok', text: 'New: the site handles this itself', note: what };
+    if (j && j.mode === 'apps-script') return { tone: 'old', text: 'Old fallback: the previous Google script still handles this', note: 'Needs its Cloudflare secret(s) to switch over' };
+    return { tone: 'bad', text: 'Unexpected answer', note: 'The endpoint answered, but not in the usual shape' };
+  };
+  const ROWS: { group: string; name: string; url: string; read: (j: any) => Result }[] = [
+    { group: 'feeds', name: 'Gallery', url: '/api/feed/gallery', read: (j) => (j && j.source === 'drive' ? { tone: 'ok', text: 'New: read straight from Google Drive', note: plural(count(j.categories), 'category', 'categories') } : j && count(j.categories) ? { tone: 'old', text: 'Old fallback: the previous Google script answered' } : { tone: 'bad', text: 'No gallery came back' }) },
+    { group: 'feeds', name: 'Cinema', url: '/api/feed/cinema', read: (j) => (j && j.source === 'sheet' ? { tone: 'ok', text: 'New: read straight from the NuCinema sheet', note: plural(count(j.films), 'film', 'films') } : j && count(j.films) ? { tone: 'old', text: 'Old fallback: the previous Google script answered' } : { tone: 'bad', text: 'No films came back' }) },
+    { group: 'feeds', name: 'Services', url: '/api/feed/services', read: (j) => (j && j.source === 'sheet' ? { tone: 'ok', text: 'New: read straight from the NuServices sheet', note: plural(count(j.services), 'service', 'services') } : j && count(j.services) ? { tone: 'old', text: 'Old fallback: the previous Google script answered' } : { tone: 'bad', text: 'No services came back' }) },
+    { group: 'feeds', name: 'Latest videos', url: '/api/feed/latest', read: (j) => (j && j.ok ? { tone: 'ok', text: 'Answering', note: j.music && j.music.publishedAt ? `Newest music video: ${when(j.music.publishedAt)}` : undefined } : { tone: 'bad', text: 'No videos came back' }) },
+    { group: 'send', name: 'Survey answers', url: '/api/survey', read: mode('Saves each response to the sheet and sends the e-mails') },
+    { group: 'send', name: 'Daily recap e-mail', url: '/api/survey-recap', read: mode('The daily check for a new livestream recap') },
+    { group: 'send', name: 'Payment taps', url: '/api/payment', read: mode('Logs each tap on PayPal, Cash App, Venmo, Zelle, Apple Pay') },
+    { group: 'send', name: 'Service clicks', url: '/api/service-click', read: mode('Counts which services people look at') },
+    { group: 'send', name: 'Service requests', url: '/api/service-lead', read: mode('Saves the intake form') },
+    { group: 'keep', name: 'Nightly sheet backup', url: '/api/backup', read: (j) => {
+      if (!j || !j.mode) return { tone: 'bad', text: 'Unexpected answer' };
+      if (j.mode === 'not-set-up') return { tone: 'todo', text: 'Not set up yet', note: 'Needs the storage bucket and a secret (docs/backup-setup.md)' };
+      if (!j.last || !j.last.at) return { tone: 'todo', text: 'Connected, but no backup has run yet', note: 'Tap "Back up now" below' };
+      const days = (Date.now() - new Date(j.last.at).getTime()) / 86400000;
+      return days > 1.6 ? { tone: 'old', text: `Last backup is ${Math.floor(days)} days old`, note: `${when(j.last.at)}. It should run every night` } : { tone: 'ok', text: `Last backup: ${when(j.last.at)}`, note: `${plural(j.last.kept || 1, 'nightly copy', 'nightly copies')} kept` };
+    } },
+  ];
+  const LABEL: Record<Tone, string> = { ok: 'OK', old: 'Fallback', todo: 'To do', bad: 'Problem' };
+
+  const show = (which: 'loading' | 'gate' | 'dash') => { $('loading').hidden = which !== 'loading'; $('gate').hidden = which !== 'gate'; $('dash').hidden = which !== 'dash'; };
+
+  async function api(init?: RequestInit) {
+    const token = store.get();
+    return fetch('/api/admin', { cache: 'no-store', signal: AbortSignal.timeout(20000), ...init, headers: { ...(init && init.headers), ...(token ? { authorization: `Bearer ${token}` } : {}) } });
+  }
+
+  // ---- the dashboard -------------------------------------------------------------------------------------------------------------
+  const tally: Record<string, Tone> = {};
+  function summarize() {
+    const tones = Object.values(tally), n = (t: Tone[]) => tones.filter((x) => t.includes(x)).length;
+    $('n-ok').textContent = String(n(['ok'])); $('n-old').textContent = String(n(['old'])); $('n-todo').textContent = String(n(['todo', 'bad']));
+    if (tones.length < ROWS.length) return;
+    const bad = ROWS.filter((r) => tally[r.name] !== 'ok').map((r) => r.name), banner = $('banner');
+    if (!bad.length) { banner.dataset.tone = 'ok'; banner.textContent = 'Everything is switched on and answering.'; }
+    else { banner.dataset.tone = ROWS.some((r) => tally[r.name] === 'bad') ? 'bad' : 'old'; banner.textContent = `${bad.length} of ${ROWS.length} need attention: ${bad.join(', ')}.`; }
+    $('foot-note').textContent = `Checked ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`;
+    for (const g of ['feeds', 'send', 'keep']) {
+      const mine = ROWS.filter((r) => r.group === g), off = mine.filter((r) => tally[r.name] !== 'ok').length, b = $(`b-${g}`);
+      b.textContent = off ? String(off) : '✓'; b.dataset.tone = off ? 'warn' : 'ok';
+    }
+  }
+  function paint(li: HTMLElement, r: Result) {
+    li.dataset.tone = r.tone;
+    (li.querySelector('.tag') as HTMLElement).textContent = LABEL[r.tone];
+    (li.querySelector('.text') as HTMLElement).textContent = r.text;
+    (li.querySelector('.note') as HTMLElement).textContent = r.note || '';
+  }
+  function runChecks() {
+    document.querySelectorAll<HTMLElement>('[data-group]').forEach((el) => { el.textContent = ''; });
+    Object.keys(tally).forEach((k) => delete tally[k]);
+    ROWS.forEach((row) => {
+      const li = document.createElement('li');
+      li.className = 'row'; li.dataset.tone = 'wait';
+      li.innerHTML = '<span class="name"></span><span class="tag">…</span><span class="text">Checking…</span><span class="note"></span>';
+      (li.querySelector('.name') as HTMLElement).textContent = row.name;
+      document.querySelector(`[data-group="${row.group}"]`)?.appendChild(li);
+      const done = (r: Result) => { paint(li, r); tally[row.name] = r.tone; summarize(); };
+      fetch(row.url, { cache: 'no-store', signal: AbortSignal.timeout(20000) })
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+        .then((j) => done(row.read(j)))
+        .catch(() => done({ tone: 'bad', text: 'Could not be reached', note: 'Try again in a minute' }));
+    });
+  }
+  function drawSetup(groups: { group: string; items: { name: string; label: string; present: boolean }[] }[]) {
+    const box = $('setup-list'); box.textContent = '';
+    let missing = 0;
+    for (const g of groups) {
+      const h = document.createElement('h3'); h.textContent = g.group; box.appendChild(h);
+      const ul = document.createElement('ul'); ul.className = 'rows';
+      for (const it of g.items) {
+        if (!it.present) missing += 1;
+        const li = document.createElement('li'); li.className = 'row'; li.dataset.tone = it.present ? 'ok' : 'todo';
+        li.innerHTML = '<span class="name"></span><span class="tag"></span><span class="note"></span>';
+        (li.querySelector('.name') as HTMLElement).textContent = it.label;
+        (li.querySelector('.tag') as HTMLElement).textContent = it.present ? 'Set' : 'Missing';
+        (li.querySelector('.note') as HTMLElement).textContent = it.name;
+        ul.appendChild(li);
+      }
+      box.appendChild(ul);
+    }
+    const b = $('b-setup'); b.textContent = missing ? String(missing) : '✓'; b.dataset.tone = missing ? 'warn' : 'ok';
+  }
+  function signedOut(message = '') { store.clear(); show('gate'); $('login-error').textContent = message; $('not-set-up').hidden = true; ($('login') as HTMLElement).hidden = false; }
+
+  async function openDash(data: any) {
+    show('dash');
+    drawSetup(data.setup || []);
+    runChecks();
+    fetch('/version.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { $('ver-line').textContent = j && j.version ? `Version: ${String(j.version).replace(/^nrn-/, '')}` : 'Version: unknown'; }).catch(() => { $('ver-line').textContent = 'Version: unknown'; });
+  }
+
+  // remember which folders are open (this tab only)
+  try {
+    const open = new Set<string>(JSON.parse(sessionStorage.getItem(OPEN) || 'null') || ['feeds']);
+    document.querySelectorAll<HTMLDetailsElement>('details.folder').forEach((d) => {
+      d.open = open.has(d.dataset.folder || '');
+      d.addEventListener('toggle', () => { d.open ? open.add(d.dataset.folder || '') : open.delete(d.dataset.folder || ''); try { sessionStorage.setItem(OPEN, JSON.stringify([...open])); } catch { /* ignore */ } });
+    });
+  } catch { /* leave the defaults */ }
+
+  $('login').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = (e.target as HTMLFormElement).querySelector('button') as HTMLButtonElement, err = $('login-error');
+    btn.disabled = true; err.textContent = '';
+    try {
+      const res = await fetch('/api/admin', { method: 'POST', cache: 'no-store', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'login', password: ($('pw') as HTMLInputElement).value }) });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok && j.token) { store.set(j.token); ($('pw') as HTMLInputElement).value = ''; await start(); }
+      else err.textContent = j.message || 'Could not sign in. Try again.';
+    } catch { err.textContent = 'Could not reach the site. Check your connection and try again.'; }
+    btn.disabled = false;
+  });
+  $('sign-out').addEventListener('click', () => signedOut('You are signed out on this device.'));
+  $('backup-now').addEventListener('click', async () => {
+    const btn = $('backup-now') as HTMLButtonElement, out = $('backup-result');
+    btn.disabled = true; out.textContent = 'Backing up…';
+    try {
+      const res = await api({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'backup' }) });
+      if (res.status === 401) { signedOut('Please sign in again.'); return; }
+      const j = await res.json().catch(() => ({}));
+      if (j.ok) {
+        const parts = Object.entries(j.saved || {}).map(([k, v]: [string, any]) => `${k}: ${plural(v.rows, 'row', 'rows')}`);
+        const bad = [...Object.keys(j.failed || {}).map((k) => `${k} failed`), ...Object.keys(j.skipped || {}).map((k) => `${k} skipped`)];
+        out.textContent = `Saved (${parts.join(', ')})${bad.length ? `. Not saved: ${bad.join(', ')}.` : '.'}`;
+      } else out.textContent = j.message || (j.result === 'nothing-saved' ? 'Nothing could be saved: no sheet could be read.' : 'The backup did not run. Try again in a minute.');
+      runChecks();
+    } catch { out.textContent = 'Could not reach the site. Try again.'; }
+    btn.disabled = false;
+  });
+
+  async function start() {
+    show('loading');
+    try {
+      const res = await api();
+      if (res.status === 401) { signedOut(store.get() ? 'Please sign in again.' : ''); return; }
+      const j = await res.json();
+      if (j.mode === 'not-set-up') { show('gate'); ($('login') as HTMLElement).hidden = true; $('not-set-up').hidden = false; return; }
+      if (j.signedIn) { await openDash(j); return; }
+      show('gate'); ($('login') as HTMLElement).hidden = false; $('not-set-up').hidden = true;
+    } catch { show('gate'); ($('login') as HTMLElement).hidden = false; $('login-error').textContent = 'Could not reach the site. Check your connection and reload.'; }
+  }
+  start();
+</script>
+
+<style is:global>
+  .admin [hidden] { display: none !important; }
+  .admin { max-width: 760px; margin: 0 auto; padding: var(--space-6) var(--space-4) var(--space-6); color: #e6e0f2; font-size: 16px; line-height: 1.55; }
+  .admin h1 { font-family: var(--font-display); font-size: clamp(30px, 7vw, 40px); line-height: 1.15; margin: 0 0 var(--space-3); color: #fff; }
+  .admin h2 { font-family: var(--font-display); font-size: 22px; margin: var(--space-4) 0 var(--space-2); color: var(--gold-300); }
+  .admin h3 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: #b9b0cf; margin: var(--space-4) 0 var(--space-2); }
+  .admin .lead { margin: 0 0 var(--space-4); color: #cfc7e0; }
+  .admin .login { display: grid; gap: var(--space-2); max-width: 420px; }
+  .admin label { font-weight: 600; color: #fff; }
+  .admin input[type='password'] { min-height: 48px; padding: 0 var(--space-3); font-size: 16px; color: #fff; background: #1a1526; border: 1px solid #5a4c78; border-radius: var(--radius-sm); }
+  .admin input[type='password']:focus-visible, .admin .btn:focus-visible, .admin summary:focus-visible { outline: 3px solid var(--gold-300); outline-offset: 2px; }
+  .admin .btn { min-height: 48px; padding: 0 var(--space-4); font: inherit; font-weight: 700; color: #fff; background: #2c2440; border: 1px solid #5a4c78; border-radius: var(--radius-pill); cursor: pointer; }
+  .admin .btn.primary { background: #c8175f; border-color: #c8175f; }
+  .admin .btn:disabled { opacity: 0.6; cursor: progress; }
+  .admin .error { margin: 0; min-height: 1.4em; color: #ffc9d4; }
+  .admin .callout { padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: #33290f; border: 1px solid #8a6d1c; color: #ffe9a8; }
+  .admin .callout p { margin: 0 0 var(--space-2); } .callout ol { margin: 0; padding-left: 1.2em; } .callout li { margin: 0 0 var(--space-2); }
+  .admin code { font-size: 0.92em; padding: 1px 6px; border-radius: 6px; background: rgba(0, 0, 0, 0.35); overflow-wrap: anywhere; }
+  .admin .banner { margin: 0 0 var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); font-weight: 600; background: #241d34; border: 1px solid #3a3150; }
+  .admin .banner[data-tone='ok'] { background: #12301f; border-color: #2c7a49; color: #c9f5d9; }
+  .admin .banner[data-tone='old'] { background: #33290f; border-color: #8a6d1c; color: #ffe9a8; }
+  .admin .banner[data-tone='bad'] { background: #3a1620; border-color: #a33a55; color: #ffd0da; }
+  .admin .strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0 0 var(--space-4); border: 1px solid #2e2640; border-radius: 20px; overflow: hidden; background: #1a1526; }
+  .admin .strip div { display: grid; justify-items: center; gap: 2px; padding: var(--space-3) var(--space-1); }
+  .admin .strip div + div { border-left: 1px solid #2e2640; }
+  .admin .strip b { font-family: var(--font-display); font-size: 32px; line-height: 1; color: #fff; }
+  .admin .strip span { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #b9b0cf; }
+  .admin .folder { margin: 0 0 var(--space-3); border: 1px solid #2e2640; border-radius: 18px; background: #1a1526; overflow: hidden; }
+  .admin .folder > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: var(--space-3); min-height: 64px; padding: var(--space-3) var(--space-4); }
+  .admin .folder > summary::-webkit-details-marker { display: none; }
+  .admin .folder > summary::after { content: ''; width: 9px; height: 9px; margin-left: auto; border-right: 2px solid #b9b0cf; border-bottom: 2px solid #b9b0cf; transform: rotate(45deg); transition: transform 0.2s; flex: none; }
+  .admin .folder[open] > summary::after { transform: rotate(-135deg); }
+  .admin .ft { display: grid; gap: 2px; min-width: 0; } .ft b { color: #fff; font-size: 17px; } .ft span { font-size: 14px; color: #b9b0cf; }
+  .admin .badge { margin-left: auto; min-width: 28px; padding: 2px 10px; text-align: center; border-radius: var(--radius-pill); font-size: 13px; font-weight: 700; background: #2c2440; color: #e6e0f2; }
+  .admin .badge[data-tone='ok'] { background: #16401f; color: #bff2cf; } .badge[data-tone='warn'] { background: #4a3a0e; color: #ffe29a; }
+  .admin .folder .rows, .admin .folder > div { border-top: 1px solid #2e2640; padding: var(--space-3); }
+  .admin .folder .rows { list-style: none; margin: 0; display: grid; gap: var(--space-2); }
+  .admin .folder h3:first-child { margin-top: 0; }
+  .admin .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--space-3); align-items: baseline; padding: var(--space-3); border-radius: var(--radius-sm); background: #211b30; overflow-wrap: anywhere; }
+  .admin .name { font-weight: 700; color: #fff; }
+  .admin .tag { justify-self: end; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 10px; border-radius: var(--radius-pill); background: #2c2440; color: #e6e0f2; }
+  .admin .text { grid-column: 1 / -1; }
+  .admin .note { grid-column: 1 / -1; font-size: 14px; color: #b9b0cf; } .note:empty { display: none; }
+  .admin .row[data-tone='ok'] .tag { background: #16401f; color: #bff2cf; }
+  .admin .row[data-tone='old'] .tag, .admin .row[data-tone='todo'] .tag { background: #4a3a0e; color: #ffe29a; }
+  .admin .row[data-tone='bad'] .tag { background: #55202e; color: #ffc9d4; }
+  .admin .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+  .admin .result { margin: 0; flex: 1 1 100%; font-size: 14px; color: #cfc7e0; } .result:empty { display: none; }
+  .admin .foot-note { margin: var(--space-4) 0 0; font-size: 14px; color: #b9b0cf; }
+</style>

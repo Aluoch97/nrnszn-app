@@ -53,7 +53,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
       <p class="links">
         {footer.map((f, i) => (<>{i > 0 && <span aria-hidden="true"> · </span>}<a href={f.href}>{f.label}</a></>))}
       </p>
-      <p class="copy">© {new Date().getFullYear()} NuRenaissance Media<span aria-hidden="true"> · </span><a class="ver" href="/status" data-version>Status</a><span aria-hidden="true"> · </span><button type="button" class="refresh" data-refresh>Refresh</button></p>
+      <p class="copy"><span>© {new Date().getFullYear()} NuRenaissance Media</span><a class="ver" href="/admin">Admin</a><span class="vtxt" data-version></span><button type="button" class="refresh" data-refresh>Refresh</button></p>
     </footer>
 
     <nav class="tabbar" aria-label="Tabs">
@@ -83,7 +83,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
         ))}
       </ul>
       <p class="sheet-foot"><a href="/privacy-policy">Privacy policy</a> · © {new Date().getFullYear()} NuRenaissance Media</p>
-      <p class="sheet-foot sheet-tools"><a class="ver" href="/status" data-version>Status</a><span aria-hidden="true"> · </span><button type="button" class="refresh" data-refresh>Refresh</button></p>
+      <p class="sheet-foot sheet-tools"><a class="ver" href="/admin">Admin</a><span class="vtxt" data-version></span><button type="button" class="refresh" data-refresh>Refresh</button></p>
     </dialog>
   </div>
 </Base>
@@ -248,9 +248,10 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
   }
   .socials a:hover { background: #241d34; }
   .links, .copy { margin: 0; }
-  .copy { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--space-1); }
+  .copy { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--space-3); }
+  .vtxt { color: var(--shell-muted); font-size: 14px; } .vtxt:empty { display: none; }
   .ver, .refresh { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--space-2); color: var(--shell-text); font: inherit; text-decoration: underline; background: none; border: 0; cursor: pointer; }
-  .sheet-tools { display: flex; align-items: center; justify-content: center; margin-top: var(--space-2); }
+  .sheet-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--space-3); margin-top: var(--space-2); }
   .sheet-tools .ver, .sheet-tools .refresh { color: var(--shell-muted); font-size: 14px; }
   .links a { color: var(--shell-text); }
 </style>
