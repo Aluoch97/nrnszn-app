@@ -1,4 +1,4 @@
-// The public Events page with events added in /admin (faked here): upcoming cards, flyer tiles in date order, safe text, working dialogs.
+// The public Events page with events added in /admin (faked here): upcoming cards, flyer tiles in date order (each a link to its event page), safe text.
 import { test, expect } from '@playwright/test';
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==', 'base64');
@@ -30,12 +30,10 @@ test('events from /admin appear: upcoming as cards, past on the flyer wall in da
   expect(days.filter(Boolean)).toEqual([...days.filter(Boolean)].sort().reverse());
   expect(days).toContain('2025-06-01'); expect(days).toContain('2025-01-01');
   expect(days.indexOf('2025-06-01')).toBeLessThan(days.indexOf('2025-01-01'));
-  // an added past event with a flyer opens its full view with the recap and the site link
-  const tile = page.locator('#ev-past li[data-day="2025-06-01"] .ev-tile-btn'); await expect(tile).toBeVisible(); await tile.click();
-  const dlg = page.locator('#ev-past li[data-day="2025-06-01"] dialog'); await expect(dlg).toBeVisible(); await expect(dlg).toContainText('A past show.');
-  await expect(dlg.locator('a', { hasText: 'Watch the recap' })).toHaveAttribute('href', 'https://www.youtube.com/watch?v=abc'); await expect(dlg.locator('a', { hasText: 'Watch on this site' })).toHaveAttribute('href', '/cinema');
-  await dlg.locator('.ev-x').click(); await expect(dlg).toBeHidden();
-  await expect(dlg.locator('a', { hasText: 'Event page' })).toHaveAttribute('href', '/events/mid-2025-show-cccccccccccc/');
+  // an added past event with a flyer is a tile that links straight to its event page (no pop-up)
+  const tile = page.locator('#ev-past li[data-day="2025-06-01"] a.ev-tile-btn'); await expect(tile).toBeVisible();
+  await expect(tile).toHaveAttribute('href', '/events/mid-2025-show-cccccccccccc/'); await expect(tile).toContainText('Mid 2025 Show');
+  expect(await page.locator('#ev-past dialog').count(), 'no pop-ups').toBe(0);
   await expect(page.locator('#ev-past li[data-day="2025-01-01"]')).toContainText('Plain Old Show');   // no flyer: a plain tile
   await expect(page.locator('#ev-past li[data-day="2025-01-01"] a')).toHaveAttribute('href', '/events/plain-old-show-dddddddddddd/');
   const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth); expect(over).toBeLessThanOrEqual(0);

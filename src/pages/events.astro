@@ -28,49 +28,23 @@ const backdrop = pastEvents[0]?.img ? `/img/events/${pastEvents[0].img}-480.webp
     <noscript><p class="ev-note">Turn on JavaScript to see the next show, or open the <a href="https://play.nrnszn.com">Certified Lounge app</a>.</p></noscript>
 
     <h2 class="ev-section">Past events</h2>
-    <p class="ev-hint">Tap a flyer for the details and the recap.</p>
+    <p class="ev-hint">Tap a flyer for the event page and the recap.</p>
     <ul class="ev-wall" id="ev-past">
       {pastEvents.map((e, i) => (
         <li class="ev-tile" data-day={e.day}>
-          <button type="button" class="ev-tile-btn" data-open={`ev-d-${i}`} aria-haspopup="dialog">
+          <a class="ev-tile-btn" href={`/events/${staticSlug(e)}/`}>
             <img src={`/img/events/${e.img}-480.webp`} srcset={`/img/events/${e.img}-480.webp 480w, /img/events/${e.img}.webp 900w`}
               sizes="(min-width: 760px) 340px, 100vw" alt={e.alt} width="900" height="506" loading="lazy" />
             <span class="ev-tile-cap">
               <span class="ev-tile-title">{e.title}</span>
               <span class="ev-tile-when">{e.when.split('·')[0].trim()}</span>
             </span>
-          </button>
-          <dialog class="ev-dialog" id={`ev-d-${i}`} aria-labelledby={`ev-d-${i}-t`}>
-            <button type="button" class="ev-x" data-close aria-label="Close">✕</button>
-            <img src={`/img/events/${e.img}.webp`} alt={e.alt} width="900" height="506" loading="lazy" />
-            <div class="ev-dbody">
-              <h3 id={`ev-d-${i}-t`}>{e.title}</h3>
-              <p class="ev-pwhen">{e.when}</p>
-              <p class="ev-pwhere">{e.where}</p>
-              <p class="ev-ptext">{e.text}</p>
-              <div class="ev-dlinks">
-                <a class="ev-btn" href={`/events/${staticSlug(e)}/`}>Event page →</a>
-                {e.video && <a class="ev-btn" href={`/events/${staticSlug(e)}/#recap`}>Watch the recap →</a>}
-                {e.watch && <a class="ev-btn ev-btn-alt" href={e.watch}>Watch on NuCinema →</a>}
-              </div>
-            </div>
-          </dialog>
+          </a>
         </li>
       ))}
     </ul>
   </div>
 </Site>
-
-<script>
-  // Past-event flyers open a full view; tap outside, ✕ or Esc to close.
-  for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-open]')) {
-    const dlg = document.getElementById(btn.dataset.open!) as HTMLDialogElement | null;
-    if (!dlg) continue;
-    btn.addEventListener('click', () => dlg.showModal());
-    dlg.querySelector('[data-close]')?.addEventListener('click', () => dlg.close());
-    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
-  }
-</script>
 
 <script is:inline define:vars={{ initial, SHOW_GUIDE_URL, pastDays }}>
   (function () {
@@ -200,6 +174,7 @@ const backdrop = pastEvents[0]?.img ? `/img/events/${pastEvents[0].img}-480.webp
 
 <script is:inline>
   // Events added in /admin (stored in the site database): upcoming ones become cards, past ones join the flyer wall in date order.
+  // Every flyer tile is a link straight to that event's own page.
   (function () {
     var el = function (tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
     var https = function (u) { return /^https:\/\/[^\s<>"']+$/i.test(String(u || '')); };
@@ -249,19 +224,11 @@ const backdrop = pastEvents[0]?.img ? `/img/events/${pastEvents[0].img}-480.webp
         if (e.where) plain.appendChild(el('span', 'ev-dyn-pwhen', e.where));
         var pl = el('a', 'ev-dyn-plainlink'); pl.href = pageOf(e); pl.setAttribute('aria-label', e.title + ': event page'); pl.appendChild(plain); li.appendChild(pl); return li;
       }
-      var btn = el('button', 'ev-tile-btn'); btn.type = 'button'; btn.setAttribute('aria-haspopup', 'dialog');
+      var btn = el('a', 'ev-tile-btn'); btn.href = pageOf(e);
       var im = el('img'); im.src = flyer(e, 480); im.srcset = flyer(e, 480) + ' 480w, ' + flyer(e, 900) + ' 900w'; im.sizes = '(min-width: 760px) 340px, 100vw'; im.alt = e.title + ' flyer'; im.width = 900; im.height = 506; im.loading = 'lazy';
       btn.appendChild(im);
       var cap = el('span', 'ev-tile-cap'); cap.appendChild(el('span', 'ev-tile-title', e.title)); cap.appendChild(el('span', 'ev-tile-when', when(e).split('·')[0].trim())); btn.appendChild(cap);
-      var dlg = el('dialog', 'ev-dialog'); dlg.setAttribute('aria-label', e.title);
-      var x = el('button', 'ev-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Close'); dlg.appendChild(x);
-      var big = el('img'); big.src = flyer(e, 900); big.alt = e.title + ' flyer'; big.width = 900; big.loading = 'lazy'; dlg.appendChild(big);
-      var body = el('div', 'ev-dbody'); body.appendChild(el('h3', '', e.title)); body.appendChild(el('p', 'ev-pwhen', when(e)));
-      if (e.where) body.appendChild(el('p', 'ev-pwhere', e.where)); if (e.details) body.appendChild(el('p', 'ev-ptext', e.details));
-      var l = links(e, 'ev-dlinks'); var pg = el('a', 'ev-btn', 'Event page \u2192'); pg.href = pageOf(e); l.insertBefore(pg, l.firstChild); body.appendChild(l); dlg.appendChild(body);
-      btn.addEventListener('click', function () { dlg.showModal(); }); x.addEventListener('click', function () { dlg.close(); });
-      dlg.addEventListener('click', function (ev) { if (ev.target === dlg) dlg.close(); });
-      li.appendChild(btn); li.appendChild(dlg); return li;
+      li.appendChild(btn); return li;
     }
     fetch('/api/events').then(function (r) { return r.json(); }).then(function (r) {
       var list = r && r.ok && Array.isArray(r.events) ? r.events : [];
@@ -295,7 +262,7 @@ const backdrop = pastEvents[0]?.img ? `/img/events/${pastEvents[0].img}-480.webp
   .ev-tile-btn {
     position: relative; isolation: isolate; overflow: hidden; display: block; width: 100%; padding: 0;
     aspect-ratio: 4 / 5; border: 1px solid #2a2238; border-radius: 16px; background: #000; cursor: pointer;
-    font: inherit; color: inherit; text-align: left;
+    font: inherit; color: inherit; text-align: left; text-decoration: none;
     transition: transform 240ms var(--ease-out), border-color 240ms, box-shadow 240ms;
   }
   .ev-tile-btn img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; transition: transform 900ms var(--ease-out); }
@@ -308,25 +275,6 @@ const backdrop = pastEvents[0]?.img ? `/img/events/${pastEvents[0].img}-480.webp
   .ev-tile-when { font-size: 13px; font-weight: 600; color: #e4ddf2; }
   .ev-tile-plain { position: relative; aspect-ratio: 4 / 5; border-radius: 16px; border: 1px solid #2a2238; background: radial-gradient(circle at 30% 20%, #3a1a4a, #15111f 70%); }
 
-  /* Flyer full view */
-  .ev-dialog {
-    width: min(560px, calc(100vw - 24px)); max-height: calc(100svh - 32px); padding: 0; overflow: auto;
-    border: 1px solid var(--gold-500); border-radius: 20px; background: #15111f; color: #f3f0fa;
-  }
-  .ev-dialog::backdrop { background: rgba(8, 6, 14, 0.82); backdrop-filter: blur(6px); }
-  .ev-dialog[open] { animation: ev-pop 260ms var(--ease-out); }
-  @keyframes ev-pop { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
-  .ev-dialog > img { display: block; width: 100%; height: auto; }
-  .ev-x {
-    position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(14, 11, 22, 0.75); color: #fff; font-size: 18px; cursor: pointer;
-  }
-  .ev-dbody { padding: var(--space-4); display: grid; gap: 4px; }
-  .ev-dbody h3 { margin: 0; font-family: var(--font-poster); font-weight: 800; font-size: 28px; text-transform: uppercase; line-height: 1.05; color: var(--gold-300); }
-  .ev-pwhen { margin: 4px 0 0; font-weight: 700; font-size: 15px; color: #f3f0fa; }
-  .ev-pwhere { margin: 0; font-size: 14px; color: #a99fc6; }
-  .ev-ptext { margin: 6px 0 0; font-size: 15px; line-height: 1.5; color: #c9c0de; }
-  .ev-dlinks { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
   .ev-btn {
     display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: var(--radius-pill);
     background: var(--gold-300); color: var(--purple-900); font-weight: 700; font-size: 16px; text-decoration: none;
@@ -351,7 +299,6 @@ const backdrop = pastEvents[0]?.img ? `/img/events/${pastEvents[0].img}-480.webp
   @media (prefers-reduced-motion: reduce) {
     #ev-show :global(.ev-feature::before) { animation: none; }
     .ev-tile-btn, .ev-tile-btn img { transition: none; }
-    .ev-dialog[open] { animation: none; }
   }
   #ev-show :global(.ev-card) { padding: var(--space-5) var(--space-4); border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238; }
   #ev-show :global(.ev-kicker) { margin: 0 0 4px; font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a99fc6; }
@@ -396,22 +343,14 @@ const backdrop = pastEvents[0]?.img ? `/img/events/${pastEvents[0].img}-480.webp
   .ev-dyn-when { margin: 4px 0 0; font-weight: 700; font-size: 16px; }
   .ev-dyn-where { margin: 0; font-size: 15px; color: #a99fc6; }
   .ev-dyn-text { margin: 6px 0 0; font-size: 15px; line-height: 1.5; color: #c9c0de; white-space: pre-line; }
-  .ev-dyn-links, .ev-dyn .ev-dlinks { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
-  .ev-dyn .ev-tile-btn { position: relative; isolation: isolate; overflow: hidden; display: block; width: 100%; padding: 0; aspect-ratio: 4 / 5; border: 1px solid #2a2238; border-radius: 16px; background: #000; cursor: pointer; font: inherit; color: inherit; text-align: left; }
+  .ev-dyn-links { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+  .ev-dyn .ev-tile-btn { text-decoration: none; position: relative; isolation: isolate; overflow: hidden; display: block; width: 100%; padding: 0; aspect-ratio: 4 / 5; border: 1px solid #2a2238; border-radius: 16px; background: #000; cursor: pointer; font: inherit; color: inherit; text-align: left; }
   .ev-dyn .ev-tile-btn img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; }
   .ev-dyn .ev-tile-btn::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent 40%, rgba(14, 11, 22, 0.92) 100%); }
   .ev-dyn .ev-tile-btn:hover, .ev-dyn .ev-tile-btn:focus-visible { border-color: var(--gold-500); }
   .ev-dyn .ev-tile-cap { position: absolute; left: 0; right: 0; bottom: 0; display: grid; gap: 2px; padding: var(--space-3); }
   .ev-dyn .ev-tile-title { font-family: var(--font-poster); font-weight: 800; text-transform: uppercase; font-size: clamp(17px, 4.6vw, 22px); line-height: 1; color: #fff4dc; }
   .ev-dyn .ev-tile-when { font-size: 13px; font-weight: 600; color: #e4ddf2; }
-  .ev-dyn .ev-dialog { width: min(560px, calc(100vw - 24px)); max-height: calc(100svh - 32px); padding: 0; overflow: auto; border: 1px solid var(--gold-500); border-radius: 20px; background: #15111f; color: #f3f0fa; }
-  .ev-dyn .ev-dialog::backdrop { background: rgba(8, 6, 14, 0.82); }
-  .ev-dyn .ev-dialog > img { display: block; width: 100%; height: auto; }
-  .ev-dyn .ev-x { position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.4); background: rgba(14, 11, 22, 0.75); color: #fff; font-size: 18px; cursor: pointer; }
-  .ev-dyn .ev-dbody { padding: var(--space-4); display: grid; gap: 4px; }
-  .ev-dyn .ev-dbody h3 { margin: 0; font-family: var(--font-poster); font-weight: 800; font-size: 28px; text-transform: uppercase; line-height: 1.05; color: var(--gold-300); }
-  .ev-dyn .ev-pwhen { margin: 4px 0 0; font-weight: 700; font-size: 15px; } .ev-dyn .ev-pwhere { margin: 0; font-size: 14px; color: #a99fc6; }
-  .ev-dyn .ev-ptext { margin: 6px 0 0; font-size: 15px; line-height: 1.5; color: #c9c0de; white-space: pre-line; }
   .ev-dyn-plainlink { display: block; color: inherit; text-decoration: none; }
   .ev-dyn-plain { display: grid; align-content: end; gap: 2px; aspect-ratio: 4 / 5; padding: var(--space-3); border-radius: 16px; border: 1px solid #2a2238; background: radial-gradient(circle at 30% 20%, #3a1a4a, #15111f 70%); }
   .ev-dyn-ptitle { font-family: var(--font-poster); font-weight: 800; text-transform: uppercase; font-size: clamp(17px, 4.6vw, 22px); line-height: 1; color: #fff4dc; }

@@ -36,7 +36,7 @@ test('the events list links to every older event page', async ({ page }, info) =
   only(info);
   await page.route('**/api/events', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, events: [] }) }));
   await page.goto('/events/');
-  const hrefs = await page.locator('#ev-past .ev-dlinks a', { hasText: 'Event page' }).evaluateAll((els) => els.map((e) => (e as HTMLAnchorElement).getAttribute('href')));
+  const hrefs = await page.locator('#ev-past a.ev-tile-btn').evaluateAll((els) => els.map((e) => (e as HTMLAnchorElement).getAttribute('href')));
   expect(hrefs.length).toBe(6); for (const h of hrefs) expect(h).toMatch(/^\/events\/\d{4}-\d{2}-\d{2}-[a-z0-9-]+\/$/);
   for (const h of hrefs) { const r = await page.request.get(h); expect(r.status(), h).toBe(200); }
 });
@@ -118,12 +118,14 @@ test('if the playlist list cannot be read, the recap still plays the whole playl
   await expect(page.locator('.evp-frame')).toHaveAttribute('src', /embed\/videoseries\?list=PLVprhlbgSo1tsyRw4KJUxmPhpQNB9BQAq/);
 });
 
-test('the events list sends Watch the recap to the event page, not to YouTube', async ({ page }, info) => {
+test('tapping a flyer on the events list goes straight to its event page (no pop-up)', async ({ page }, info) => {
   only(info);
   await page.route('**/api/events', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, events: [] }) }));
   await page.goto('/events/');
-  const hrefs = await page.locator('#ev-past .ev-dlinks a', { hasText: 'Watch the recap' }).evaluateAll((els) => els.map((e) => (e as HTMLAnchorElement).getAttribute('href')));
-  expect(hrefs.length).toBeGreaterThan(0); for (const h of hrefs) expect(h).toMatch(/^\/events\/\d{4}-\d{2}-\d{2}-[a-z0-9-]+\/#recap$/);
+  expect(await page.locator('#ev-past dialog').count(), 'no pop-ups left').toBe(0);
+  await page.locator('#ev-past a.ev-tile-btn', { hasText: 'Fall 2025' }).click();
+  await expect(page).toHaveURL(/\/events\/2025-11-08-renaissance-certified-fall-2025\/$/);
+  await expect(page.locator('h1')).toContainText('Fall 2025');
 });
 
 test('an admin event with a YouTube playlist plays it on the page; any other recap link opens in a new tab', async ({ page }, info) => {
