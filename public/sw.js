@@ -1,5 +1,6 @@
 // Minimal offline support: pages are network-first (always fresh when online),
-// static assets are cache-first. Bump VERSION to force everyone onto new assets.
+// static assets are cache-first. The version below is stamped automatically on every build (scripts/stamp-version.mjs), so a changed site
+// always gets a new cache and old saved files are dropped; nobody has to bump it by hand.
 const VERSION = 'nrn-v7';
 
 self.addEventListener('install', (e) => {
@@ -9,7 +10,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION && !k.startsWith('nrn-feeds')).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -22,6 +23,8 @@ self.addEventListener('fetch', (e) => {
   if (url.pathname.startsWith('/media/') || req.headers.has('range')) return;
   // Live feeds and photos from /api are cached at Cloudflare; never keep a copy in the phone.
   if (url.pathname.startsWith('/api/')) return;
+  // The version file tells the footer and the status page what is live right now: always fresh.
+  if (url.pathname === '/version.json') return;
 
   if (req.mode === 'navigate') {
     e.respondWith(

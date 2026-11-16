@@ -66,6 +66,7 @@ const SCRIPT_URL = SERVICES_API_URL;
     </div>
   </div>
 
+  <script is:inline src="/feed-cache.js"></script>
   <script is:inline define:vars={{ SCRIPT_URL }}>
 (function () {
   var STORAGE_KEY = 'nrn_service_selection_v4'; // bumped when the video edit tiers changed: saved selections store tier positions, which shifted
@@ -129,10 +130,8 @@ const SCRIPT_URL = SERVICES_API_URL;
 
   loadStoredSelection();
 
-  // Cached copy at Cloudflare first (fast, survives Google hiccups); straight to Google if that fails.
-  var viaEdge = function (path, direct) { return fetch(path).then(function (r) { if (!r.ok) throw new Error(r.status); return r; }).catch(function () { return fetch(direct); }); };
-  viaEdge('/api/feed/services', SCRIPT_URL + '?action=data')
-    .then(function (r) { return r.json(); })
+  // (A copy kept on this device shows at once; see /feed-cache.js.)
+  nrnFeed('/api/feed/services', SCRIPT_URL + '?action=data', { valid: function (d) { return !!d && !d.error && Array.isArray(d.services) && d.services.length > 0; } })
     .then(function (data) {
       services = data.services || [];
       bundles = data.bundles || [];

@@ -10,8 +10,8 @@ import Icon from '../components/Icon.astro';
 import { nav, tabs, more, footer } from '../data/site.js';
 import { socials } from '../data/portal.js';
 
-interface Props { title: string; description: string; back?: { href: string; label: string }; canonicalPath?: string; }
-const { title, description, back, canonicalPath } = Astro.props;
+interface Props { title: string; description: string; back?: { href: string; label: string }; canonicalPath?: string; noindex?: boolean; }
+const { title, description, back, canonicalPath, noindex } = Astro.props;
 const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 const inSection = (href: string) => href === path || (href !== '/' && path.startsWith(href + '-'));
 const isCurrent = (href: string) => inSection(href) || (nav.find((n) => n.href === href)?.also ?? []).some(inSection);
@@ -19,7 +19,7 @@ const tabLinks = tabs.map((t) => nav.find((n) => n.href === t)!).filter(Boolean)
 const moreLinks = more.map((m) => nav.find((n) => n.href === m)!).filter(Boolean);
 const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) => isCurrent(f.href));
 ---
-<Base title={title} description={description} canonicalPath={canonicalPath}>
+<Base title={title} description={description} canonicalPath={canonicalPath} noindex={noindex}>
   <div class="site">
     <a class="skip" href="#content">Skip to content</a>
     <header class:list={['bar', { 'has-back': back }]}>
@@ -53,7 +53,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
       <p class="links">
         {footer.map((f, i) => (<>{i > 0 && <span aria-hidden="true"> · </span>}<a href={f.href}>{f.label}</a></>))}
       </p>
-      <p class="copy">© {new Date().getFullYear()} NuRenaissance Media</p>
+      <p class="copy"><span>© {new Date().getFullYear()} NuRenaissance Media</span><a class="ver" href="/admin">Admin</a><span class="vtxt" data-version></span><button type="button" class="refresh" data-refresh>Refresh</button></p>
     </footer>
 
     <nav class="tabbar" aria-label="Tabs">
@@ -83,6 +83,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
         ))}
       </ul>
       <p class="sheet-foot"><a href="/privacy-policy">Privacy policy</a> · © {new Date().getFullYear()} NuRenaissance Media</p>
+      <p class="sheet-foot sheet-tools"><a class="ver" href="/admin">Admin</a><span class="vtxt" data-version></span><button type="button" class="refresh" data-refresh>Refresh</button></p>
     </dialog>
   </div>
 </Base>
@@ -247,6 +248,11 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
   }
   .socials a:hover { background: #241d34; }
   .links, .copy { margin: 0; }
+  .copy { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--space-3); }
+  .vtxt { color: var(--shell-muted); font-size: 14px; } .vtxt:empty { display: none; }
+  .ver, .refresh { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--space-2); color: var(--shell-text); font: inherit; text-decoration: underline; background: none; border: 0; cursor: pointer; }
+  .sheet-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--space-3); margin-top: var(--space-2); }
+  .sheet-tools .ver, .sheet-tools .refresh { color: var(--shell-muted); font-size: 14px; }
   .links a { color: var(--shell-text); }
 </style>
 
@@ -267,3 +273,20 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
   /* Main-site pages are dark; keep the page behind them dark too (shows on overscroll). */
   html:has(.site), html:has(.site) body { background: #0e0b16; }
 </style>
+
+<script>
+  // The version of the site (written at build time to /version.json) next to the Status link, and a Refresh button that
+  // clears every saved copy on this device and reloads, so a phone can never be stuck on old files.
+  async function refreshSite(btn: HTMLButtonElement) {
+    btn.disabled = true; btn.textContent = 'Refreshing…';
+    try { if ('serviceWorker' in navigator) await Promise.all((await navigator.serviceWorker.getRegistrations()).map((r) => r.unregister())); } catch { /* carry on */ }
+    try { if ('caches' in window) await Promise.all((await caches.keys()).map((k) => caches.delete(k))); } catch { /* carry on */ }
+    try { const u = new URL(location.href); u.searchParams.set('r', String(Date.now())); location.replace(u.toString()); } catch { location.reload(); }
+  }
+  document.querySelectorAll<HTMLButtonElement>('[data-refresh]').forEach((b) => b.addEventListener('click', () => refreshSite(b)));
+  try { const u = new URL(location.href); if (u.searchParams.has('r')) { u.searchParams.delete('r'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } } catch { /* leave the address alone */ }
+  fetch('/version.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => {
+    if (!j || !j.version) return;
+    document.querySelectorAll<HTMLElement>('[data-version]').forEach((el) => { el.textContent = 'Version ' + String(j.version).replace(/^nrn-/, ''); });
+  }).catch(() => { /* the link just keeps saying Status */ });
+</script>

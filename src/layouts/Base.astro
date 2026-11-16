@@ -10,8 +10,9 @@ interface Props {
   description: string;
   image?: string;
   canonicalPath?: string; // when two URLs show the same page (e.g. /support and /about)
+  noindex?: boolean; // keep a page out of search results (the status page)
 }
-const { title, description, image = '/img/share.jpg', canonicalPath } = Astro.props;
+const { title, description, image = '/img/share.jpg', canonicalPath, noindex = false } = Astro.props;
 // Shared links (iMessage, Instagram, etc.) show the wide NuRenaissance card (1200x630) with the same line on every page.
 const shareText = 'The NuRenaissance is a Nashville-based media company empowering creatives & celebrating bold individuality.';
 const canonical = new URL(canonicalPath ?? Astro.url.pathname, Astro.site);
@@ -25,6 +26,7 @@ const ogImage = new URL(image, Astro.site);
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
