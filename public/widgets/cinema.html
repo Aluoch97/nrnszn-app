@@ -499,6 +499,7 @@
   </div>
 </div>
 
+<script src="/feed-cache.js"></script>
 <script>
 (function(){
 
@@ -1005,10 +1006,8 @@
     } catch(err){ /* sessionStorage unavailable (private browsing, etc.) — fall through to a live fetch */ }
 
     // Cached copy at Cloudflare first; straight to Google if that fails.
-    return fetch('/api/feed/cinema')
-      .then(r => { if (!r.ok) throw new Error(r.status); return r; })
-      .catch(() => fetch(CATALOG_ENDPOINT))
-      .then(r => r.json())
+    // (A copy kept on this device shows at once; see /feed-cache.js.)
+    return nrnFeed('/api/feed/cinema', CATALOG_ENDPOINT, { valid: d => !!d && !d.error && Array.isArray(d.films) && d.films.length > 0 })
       .then(localizeImages)
       .then(data => {
         try { sessionStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); }

@@ -1,0 +1,24 @@
+name: Daily sheet backup
+
+# Every night, asks the site to copy its Google Sheets (surveys, subscribers, discount codes, payments log, services, cinema) into a private Cloudflare bucket.
+# Does nothing until the GitHub secret BACKUP_CRON_TOKEN is set (same value as the Cloudflare secret of the same name). See docs/backup-setup.md.
+# Run it by hand any time from the Actions tab ("Run workflow").
+on:
+  schedule:
+    - cron: '41 8 * * *' # about 3am Nashville in winter, 4am in summer (GitHub uses UTC)
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Back up the sheets
+        env:
+          BACKUP_CRON_TOKEN: ${{ secrets.BACKUP_CRON_TOKEN }}
+        run: |
+          if [ -z "$BACKUP_CRON_TOKEN" ]; then echo "BACKUP_CRON_TOKEN is not set yet, so no backup runs. Nothing to do."; exit 0; fi
+          code=$(curl -sS -o response.json -w '%{http_code}' -X POST -H "authorization: Bearer $BACKUP_CRON_TOKEN" "https://www.nrnszn.com/api/backup")
+          cat response.json; echo
+          if [ "$code" = "503" ]; then echo "The site says backups are not set up yet (bucket or secret missing in Cloudflare). See docs/backup-setup.md."; exit 0; fi
+          test "$code" = "200"

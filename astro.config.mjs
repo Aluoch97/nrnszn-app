@@ -8,6 +8,7 @@ export default defineConfig({
   // Small stylesheets go inside each page so it can draw without waiting on another file.
   build: { inlineStylesheets: 'always' },
   integrations: [
-    sitemap(),
+    // The status page is for the owner, not for search results.
+    sitemap({ filter: (page) => !/\/status\/?$/.test(page) }),
   ],
 });
