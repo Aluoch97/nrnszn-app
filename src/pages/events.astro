@@ -50,7 +50,7 @@ const backdrop = pastEvents[0]?.img ? `/img/events/${pastEvents[0].img}-480.webp
               <p class="ev-ptext">{e.text}</p>
               <div class="ev-dlinks">
                 <a class="ev-btn" href={`/events/${staticSlug(e)}/`}>Event page →</a>
-                {e.video && <a class="ev-btn" href={e.video} target="_blank" rel="noopener">Watch the recap ↗</a>}
+                {e.video && <a class="ev-btn" href={`/events/${staticSlug(e)}/#recap`}>Watch the recap →</a>}
                 {e.watch && <a class="ev-btn ev-btn-alt" href={e.watch}>Watch on NuCinema →</a>}
               </div>
             </div>
@@ -210,11 +210,22 @@ const backdrop = pastEvents[0]?.img ? `/img/events/${pastEvents[0].img}-480.webp
       return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + (e.time ? ' · ' + e.time : '');
     };
     var flyer = function (e, size) { return '/api/flyer?id=' + encodeURIComponent(e.flyer) + '&size=' + size; };
+    // Same rule as src/lib/recap.ts parseYouTube: a YouTube link with a real playlist or video id plays on the event page.
+    var playable = function (href) {
+      try {
+        var u = new URL(href), host = u.hostname.replace(/^www\.|^m\./, ''), v = '';
+        if (host === 'youtu.be') v = u.pathname.slice(1).split('/')[0];
+        else if (host === 'youtube.com' || host === 'music.youtube.com') v = u.searchParams.get('v') || ((/^\/(?:embed|shorts|live)\/([^/?#]+)/.exec(u.pathname) || [])[1] || '');
+        else return false;
+        return /^[A-Za-z0-9_-]{10,64}$/.test(u.searchParams.get('list') || '') || /^[A-Za-z0-9_-]{11}$/.test(v);
+      } catch (err) { return false; }
+    };
     var pageOf = function (e) { return '/events/' + encodeURIComponent(e.slug || '') + '/'; };
     function links(e, cls) {
       var box = el('div', cls);
       if (https(e.tickets)) { var t = el('a', 'ev-btn', 'Get tickets'); t.href = e.tickets; t.target = '_blank'; t.rel = 'noopener'; box.appendChild(t); }
-      if (https(e.video)) { var v = el('a', 'ev-btn ev-btn-alt', 'Watch the recap ↗'); v.href = e.video; v.target = '_blank'; v.rel = 'noopener'; box.appendChild(v); }
+      // A YouTube recap is watched on the event's own page; any other link opens in a new tab.
+      if (https(e.video)) { var yt = playable(e.video); var v = el('a', 'ev-btn ev-btn-alt', yt ? 'Watch the recap \u2192' : 'Watch the recap \u2197'); v.href = yt ? pageOf(e) + '#recap' : e.video; if (!yt) { v.target = '_blank'; v.rel = 'noopener'; } box.appendChild(v); }
       if (local(e.watch)) { var w = el('a', 'ev-btn ev-btn-alt', 'Watch on this site →'); w.href = e.watch; box.appendChild(w); }
       return box;
     }

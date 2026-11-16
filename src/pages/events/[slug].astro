@@ -5,6 +5,7 @@ import Site from '../../layouts/Site.astro';
 import '../../styles/event-page.css';
 import { pastEvents } from '../../data/events.js';
 import { staticSlug, eventJsonLd } from '../../edge/eventpage.js';
+import { parseYouTube } from '../../lib/recap';
 
 export function getStaticPaths() {
   return pastEvents.map((e) => ({ params: { slug: staticSlug(e) }, props: { e } }));
@@ -15,6 +16,7 @@ const url = `https://www.nrnszn.com/events/${slug}/`;
 const image = `/img/events/${e.img}.webp`;
 const ld = eventJsonLd({ title: e.title, day: e.day, where: e.where, details: e.text }, url, `https://www.nrnszn.com${image}`);
 const paragraphs = String(e.text || '').split(/\n+/).filter(Boolean);
+const inApp = e.video && parseYouTube(e.video);   // a YouTube recap plays right on the page
 ---
 <Site
   title={`${e.title} | NuRenaissance`}
@@ -33,11 +35,24 @@ const paragraphs = String(e.text || '').split(/\n+/).filter(Boolean);
     </figure>
     <div class="evp-text">{paragraphs.map((t) => <p>{t}</p>)}</div>
     <div class="evp-actions">
-      {e.video && <a class="evp-btn" href={e.video} target="_blank" rel="noopener">Watch the recap ↗</a>}
+      {e.video && (inApp ? <a class="evp-btn" href="#recap">Watch the recap ↓</a> : <a class="evp-btn" href={e.video} target="_blank" rel="noopener">Watch the recap ↗</a>)}
       {e.watch && <a class="evp-btn alt" href={e.watch}>Watch on NuCinema →</a>}
     </div>
+    <section class="evp-recap" id="recap" aria-labelledby="recap-h" data-recap={inApp ? e.video : undefined} hidden>
+      <h2 class="evp-recap-h" id="recap-h">Recap <span class="evp-count"></span></h2>
+      <div class="evp-player"></div>
+      <p class="evp-now" hidden></p>
+      <ol class="evp-list"></ol>
+      <p class="evp-yt"><a href="https://www.youtube.com/@nrnszn" target="_blank" rel="noopener">Open in YouTube ↗</a></p>
+    </section>
     <p class="evp-note">This event has passed. Follow <a href="https://www.instagram.com/nrnszn" target="_blank" rel="noopener">@nrnszn</a> to hear about the next one.</p>
     <p class="evp-back"><a href="/events">← All events</a></p>
   </article>
   <script type="application/ld+json" set:html={JSON.stringify(ld)} />
 </Site>
+
+<script>
+  import { mountRecap } from '../../lib/recap';
+  const s = document.querySelector<HTMLElement>('.evp-recap[data-recap]');
+  if (s) mountRecap(s, s.dataset.recap!);
+</script>

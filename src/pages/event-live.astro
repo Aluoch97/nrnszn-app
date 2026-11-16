@@ -18,12 +18,20 @@ import '../styles/event-page.css';
     <figure class="evp-flyer" id="evp-flyer" hidden><img id="evp-img" alt="" width="900" /></figure>
     <div class="evp-text" id="evp-text" hidden></div>
     <div class="evp-actions" id="evp-actions" hidden></div>
+    <section class="evp-recap" id="recap" aria-labelledby="recap-h" hidden>
+      <h2 class="evp-recap-h" id="recap-h">Recap <span class="evp-count"></span></h2>
+      <div class="evp-player"></div>
+      <p class="evp-now" hidden></p>
+      <ol class="evp-list"></ol>
+      <p class="evp-yt"><a href="https://www.youtube.com/@nrnszn" target="_blank" rel="noopener">Open in YouTube ↗</a></p>
+    </section>
     <p class="evp-note" id="evp-note">We could not find that event. It may have been removed.</p>
     <p class="evp-back"><a href="/events">← All events</a></p>
   </article>
 </Site>
 
 <script>
+  import { mountRecap, parseYouTube } from '../lib/recap';
   // Draws the event from the JSON copy that the server put in the page. Everything is set as plain text.
   const box = document.getElementById('event-data');
   const $ = (id: string) => document.getElementById(id) as HTMLElement;
@@ -46,7 +54,10 @@ import '../styles/event-page.css';
     const acts = $('evp-actions'); acts.textContent = '';
     const add = (label: string, href: string, cls: string, ext: boolean) => { const a = document.createElement('a'); a.className = 'evp-btn' + (cls ? ' ' + cls : ''); a.textContent = label; a.href = href; if (ext) { a.target = '_blank'; a.rel = 'noopener'; } acts.appendChild(a); };
     if (upcoming && https(e.tickets)) add('Get tickets', e.tickets, '', true);
-    if (https(e.video)) add('Watch the recap ↗', e.video, upcoming && https(e.tickets) ? 'alt' : '', true);
+    // A YouTube recap plays right on the page (the Recap section below); any other link opens in a new tab.
+    const recap = https(e.video) && parseYouTube(e.video) ? (document.getElementById('recap') as HTMLElement) : null;
+    if (recap && mountRecap(recap, e.video)) add('Watch the recap ↓', '#recap', upcoming && https(e.tickets) ? 'alt' : '', false);
+    else if (https(e.video)) add('Watch the recap ↗', e.video, upcoming && https(e.tickets) ? 'alt' : '', true);
     if (local(e.watch)) add('Watch on this site →', e.watch, 'alt', false);
     acts.hidden = !acts.children.length;
     set('evp-note', upcoming ? (https(e.tickets) ? '' : 'Tickets and updates: follow @nrnszn on Instagram.') : 'This event has passed. Follow @nrnszn on Instagram to hear about the next one.');

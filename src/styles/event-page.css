@@ -18,3 +18,29 @@
 .evp-back { margin: var(--space-5) 0 0; }
 .evp-back a { display: inline-flex; align-items: center; min-height: 44px; color: var(--gold-300); font-weight: 600; }
 .evp [hidden] { display: none !important; }
+
+/* The recap player (src/lib/recap.ts): the event's YouTube playlist, watched on the page. */
+.evp-recap { margin: var(--space-6) 0 0; scroll-margin-top: 72px; }
+.evp-recap-h { margin: 0 0 var(--space-3); display: flex; align-items: baseline; gap: var(--space-2); font-family: var(--font-poster); font-weight: 800; text-transform: uppercase; font-size: clamp(28px, 8vw, 40px); line-height: 1; color: var(--pink-300); }
+.evp-count { font-family: inherit; font-size: 15px; font-weight: 700; letter-spacing: 0.06em; color: #b9b0cf; text-transform: none; }
+.evp-player { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 18px; border: 1px solid #2a2238; background: #000; }
+.evp-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.evp-poster { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; cursor: pointer; background: radial-gradient(circle at 50% 40%, #3a1a4a, #0e0b16 75%); }
+.evp-poster img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; transition: opacity 200ms; }
+.evp-poster:hover img { opacity: 1; }
+.evp-play { position: absolute; left: 50%; top: 50%; translate: -50% -50%; width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; padding-left: 5px; font-size: 28px; background: var(--gold-300); color: var(--purple-900); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6); transition: scale 160ms; }
+.evp-poster:hover .evp-play { scale: 1.08; }
+.evp-poster:focus-visible { outline: 3px solid var(--gold-300); outline-offset: -3px; }
+.evp-now { margin: var(--space-3) 0 0; font-weight: 700; font-size: 17px; color: #fff; overflow-wrap: anywhere; }
+.evp-list { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: var(--space-2); }
+.evp-loading { margin: 0; font-size: 15px; color: #b9b0cf; }
+.evp-item { width: 100%; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--space-3); align-items: center; padding: var(--space-2); border-radius: 14px; border: 1px solid #2a2238; background: #15111f; color: #f3f0fa; text-align: left; font: inherit; cursor: pointer; }
+.evp-item:hover { border-color: var(--gold-500); }
+.evp-item[aria-current='true'] { border-color: var(--pink-300); background: #241d34; }
+.evp-item img { width: 120px; height: 68px; object-fit: cover; border-radius: 10px; background: #000; }
+.evp-item-text { display: grid; gap: 2px; min-width: 0; }
+.evp-item-title { font-size: 15px; font-weight: 600; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.evp-item-meta { font-size: 13px; color: #b9b0cf; }
+.evp-yt { margin: var(--space-3) 0 0; }
+.evp-yt a { display: inline-flex; align-items: center; min-height: 44px; color: var(--gold-300); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .evp-poster img, .evp-play { transition: none; } }

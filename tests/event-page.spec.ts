@@ -23,7 +23,7 @@ test('an older event has its own page: title, date, place, flyer, the story and 
   await expect(page.locator('h1')).toHaveText('Certified Lounge · Fall 2026');
   await expect(page.locator('.evp-when')).toContainText('Oct 17, 2026'); await expect(page.locator('.evp-where')).toContainText('HOME Studios');
   await expect(page.locator('.evp-flyer img')).toBeVisible(); await expect(page.locator('.evp-text')).toContainText('Certified is back');
-  await expect(page.locator('.evp-btn', { hasText: 'Watch the recap' })).toHaveAttribute('href', /youtube\.com/);
+  await expect(page.locator('.evp-btn', { hasText: 'Watch the recap' })).toHaveAttribute('href', '#recap');   // played on the page (see the recap tests)
   await expect(page.locator('.evp-note')).toContainText('has passed');
   await expect(page.locator('a', { hasText: 'All events' })).toHaveAttribute('href', '/events');
   expect(await page.locator('link[rel="canonical"]').getAttribute('href')).toBe('https://www.nrnszn.com/events/2026-10-17-certified-lounge-fall-2026');
@@ -77,4 +77,66 @@ test('the template page opened directly says the event was not found and stays o
   await page.goto('/event-live/');
   await expect(page.locator('h1')).toHaveText('Event not found'); await expect(page.locator('#evp-note')).toContainText('could not find');
   expect(await page.locator('meta[name="robots"]').getAttribute('content')).toContain('noindex');
+});
+
+// ---------- The recap played on the page (src/lib/recap.ts) ----------
+const VIDEOS = [{ id: 'aaaaaaaaaa1', title: 'Night one', duration: '3:01' }, { id: 'bbbbbbbbbb2', title: 'Night two', duration: '4:02' }, { id: 'cccccccccc3', title: 'Night three' }];
+async function fakeYouTube(page: import('@playwright/test').Page, playlist: 'ok' | 'down' = 'ok') {
+  await page.route('**/api/playlist?**', (r) => playlist === 'ok'
+    ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, title: 'RC', videos: VIDEOS }) })
+    : r.fulfill({ status: 502, contentType: 'application/json', body: '{"ok":false}' }));
+  await page.route(/i\.ytimg\.com|youtube-nocookie\.com/, (r) => r.request().resourceType() === 'image'
+    ? r.fulfill({ status: 200, contentType: 'image/png', body: PNG }) : r.fulfill({ status: 200, contentType: 'text/html', body: '<p>player</p>' }));
+}
+
+test('an older event plays its recap playlist right on the page', async ({ page }, info) => {
+  only(info);
+  const errors: string[] = []; page.on('pageerror', (e) => errors.push(e.message));
+  await fakeYouTube(page);
+  await page.goto('/events/2025-11-08-renaissance-certified-fall-2025/#recap');
+  const recap = page.locator('#recap');
+  await expect(recap).toBeVisible(); await expect(recap.locator('.evp-count')).toHaveText('3 videos'); await expect(recap.locator('.evp-item')).toHaveCount(3);
+  await expect(recap.locator('.evp-yt a')).toHaveAttribute('href', /youtube\.com\/playlist\?list=PLVprhlbgSo1tsyRw4KJUxmPhpQNB9BQAq/);
+  expect(await recap.evaluate((s) => s.getBoundingClientRect().top), 'arriving on #recap scrolls to it').toBeLessThan(200);
+  await expect(page.locator('.evp-frame')).toHaveCount(0);   // the YouTube player waits for a tap
+  await recap.locator('.evp-poster').click();
+  await expect(page.locator('.evp-frame')).toHaveAttribute('src', /youtube-nocookie\.com\/embed\/aaaaaaaaaa1\?autoplay=1.*list=PLVprhlbgSo1tsyRw4KJUxmPhpQNB9BQAq/);
+  await recap.locator('.evp-item', { hasText: 'Night three' }).click();
+  await expect(page.locator('.evp-frame')).toHaveAttribute('src', /embed\/cccccccccc3\?/); await expect(recap.locator('.evp-now')).toHaveText('Night three');
+  await expect(recap.locator('.evp-item[aria-current="true"]')).toHaveText(/Night three/);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+  const serious = (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id);
+  expect(serious).toEqual([]); expect(errors).toEqual([]);
+});
+
+test('if the playlist list cannot be read, the recap still plays the whole playlist', async ({ page }, info) => {
+  only(info);
+  await fakeYouTube(page, 'down');
+  await page.goto('/events/2025-11-08-renaissance-certified-fall-2025/');
+  await expect(page.locator('#recap .evp-list')).toBeHidden();
+  await page.locator('#recap .evp-poster').click();
+  await expect(page.locator('.evp-frame')).toHaveAttribute('src', /embed\/videoseries\?list=PLVprhlbgSo1tsyRw4KJUxmPhpQNB9BQAq/);
+});
+
+test('the events list sends Watch the recap to the event page, not to YouTube', async ({ page }, info) => {
+  only(info);
+  await page.route('**/api/events', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, events: [] }) }));
+  await page.goto('/events/');
+  const hrefs = await page.locator('#ev-past .ev-dlinks a', { hasText: 'Watch the recap' }).evaluateAll((els) => els.map((e) => (e as HTMLAnchorElement).getAttribute('href')));
+  expect(hrefs.length).toBeGreaterThan(0); for (const h of hrefs) expect(h).toMatch(/^\/events\/\d{4}-\d{2}-\d{2}-[a-z0-9-]+\/#recap$/);
+});
+
+test('an admin event with a YouTube playlist plays it on the page; any other recap link opens in a new tab', async ({ page }, info) => {
+  only(info);
+  await fakeYouTube(page);
+  const url = await serveEvent(page, ev({ title: 'Recap Night', id: 'd1d2d3d4d5d6', day: '2020-03-03', tickets: '', flyer: '', video: 'https://youtube.com/playlist?list=PLabcdefghijklmnop&si=xyz' }));
+  await page.goto(url);
+  await expect(page.locator('.evp-btn', { hasText: 'Watch the recap' })).toHaveAttribute('href', '#recap');
+  await expect(page.locator('#recap .evp-item')).toHaveCount(3);
+  await page.locator('#recap .evp-poster').click();
+  await expect(page.locator('.evp-frame')).toHaveAttribute('src', /embed\/aaaaaaaaaa1\?.*list=PLabcdefghijklmnop/);
+  const other = await serveEvent(page, ev({ title: 'Vimeo Night', id: 'e1e2e3e4e5e6', day: '2020-03-03', tickets: '', flyer: '', video: 'https://vimeo.com/12345' }));
+  await page.goto(other);
+  await expect(page.locator('.evp-btn', { hasText: 'Watch the recap' })).toHaveAttribute('href', 'https://vimeo.com/12345');
+  await expect(page.locator('#recap')).toBeHidden();
 });
