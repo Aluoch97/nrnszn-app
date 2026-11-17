@@ -7,6 +7,8 @@
 //   POST /api/admin {action:'backup'} + token             "Back up now": runs the sheet backup (src/edge/backup.js) once.
 //   GET  /api/admin?section=events | analytics&days=7|30|90  + token   the events list / the website numbers (need the D1 database binding DB).
 //   POST /api/admin {action:'event-save', event} | {action:'event-delete', id}  + token   add, edit or delete an event.
+//   GET  /api/admin?section=push  + token                   how many phones have notifications on, how many were sent today.
+//   POST /api/admin {action:'push-send', push:{title, body, url}}  + token   send one phone notification to everyone (at most 3 a day).
 //
 // Switches on only when the Cloudflare secret ADMIN_PASSWORD exists (at least 10 characters). The session token is signed with a key made
 // from that password, so changing the password signs every device out. The token lives in the browser's localStorage, like Soul Vault's owner key.
@@ -15,6 +17,7 @@ import { runBackup, backupStatus } from './backup.js';
 import { hasDb } from './db.js';
 import { listAll, saveEvent, deleteEvent } from './events.js';
 import { summary } from './analytics.js';
+import { pushStatus, pushSend } from './push.js';
 
 const reply = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json;charset=utf-8', 'cache-control': 'no-store' } });
 export const SESSION_MS = 30 * 24 * 3600 * 1000;
@@ -74,6 +77,10 @@ export function setupChecklist(env) {
     { group: 'Events and analytics', items: [
       { name: 'DB', label: 'Site database (D1 binding)', present: hasDb(env) },
     ] },
+    { group: 'Phone notifications', items: [
+      { name: 'VAPID_PUBLIC_KEY', label: 'Notifications public key', present: has('VAPID_PUBLIC_KEY') },
+      { name: 'VAPID_PRIVATE_KEY', label: 'Notifications private key', present: has('VAPID_PRIVATE_KEY') },
+    ] },
     { group: 'Backups and sign-in', items: [
       { name: 'BACKUPS', label: 'Backup storage bucket (R2 binding)', present: !!(env.BACKUPS && typeof env.BACKUPS.put === 'function') },
       { name: 'BACKUP_CRON_TOKEN', label: 'Nightly backup job password', present: has('BACKUP_CRON_TOKEN') },
@@ -92,6 +99,10 @@ export async function adminGet({ request, env }) {
   if (!request.headers.get('authorization')) return reply({ status: 'ok', message: 'NuRenaissance admin.', mode: 'ready' });
   if (!(await authed(request, env))) return reply({ ok: false, message: 'Please sign in again.' }, 401);
   const url = new URL(request.url), section = url.searchParams.get('section');
+  if (section === 'push') {
+    if (!hasDb(env)) return reply({ ok: false, result: 'no-db', message: 'The site database is not connected yet (see docs/admin-setup.md).' }, 503);
+    try { return reply({ ok: true, ...(await pushStatus(env.DB, env)) }); } catch (e) { console.error('admin push', e); return reply({ ok: false, message: 'The database did not answer. Try again in a minute.' }, 502); }
+  }
   if (section === 'events' || section === 'analytics') {
     if (!hasDb(env)) return reply({ ok: false, result: 'no-db', message: 'The site database is not connected yet (see docs/admin-setup.md).' }, 503);
     try {
@@ -125,6 +136,11 @@ export async function adminPost({ request, env }) {
       const out = body.action === 'event-save' ? await saveEvent(env.DB, body.event) : await deleteEvent(env.DB, body.id);
       return reply(out, out.ok ? 200 : 400);
     } catch (e) { console.error('admin event', e); return reply({ ok: false, message: 'The database did not answer. Try again in a minute.' }, 502); }
+  }
+  if (body && body.action === 'push-send') {
+    if (!hasDb(env)) return reply({ ok: false, result: 'no-db', message: 'The site database is not connected yet (see docs/admin-setup.md).' }, 503);
+    try { return reply({ ok: true, ...(await pushSend(env.DB, env, body.push)) }); }
+    catch (e) { return reply({ ok: false, message: String((e && e.message) || e).slice(0, 240) }, 400); }   // plain-language messages from push.js (no title, nobody subscribed, daily limit, keys missing)
   }
   return reply({ ok: false, message: 'Unknown request.' }, 400);
 }

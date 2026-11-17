@@ -51,3 +51,12 @@ Both need one small Cloudflare database. It stays empty and free until you use i
 
 ## Event pages
 Each event (old and new) has its own page at `/events/<name>/`. Events you add in /admin get theirs automatically; in the Events list tap **View page** to open it. A hidden (unpublished) event has no page.
+
+## Phone notifications (optional)
+
+1. On any computer with Node, in this project's folder, run `node scripts/make-vapid-keys.mjs`. It prints a PUBLIC key and a PRIVATE key.
+2. Cloudflare dashboard > **Workers & Pages** > **nrnszn-app** > **Settings** > **Variables and Secrets** > **Add**. Make two for Production: `VAPID_PUBLIC_KEY` (the public one) and `VAPID_PRIVATE_KEY` (the private one, type **Secret**). The private key goes ONLY here.
+3. **Deployments** > the newest one > **Retry deployment** (a new deploy picks up new variables).
+4. Open https://www.nrnszn.com on your phone: a **Notifications** link appears in the footer (and in the More sheet). Tap it, then **Turn on notifications**. On iPhone, add the site to the Home Screen first.
+5. Open /admin > **Phone notifications**: it shows how many phones are on. Write a title, tap **Send**, confirm. A notification should arrive. At most 3 can be sent per 24 hours.
+

@@ -49,3 +49,24 @@ self.addEventListener('fetch', (e) => {
     }))
   );
 });
+
+// Phone notifications (public/push.js, src/edge/push.js). The message arrives encrypted; the browser decrypts it and gives us JSON { title, body, url, tag }.
+// Plain text only, and a tap goes to a page on this site.
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = {}; }
+  e.waitUntil(self.registration.showNotification(String(d.title || 'NuRenaissance').slice(0, 100), {
+    body: String(d.body || '').slice(0, 200), icon: '/icons/icon-192.png', badge: '/icons/favicon-48.png',
+    tag: String(d.tag || 'nrnszn').slice(0, 60), data: { url: String(d.url || '/') },
+  }));
+});
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  let target = '/';
+  try { const u = new URL((e.notification.data && e.notification.data.url) || '/', self.location.origin); if (u.origin === self.location.origin) target = u.pathname + u.search + u.hash; } catch (err) { /* home */ }
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    for (const c of list) { if ('focus' in c) { if (c.navigate) c.navigate(target).catch(() => {}); return c.focus(); } }
+    return self.clients.openWindow(target);
+  }));
+});
+

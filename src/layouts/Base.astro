@@ -57,6 +57,7 @@ const ogImage = new URL(image, Astro.site);
     <slot />
     <script is:inline src="/hit.js" defer></script>
     <script is:inline src="/update-banner.js" defer></script>
+    <script is:inline src="/push.js" defer></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {

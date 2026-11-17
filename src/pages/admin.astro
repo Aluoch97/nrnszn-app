@@ -80,6 +80,22 @@ import Site from '../layouts/Site.astro';
           </form>
         </div>
       </details>
+      <details class="folder" data-folder="push">
+        <summary><span class="ft"><b>Phone notifications</b><span>Send a notification to everyone who turned them on</span></span><span class="badge" id="b-push">…</span></summary>
+        <div id="push-box">
+          <p id="push-msg" class="result" role="status" aria-live="polite">Loading…</p>
+          <form id="push-form" class="evform" hidden>
+            <label for="push-title">Title <span class="hint">(shows in bold)</span></label><input id="push-title" type="text" maxlength="60" autocomplete="off" placeholder="New episode of Certified Lounge" required />
+            <label for="push-body">Message <span class="hint">(optional)</span></label><input id="push-body" type="text" maxlength="140" autocomplete="off" />
+            <label for="push-url">Where a tap goes</label>
+            <select id="push-url"><option value="/">Home</option><option value="/events">Events</option><option value="/cinema">Cinema</option><option value="/gallery">Gallery</option><option value="/services">Services</option></select>
+            <p id="push-preview" class="result"></p>
+            <div class="actions"><button type="submit" class="btn primary" id="push-send">Send</button></div>
+            <p id="push-error" class="error" role="alert"></p>
+          </form>
+          <ul class="rows" id="push-last"></ul>
+        </div>
+      </details>
       <details class="folder" data-folder="analytics">
         <summary><span class="ft"><b>Website analytics</b><span>Visitors, pages, where people come from</span></span><span class="badge" id="b-analytics">…</span></summary>
         <div id="an-box">
@@ -213,7 +229,7 @@ import Site from '../layouts/Site.astro';
   async function openDash(data: any) {
     show('dash');
     drawSetup(data.setup || []);
-    runChecks(); loadEvents(); loadAnalytics();
+    runChecks(); loadEvents(); loadAnalytics(); loadPush();
     fetch('/version.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { $('ver-line').textContent = j && j.version ? `Version: ${String(j.version).replace(/^nrn-/, '')}` : 'Version: unknown'; }).catch(() => { $('ver-line').textContent = 'Version: unknown'; });
   }
 
@@ -393,6 +409,39 @@ import Site from '../layouts/Site.astro';
     } catch { out.innerHTML = '<p class="result">Could not reach the site. Reload this page to try again.</p>'; }
   }
   fld<HTMLSelectElement>('an-days').addEventListener('change', loadAnalytics);
+
+  // Phone notifications: how many phones, and the Send form (src/edge/push.js; at most 3 a day).
+  async function loadPush() {
+    const msg = $('push-msg'), form = $('push-form'), badge = $('b-push');
+    try {
+      const res = await api(undefined, '?section=push');
+      if (res.status === 401) { signedOut('Please sign in again.'); return; }
+      const j = await res.json().catch(() => ({}));
+      if (!j.ok) { form.hidden = true; msg.textContent = j.result === 'no-db' ? 'The site database is not connected yet. See the Setup checklist below.' : (j.message || 'Could not load.'); badge.textContent = '!'; badge.dataset.tone = 'warn'; return; }
+      if (!j.on) { form.hidden = true; msg.textContent = 'Notifications are not switched on yet: the two keys (VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY) are missing in Cloudflare. See the Setup checklist below.'; badge.textContent = '!'; badge.dataset.tone = 'warn'; return; }
+      msg.textContent = `${j.subscribers} ${j.subscribers === 1 ? 'phone has' : 'phones have'} notifications on. You have sent ${j.sentToday} of ${j.cap} allowed in the last 24 hours.`;
+      form.hidden = false; badge.textContent = String(j.subscribers); badge.dataset.tone = 'ok';
+      $('push-send').textContent = `Send to ${j.subscribers} ${j.subscribers === 1 ? 'phone' : 'phones'}`;
+      const ul = $('push-last'); ul.innerHTML = '';
+      for (const l of (j.last || [])) { const li = document.createElement('li'); li.className = 'row'; li.textContent = `${new Date(l.at).toLocaleDateString()}: ${l.title} (${l.sent} ${l.sent === 1 ? 'phone' : 'phones'})`; ul.appendChild(li); }
+    } catch { msg.textContent = 'Could not reach the site. Reload this page to try again.'; }
+  }
+  const pushPreview = () => { const t = fld<HTMLInputElement>('push-title').value, b = fld<HTMLInputElement>('push-body').value; $('push-preview').textContent = t || b ? `It will look like: “${t || '…'}”${b ? ' — ' + b : ''}` : ''; };
+  fld<HTMLInputElement>('push-title').addEventListener('input', pushPreview); fld<HTMLInputElement>('push-body').addEventListener('input', pushPreview);
+  $('push-form').addEventListener('submit', async (ev) => {
+    ev.preventDefault(); const err = $('push-error'), btn = $('push-send') as HTMLButtonElement; err.textContent = '';
+    const title = fld<HTMLInputElement>('push-title').value.trim(); if (!title) { err.textContent = 'Write a title first.'; return; }
+    if (!confirm(`Send this to everyone who turned notifications on?\n\n${title}\n${fld<HTMLInputElement>('push-body').value}`)) return;
+    btn.disabled = true; const label = btn.textContent; btn.textContent = 'Sending…';
+    try {
+      const res = await api({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'push-send', push: { title, body: fld<HTMLInputElement>('push-body').value, url: fld<HTMLSelectElement>('push-url').value } }) });
+      if (res.status === 401) { signedOut('Please sign in again.'); return; }
+      const j = await res.json().catch(() => ({}));
+      if (j.ok) { $('push-msg').textContent = `Sent to ${j.sent} ${j.sent === 1 ? 'phone' : 'phones'}${j.removed ? ` (${j.removed} had turned them off)` : ''}.`; fld<HTMLInputElement>('push-title').value = ''; fld<HTMLInputElement>('push-body').value = ''; pushPreview(); await loadPush(); }
+      else err.textContent = j.message || 'Could not send.';
+    } catch { err.textContent = 'Could not reach the site. Try again.'; }
+    btn.disabled = false; if (btn.textContent === 'Sending…') btn.textContent = label;
+  });
 
   async function start() {
     show('loading');

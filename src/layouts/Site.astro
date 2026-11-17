@@ -53,7 +53,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
       <p class="links">
         {footer.map((f, i) => (<>{i > 0 && <span aria-hidden="true"> · </span>}<a href={f.href}>{f.label}</a></>))}
       </p>
-      <p class="copy"><span>© {new Date().getFullYear()} NuRenaissance Media</span><a class="ver" href="/admin">Admin</a><span class="vtxt" data-version></span><button type="button" class="refresh" data-refresh>Refresh</button></p>
+      <p class="copy"><span>© {new Date().getFullYear()} NuRenaissance Media</span><a class="ver" href="/admin">Admin</a><span class="vtxt" data-version></span><button type="button" class="refresh" data-push-open hidden>Notifications</button><button type="button" class="refresh" data-refresh>Refresh</button></p>
     </footer>
 
     <nav class="tabbar" aria-label="Tabs">
@@ -83,7 +83,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
         ))}
       </ul>
       <p class="sheet-foot"><a href="/privacy-policy">Privacy policy</a> · © {new Date().getFullYear()} NuRenaissance Media</p>
-      <p class="sheet-foot sheet-tools"><a class="ver" href="/admin">Admin</a><span class="vtxt" data-version></span><button type="button" class="refresh" data-refresh>Refresh</button></p>
+      <p class="sheet-foot sheet-tools"><a class="ver" href="/admin">Admin</a><span class="vtxt" data-version></span><button type="button" class="refresh" data-push-open hidden>Notifications</button><button type="button" class="refresh" data-refresh>Refresh</button></p>
     </dialog>
   </div>
 </Base>
@@ -250,6 +250,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
   .links, .copy { margin: 0; }
   .copy { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--space-3); }
   .vtxt { color: var(--shell-muted); font-size: 14px; } .vtxt:empty { display: none; }
+  .refresh[hidden] { display: none; }
   .ver, .refresh { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--space-2); color: var(--shell-text); font: inherit; text-decoration: underline; background: none; border: 0; cursor: pointer; }
   .sheet-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--space-3); margin-top: var(--space-2); }
   .sheet-tools .ver, .sheet-tools .refresh { color: var(--shell-muted); font-size: 14px; }
@@ -279,7 +280,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
   // clears every saved copy on this device and reloads, so a phone can never be stuck on old files.
   async function refreshSite(btn: HTMLButtonElement) {
     btn.disabled = true; btn.textContent = 'Refreshing…';
-    try { if ('serviceWorker' in navigator) await Promise.all((await navigator.serviceWorker.getRegistrations()).map((r) => r.unregister())); } catch { /* carry on */ }
+    try { if ('serviceWorker' in navigator) await Promise.all((await navigator.serviceWorker.getRegistrations()).map((r) => r.update())); } catch { /* carry on */ }   // update, never unregister: that would switch off phone notifications
     try { if ('caches' in window) await Promise.all((await caches.keys()).map((k) => caches.delete(k))); } catch { /* carry on */ }
     try { const u = new URL(location.href); u.searchParams.set('r', String(Date.now())); location.replace(u.toString()); } catch { location.reload(); }
   }
