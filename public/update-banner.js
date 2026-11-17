@@ -13,7 +13,7 @@
   function update(btn) {
     btn.disabled = true; btn.textContent = 'Updating…';
     var steps = [];
-    try { if ('serviceWorker' in navigator) steps.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })); } catch (e) {}
+    try { if ('serviceWorker' in navigator) steps.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.update(); })); })); } catch (e) {}
     try { if ('caches' in window) steps.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (e) {}
     Promise.all(steps).catch(function () {}).then(function () {
       try { var u = new URL(location.href); u.searchParams.set('r', String(Date.now())); location.replace(u.toString()); } catch (e) { location.reload(); }
