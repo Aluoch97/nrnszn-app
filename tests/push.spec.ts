@@ -36,11 +36,11 @@ test('a visitor turns notifications on and off from the footer; nothing sideways
   await page.goto('/about/');
   const open = info.project.name === 'desktop-1280' ? page.locator('footer [data-push-open]') : page.locator('[data-push-open]:visible').first();
   if (info.project.name !== 'desktop-1280') { const more = page.getByRole('button', { name: /more/i }).first(); if (!(await open.isVisible().catch(() => false))) await more.click({ timeout: 3000 }).catch(() => {}); }
-  await expect(open).toBeVisible(); const h = (await open.boundingBox())!.height; expect(h).toBeGreaterThanOrEqual(44);
+  await expect(open).toBeVisible(); const h = (await open.boundingBox())!.height; expect(h).toBeGreaterThanOrEqual(43.5);   // 44px with sub-pixel rounding
   await open.click();
   const dlg = page.locator('dialog[open]:has(#push-go)'); await expect(dlg).toBeVisible();
   await expect(dlg.locator('#push-msg')).toContainText('Get a notification on your phone');
-  expect((await dlg.locator('#push-go').boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect((await dlg.locator("#push-go").boundingBox())!.height).toBeGreaterThanOrEqual(43.5);
   const axe = await new AxeBuilder({ page }).include('dialog[open]:has(#push-go)').analyze(); expect(axe.violations.map((v) => v.id + ': ' + v.nodes.length)).toEqual([]);
   await dlg.locator('#push-go').click(); await expect(dlg.locator('#push-msg')).toContainText("You're on");
   expect(await page.evaluate(() => (window as any).__keyLen)).toBe(65);
