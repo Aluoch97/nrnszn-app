@@ -80,6 +80,6 @@ test('/admin: the Send form shows the numbers, asks first, and sends what was wr
   await page.fill('#push-title', 'New episode'); await page.fill('#push-body', 'Certified Lounge S2E4 is up'); await page.selectOption('#push-url', '/cinema');
   await expect(page.locator('#push-preview')).toContainText('New episode');
   await page.click('#push-send');
-  await expect(page.locator('#push-msg')).toContainText('Sent to 2 phones'); await expect.poll(() => sent.length).toBe(1);
+  await expect(page.locator('#push-done')).toContainText('Sent to 2 phones'); await expect.poll(() => sent.length).toBe(1);
   expect(sent[0]).toEqual({ title: 'New episode', body: 'Certified Lounge S2E4 is up', url: '/cinema' });
 });

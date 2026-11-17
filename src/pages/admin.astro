@@ -84,6 +84,7 @@ import Site from '../layouts/Site.astro';
         <summary><span class="ft"><b>Phone notifications</b><span>Send a notification to everyone who turned them on</span></span><span class="badge" id="b-push">…</span></summary>
         <div id="push-box">
           <p id="push-msg" class="result" role="status" aria-live="polite">Loading…</p>
+          <p id="push-done" class="result" role="status" aria-live="polite"></p>
           <form id="push-form" class="evform" hidden>
             <label for="push-title">Title <span class="hint">(shows in bold)</span></label><input id="push-title" type="text" maxlength="60" autocomplete="off" placeholder="New episode of Certified Lounge" required />
             <label for="push-body">Message <span class="hint">(optional)</span></label><input id="push-body" type="text" maxlength="140" autocomplete="off" />
@@ -429,7 +430,7 @@ import Site from '../layouts/Site.astro';
   const pushPreview = () => { const t = fld<HTMLInputElement>('push-title').value, b = fld<HTMLInputElement>('push-body').value; $('push-preview').textContent = t || b ? `It will look like: “${t || '…'}”${b ? ' — ' + b : ''}` : ''; };
   fld<HTMLInputElement>('push-title').addEventListener('input', pushPreview); fld<HTMLInputElement>('push-body').addEventListener('input', pushPreview);
   $('push-form').addEventListener('submit', async (ev) => {
-    ev.preventDefault(); const err = $('push-error'), btn = $('push-send') as HTMLButtonElement; err.textContent = '';
+    ev.preventDefault(); const err = $('push-error'), btn = $('push-send') as HTMLButtonElement; err.textContent = ''; $('push-done').textContent = '';
     const title = fld<HTMLInputElement>('push-title').value.trim(); if (!title) { err.textContent = 'Write a title first.'; return; }
     if (!confirm(`Send this to everyone who turned notifications on?\n\n${title}\n${fld<HTMLInputElement>('push-body').value}`)) return;
     btn.disabled = true; const label = btn.textContent; btn.textContent = 'Sending…';
@@ -437,7 +438,7 @@ import Site from '../layouts/Site.astro';
       const res = await api({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'push-send', push: { title, body: fld<HTMLInputElement>('push-body').value, url: fld<HTMLSelectElement>('push-url').value } }) });
       if (res.status === 401) { signedOut('Please sign in again.'); return; }
       const j = await res.json().catch(() => ({}));
-      if (j.ok) { $('push-msg').textContent = `Sent to ${j.sent} ${j.sent === 1 ? 'phone' : 'phones'}${j.removed ? ` (${j.removed} had turned them off)` : ''}.`; fld<HTMLInputElement>('push-title').value = ''; fld<HTMLInputElement>('push-body').value = ''; pushPreview(); await loadPush(); }
+      if (j.ok) { $('push-done').textContent = `Sent to ${j.sent} ${j.sent === 1 ? 'phone' : 'phones'}${j.removed ? ` (${j.removed} had turned them off)` : ''}.`; fld<HTMLInputElement>('push-title').value = ''; fld<HTMLInputElement>('push-body').value = ''; pushPreview(); await loadPush(); }
       else err.textContent = j.message || 'Could not send.';
     } catch { err.textContent = 'Could not reach the site. Try again.'; }
     btn.disabled = false; if (btn.textContent === 'Sending…') btn.textContent = label;
