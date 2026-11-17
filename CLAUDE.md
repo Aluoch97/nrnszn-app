@@ -8,7 +8,7 @@ Owner: Nick (NuRenaissance Media). He reviews on his phone, so mobile comes firs
   Locally in a container with a preinstalled browser: `PW_CHROMIUM=/path/to/chrome npm run check`.
 - GitHub Actions runs the same check on every push and pull request (`.github/workflows/site-check.yml`).
 - Push work to a branch, not `main`. Cloudflare builds a preview at `<branch>.nrnszn-app.pages.dev`;
-  `main` is production. Only merge/push to `main` when Nick says so.
+  `main` is production. Merging (Nick, Nov 17, 2026): when a pull request's checks are all green, merge it (merge commit) without asking. Say in one line that it merged. If a check is red, fix it first. (Replaces the old rule "only merge to main when Nick says so".)
 
 ## Mobile rules (the check enforces these)
 - No sideways scrolling at 320px wide. Use `minmax(0, 1fr)` grid columns and `min-width: 0` on flex/grid children.
