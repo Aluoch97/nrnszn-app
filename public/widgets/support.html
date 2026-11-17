@@ -456,13 +456,15 @@
     cashapp: 'https://cash.app/$nrnsznn',
     venmo: 'https://venmo.com/u/nrnszn',
     zelle: 'nurrenaissance@gmail.com',
-    applepay: '615-525-1330'
+    // Stripe Payment Link (Nov 2026): Stripe's checkout shows Apple Pay on iPhones/Macs and a card form for everyone else.
+    applepay: 'https://buy.stripe.com/fZueVf0nt4Ws4fl7GPd3i01'
   };
 
   var METHOD_LABELS = {
     paypal: 'PayPal',
     cashapp: 'Cash App',
-    venmo: 'Venmo'
+    venmo: 'Venmo',
+    applepay: 'Apple Pay'
   };
 
   // Real platform logos (provided by NuRenaissance), resized and embedded
@@ -482,7 +484,7 @@
     cashapp: { name: 'Cash App', hint: 'Opens in a new tab', isButton: false },
     venmo: { name: 'Venmo', hint: 'Opens in a new tab', isButton: false },
     zelle: { name: 'Zelle', hint: 'Tap for details', isButton: true },
-    applepay: { name: 'Apple Pay', hint: 'Tap for details', isButton: true }
+    applepay: { name: 'Apple Pay', hint: 'Opens in a new tab', isButton: false }
   };
 
   var root = document.getElementById('nrn-pay-root');
@@ -511,8 +513,8 @@
   }
 
   // Builds the payment-method list, in the fixed display order above —
-  // Zelle and Apple Pay each carry their own expandable instructions panel
-  // right after.
+  // Zelle carries its own expandable instructions panel right after;
+  // Apple Pay is a Stripe checkout link like PayPal, Cash App and Venmo.
   function methodsHTML() {
     return ['paypal', 'cashapp', 'venmo', 'zelle', 'applepay'].map(function (method) {
       var def = METHOD_ROW_DEFS[method];
@@ -523,14 +525,6 @@
           '<div class="nrn-copy-row">' +
             '<div class="nrn-copy-value">' + HANDLES.zelle + '</div>' +
             '<button type="button" class="nrn-copy-btn" data-copy="' + HANDLES.zelle + '">Copy</button>' +
-          '</div>' +
-        '</div>';
-      } else if (method === 'applepay') {
-        row += '<div class="nrn-instructions" id="nrn-instructions-applepay">' +
-          'Open <strong>Messages</strong>, start a conversation with the number below, tap the <strong>+</strong> button, and choose <strong>Apple Pay</strong>:' +
-          '<div class="nrn-copy-row">' +
-            '<div class="nrn-copy-value">' + HANDLES.applepay + '</div>' +
-            '<button type="button" class="nrn-copy-btn" data-copy="' + HANDLES.applepay + '">Copy</button>' +
           '</div>' +
         '</div>';
       }
@@ -622,6 +616,9 @@
           return HANDLES.paypal;
         case 'cashapp':
           return HANDLES.cashapp;
+        case 'applepay':
+          // Stripe Payment Link: the customer picks the amount and pays with Apple Pay or a card there.
+          return HANDLES.applepay;
         case 'venmo':
           var url = HANDLES.venmo;
           if (state.note.trim()) url += '?note=' + encodeURIComponent(state.note.trim());
@@ -650,7 +647,7 @@
     // sandboxed iframe — window.open() from inside that sandbox is often
     // silently blocked as a popup, while a native anchor click with
     // target="_blank" is treated as a normal navigation and works reliably.
-    root.querySelectorAll('.nrn-method[data-method="paypal"], .nrn-method[data-method="cashapp"], .nrn-method[data-method="venmo"]').forEach(function (el) {
+    root.querySelectorAll('.nrn-method[data-method="paypal"], .nrn-method[data-method="cashapp"], .nrn-method[data-method="venmo"], .nrn-method[data-method="applepay"]').forEach(function (el) {
       el.addEventListener('click', function () {
         var method = el.getAttribute('data-method');
         var link = buildLink(method);
@@ -672,7 +669,7 @@
       });
     });
 
-    ['zelle', 'applepay'].forEach(function (method) {
+    ['zelle'].forEach(function (method) {
       var btn = root.querySelector('.nrn-method[data-method="' + method + '"]');
       var panel = root.querySelector('#nrn-instructions-' + method);
       if (!btn || !panel) return;
@@ -686,7 +683,7 @@
           logClick(method);
           markOpened(btn);
           showToast(
-            'Thank you for supporting NuRenaissance Media! Just follow the steps below to send it from your ' + (method === 'zelle' ? 'banking app' : 'Messages app') + '.',
+            'Thank you for supporting NuRenaissance Media! Just follow the steps below to send it from your banking app.',
             7000
           );
         }
