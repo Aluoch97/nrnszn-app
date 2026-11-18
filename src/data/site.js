@@ -18,14 +18,15 @@ export const more = ['/about'];
 
 // The apps on the Apps page. `inApp`: opens inside this site (full screen with a back bar).
 // `accent`: the glow color of its card, taken from the app's art.
+// `img`: each app's own current icon (Nov 18, 2026: copied from the apps' sites / the PODI repo).
 export const apps = [
-  { name: 'Certified', accent: '#ff6aa6', href: '/play', inApp: true, img: '/img/apps/certified-lounge.webp',
+  { name: 'Certified', accent: '#ff6aa6', href: '/play', inApp: true, img: '/img/apps/certified-icon.webp',
     text: 'Renaissance Certified in one app: play along at the show, the show guide, and the eras, recaps and videos.' },
-  { name: 'NuDirectory', accent: '#e8bb52', href: '/directory', inApp: true, img: '/img/apps/nudirectory.webp',
+  { name: 'NuDirectory', accent: '#e8bb52', href: '/directory', inApp: true, img: '/img/apps/nudirectory-icon.webp',
     text: 'The Nashville scene board: shows, studios, session players, promo contacts and more, all in one place.' },
-  { name: 'PODI', accent: '#c77dd8', href: 'https://podi.nrnszn.com', img: '/img/apps/podi.webp',
+  { name: 'PODI', accent: '#c77dd8', href: 'https://podi.nrnszn.com', img: '/img/apps/podi-icon.webp',
     text: 'A streamlined, browser-based media workflow tool that makes multi-camera editing simple, without heavy desktop software.' },
-  { name: 'Soul Vault', accent: '#cfd2dc', href: '/vault', inApp: true, img: '/img/apps/soul-vault.webp',
+  { name: 'Soul Vault', accent: '#ef3b55', href: '/vault', inApp: true, img: '/img/apps/soul-vault-icon.webp',
     text: 'A direct-to-fan streaming space and living archive for the music of Nicólas Soul: full projects, unreleased cuts, alternate mixes, time-synced lyrics, videos and behind-the-scenes stories. Ad-free.' },
 ];
 
