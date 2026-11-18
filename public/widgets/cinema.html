@@ -869,7 +869,7 @@
           </div>
         `;
 
-        const fire = () => openLightbox(item);
+        const fire = () => openLightbox(item, item._episodes);   // a Vlogumentary episode keeps its episode list
         card.addEventListener("click", fire);
         card.addEventListener("keydown", (e)=>{ if(e.key==="Enter" || e.key===" "){ e.preventDefault(); fire(); } });
 
@@ -982,7 +982,28 @@
   }
 
   // ---------- boot ----------
+  // Layout choices (Nick, Nov 2026), made here so the Sheet stays as it is:
+  //  - "Vlogumentaries" (e.g. Certified Tour) are shown under Films, one card per episode;
+  //    each card still plays with the rest of that show's episodes listed below it.
+  //  - The "Originals" row comes first in both Films and Shows; the other rows keep the Sheet's order.
+  function arrange(films, shows){
+    const ORIGINALS_FIRST = (a, b) => (b.sub === "Originals") - (a.sub === "Originals");
+    const vlogs = (shows || []).filter(s => s.sub === "Vlogumentaries");
+    const otherShows = (shows || []).filter(s => s.sub !== "Vlogumentaries");
+    const vlogItems = [];
+    // The same episode objects (not copies), so the episode list can mark the one that's playing.
+    vlogs.forEach(show => (show.episodes || []).forEach(ep => {
+      if(!ep.image) ep.image = show.image;
+      ep._episodes = show.episodes;
+      vlogItems.push(ep);
+    }));
+    const outFilms = (films || []).slice();
+    if(vlogItems.length) outFilms.push({ row: "Films", sub: "Vlogumentaries", items: vlogItems });
+    return { films: outFilms.sort(ORIGINALS_FIRST), shows: otherShows.sort(ORIGINALS_FIRST) };
+  }
+
   function renderAll(feature, films, shows){
+    ({ films, shows } = arrange(films, shows));
     renderHero(feature || FALLBACK_FEATURE);
     renderCategoryTiles(films, shows);
     renderFilmsView(films);
