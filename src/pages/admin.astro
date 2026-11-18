@@ -85,6 +85,16 @@ import Site from '../layouts/Site.astro';
         <div id="push-box">
           <p id="push-msg" class="result" role="status" aria-live="polite">Loading…</p>
           <p id="push-done" class="result" role="status" aria-live="polite"></p>
+          <div id="push-auto" class="evform" hidden>
+            <h3>Automatic</h3>
+            <p class="result">Visitors are told by themselves. They go out between 9 AM and 9 PM Central and count toward the 3-a-day limit; several things at once become one notification. Switching one on never announces anything that already exists.</p>
+            <label class="check"><input type="checkbox" data-auto="events" /> New events (when you add one here that is dated today or later)</label>
+            <label class="check"><input type="checkbox" data-auto="videos" /> New YouTube videos (the Interview and Music Video playlists)</label>
+            <label class="check"><input type="checkbox" data-auto="services" /> New services (added to your NuServices sheet)</label>
+            <label class="check"><input type="checkbox" data-auto="gallery" /> New gallery photos (added to NuGallery in Google Drive)</label>
+            <label class="check"><input type="checkbox" data-auto="cinema" /> New NuCinema films, shows and episodes</label>
+            <p id="push-auto-st" class="result" role="status" aria-live="polite"></p>
+          </div>
           <form id="push-form" class="evform" hidden>
             <label for="push-title">Title <span class="hint">(shows in bold)</span></label><input id="push-title" type="text" maxlength="60" autocomplete="off" placeholder="New episode of Certified Lounge" required />
             <label for="push-body">Message <span class="hint">(optional)</span></label><input id="push-body" type="text" maxlength="140" autocomplete="off" />
@@ -422,11 +432,26 @@ import Site from '../layouts/Site.astro';
       if (!j.on) { form.hidden = true; msg.textContent = 'Notifications are not switched on yet: the two keys (VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY) are missing in Cloudflare. See the Setup checklist below.'; badge.textContent = '!'; badge.dataset.tone = 'warn'; return; }
       msg.textContent = `${j.subscribers} ${j.subscribers === 1 ? 'phone has' : 'phones have'} notifications on. You have sent ${j.sentToday} of ${j.cap} allowed in the last 24 hours.`;
       form.hidden = false; badge.textContent = String(j.subscribers); badge.dataset.tone = 'ok';
+      $('push-auto').hidden = false; document.querySelectorAll<HTMLInputElement>('[data-auto]').forEach((c) => { c.checked = !!(j.auto && j.auto[c.dataset.auto as string]); });
       $('push-send').textContent = `Send to ${j.subscribers} ${j.subscribers === 1 ? 'phone' : 'phones'}`;
       const ul = $('push-last'); ul.innerHTML = '';
       for (const l of (j.last || [])) { const li = document.createElement('li'); li.className = 'row'; li.textContent = `${new Date(l.at).toLocaleDateString()}: ${l.title} (${l.sent} ${l.sent === 1 ? 'phone' : 'phones'})`; ul.appendChild(li); }
     } catch { msg.textContent = 'Could not reach the site. Reload this page to try again.'; }
   }
+  $('push-auto').addEventListener('change', async () => {
+    const st = $('push-auto-st'), want: Record<string, boolean> = {}; document.querySelectorAll<HTMLInputElement>('[data-auto]').forEach((c) => { want[c.dataset.auto as string] = c.checked; });
+    st.textContent = 'Saving…';
+    try {
+      const res = await api({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'push-auto', auto: want }) });
+      if (res.status === 401) { signedOut('Please sign in again.'); return; }
+      const j = await res.json().catch(() => ({}));
+      if (!j.ok) { st.textContent = j.message || 'Could not save.'; await loadPush(); return; }
+      const on = Object.keys(j.auto).filter((k) => j.auto[k]), asked = Object.keys(want).filter((k) => want[k]);
+      document.querySelectorAll<HTMLInputElement>('[data-auto]').forEach((c) => { c.checked = !!j.auto[c.dataset.auto as string]; });
+      const failed = asked.filter((k) => !j.auto[k]);
+      st.textContent = (on.length ? `On: ${on.join(', ')}. Everything that exists today was recorded, so only NEW things are announced.` : 'Off. Nothing is sent by itself.') + (failed.length ? ` Could not switch on ${failed.join(', ')}: that source could not be read right now (check the Setup checklist), so it was left off.` : '');
+    } catch { st.textContent = 'Could not reach the site. Try again.'; }
+  });
   const pushPreview = () => { const t = fld<HTMLInputElement>('push-title').value, b = fld<HTMLInputElement>('push-body').value; $('push-preview').textContent = t || b ? `It will look like: “${t || '…'}”${b ? ' — ' + b : ''}` : ''; };
   fld<HTMLInputElement>('push-title').addEventListener('input', pushPreview); fld<HTMLInputElement>('push-body').addEventListener('input', pushPreview);
   $('push-form').addEventListener('submit', async (ev) => {

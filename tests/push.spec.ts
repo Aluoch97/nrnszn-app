@@ -62,13 +62,13 @@ test('a "no" from the phone saves nothing', async ({ page }, info) => {
 // ---- /admin: the Phone notifications folder ----
 test('/admin: the Send form shows the numbers, asks first, and sends what was written', async ({ page }, info) => {
   only(info); if (info.project.name === 'phone-320') test.skip(true, 'one phone size is enough here');
-  const sent: any[] = []; let subscribers = 2, sentToday = 0; page.on('dialog', (d) => d.accept());
+  const sent: any[] = [], autos: any[] = []; let subscribers = 2, sentToday = 0, auto: Record<string, boolean> = { events: false, videos: false, services: false, gallery: false, cinema: false }; page.on('dialog', (d) => d.accept());
   await page.addInitScript(() => localStorage.setItem('nrn_admin', 'fake-session-token'));
   await page.route('**/api/**', async (route) => {
     const req = route.request(), url = new URL(req.url());
     if (url.pathname === '/api/admin') {
-      if (req.method() === 'POST') { const b = JSON.parse(req.postData() || '{}'); if (b.action === 'push-send') { sent.push(b.push); sentToday += 1; return route.fulfill(json({ ok: true, sent: subscribers, failed: 0, removed: 0 })); } return route.fulfill(json({ ok: true })); }
-      if (url.searchParams.get('section') === 'push') return route.fulfill(json({ ok: true, on: true, subscribers, sentToday, cap: 3, last: sentToday ? [{ at: Date.now(), title: sent[sent.length - 1].title, body: '', sent: subscribers }] : [] }));
+      if (req.method() === 'POST') { const b = JSON.parse(req.postData() || '{}'); if (b.action === 'push-auto') { autos.push(b.auto); auto = { ...b.auto, gallery: false }; return route.fulfill(json({ ok: true, auto })); } if (b.action === 'push-send') { sent.push(b.push); sentToday += 1; return route.fulfill(json({ ok: true, sent: subscribers, failed: 0, removed: 0 })); } return route.fulfill(json({ ok: true })); }
+      if (url.searchParams.get('section') === 'push') return route.fulfill(json({ ok: true, on: true, subscribers, sentToday, cap: 3, auto, last: sentToday ? [{ at: Date.now(), title: sent[sent.length - 1].title, body: '', sent: subscribers }] : [] }));
       if (url.searchParams.get('section')) return route.fulfill(json({ ok: true, events: [], days: 30, views: 0, visitors: 0, viewsPerVisitor: 0, previous: { views: 0, visitors: 0 }, daily: [], pages: [], referrers: [], devices: [], places: [], newReturning: {} }));
       return route.fulfill(json({ status: 'ok', mode: 'ready', signedIn: true, setup: [], backup: null }));
     }
@@ -77,6 +77,10 @@ test('/admin: the Send form shows the numbers, asks first, and sends what was wr
   await page.goto('/admin/'); await page.locator('details[data-folder="push"] summary').click();
   await expect(page.locator('#push-msg')).toContainText('2 phones have notifications on. You have sent 0 of 3');
   await expect(page.locator('#push-send')).toHaveText('Send to 2 phones');
+  await expect(page.locator('[data-auto]')).toHaveCount(5); expect(await page.locator('[data-auto]:checked').count()).toBe(0);
+  await page.check('[data-auto="events"]'); await page.check('[data-auto="gallery"]');
+  await expect(page.locator('#push-auto-st')).toContainText('On: events'); await expect(page.locator('#push-auto-st')).toContainText('Could not switch on gallery');
+  expect(autos.at(-1)).toMatchObject({ events: true, gallery: true }); await expect(page.locator('[data-auto="gallery"]')).not.toBeChecked(); await expect(page.locator('[data-auto="events"]')).toBeChecked();
   await page.fill('#push-title', 'New episode'); await page.fill('#push-body', 'Certified Lounge S2E4 is up'); await page.selectOption('#push-url', '/cinema');
   await expect(page.locator('#push-preview')).toContainText('New episode');
   await page.click('#push-send');
