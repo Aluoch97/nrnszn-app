@@ -15,7 +15,7 @@ for (const raw of changelog.split('\n')) {
   else if (line.trim()) releases[releases.length - 1].intro.push(line.trim());
 }
 ---
-<Site title="What's new | NuRenaissance" description="What changed in each update of the NuRenaissance site.">
+<Site title="What's new | NuRenaissance" description="What changed in each update of the NuRenaissance site." noindex>
   <article class="doc">
     <h1>What's new</h1>
     {releases.map((r, i) => (
