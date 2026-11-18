@@ -19,14 +19,20 @@ export const more = ['/about'];
 // The apps on the Apps page. `inApp`: opens inside this site (full screen with a back bar).
 // `accent`: the glow color of its card, taken from the app's art.
 // `img`: each app's own current icon (Nov 18, 2026: copied from the apps' sites / the PODI repo).
+// `home`: the app's own address. "Add to Home Screen" sends people there, because a Home Screen icon opens the
+//   address it was added from (added inside nrnszn.com it would open nrnszn.com). `oneTap`: opening `home`
+//   (with ?install=1) shows that app's own Install button on Android. `desktop`: built for computers first.
+// `self`: this website (nrnszn.com): its sheet installs right on the page (Android one tap), like /install.
 export const apps = [
-  { name: 'Certified', accent: '#ff6aa6', href: '/play', inApp: true, img: '/img/apps/certified-icon.webp',
+  { name: 'NuRenaissance', accent: '#b07ff0', href: '/', self: true, img: '/img/apps/nrnszn-icon.webp', home: 'https://www.nrnszn.com/',
+    text: 'This website as an app: Media, Events, Apps, Services and notifications, full screen and one tap from your Home Screen.' },
+  { name: 'Certified', accent: '#ff6aa6', href: '/play', inApp: true, img: '/img/apps/certified-icon.webp', home: 'https://play.nrnszn.com/?install=1', oneTap: true,
     text: 'Renaissance Certified in one app: play along at the show, the show guide, and the eras, recaps and videos.' },
-  { name: 'NuDirectory', accent: '#e8bb52', href: '/directory', inApp: true, img: '/img/apps/nudirectory-icon.webp',
+  { name: 'NuDirectory', accent: '#e8bb52', href: '/directory', inApp: true, img: '/img/apps/nudirectory-icon.webp', home: 'https://directory.nrnszn.com/',
     text: 'The Nashville scene board: shows, studios, session players, promo contacts and more, all in one place.' },
-  { name: 'PODI', accent: '#c77dd8', href: 'https://podi.nrnszn.com', img: '/img/apps/podi-icon.webp',
+  { name: 'PODI', accent: '#c77dd8', href: 'https://podi.nrnszn.com', img: '/img/apps/podi-icon.webp', home: 'https://podi.nrnszn.com/', desktop: true,
     text: 'A streamlined, browser-based media workflow tool that makes multi-camera editing simple, without heavy desktop software.' },
-  { name: 'Soul Vault', accent: '#ef3b55', href: '/vault', inApp: true, img: '/img/apps/soul-vault-icon.webp',
+  { name: 'Soul Vault', accent: '#ef3b55', href: '/vault', inApp: true, img: '/img/apps/soul-vault-icon.webp', home: 'https://soulnicolas.com/',
     text: 'A direct-to-fan streaming space and living archive for the music of Nicólas Soul: full projects, unreleased cuts, alternate mixes, time-synced lyrics, videos and behind-the-scenes stories. Ad-free.' },
 ];
 

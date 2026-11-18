@@ -4,6 +4,12 @@ Short version numbers: 1.0, 1.1, 1.2 ... A small change goes up by one step (1.1
 The newest version is on top, and it is the number shown in the footer. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 1.2 · Nov 18, 2026
+Apps page: new icons and an Add to Home Screen button.
+- **NuRenaissance is on the list too:** add this website to your Home Screen. On Android it's one tap (Install), right on the page.
+- **Each app shows its current icon:** Certified, NuDirectory, PODI and Soul Vault.
+- **Add to Home Screen** button on every app card: it shows the steps for your phone and opens the app at its own address, so the icon on your Home Screen opens the app itself. For Certified on Android it's one tap: Install.
+
 ## 1.1 · Nov 18, 2026
 Notifications, an admin page, and this page.
 - **Phone notifications:** tap "Notifications" in the footer to hear about new events, videos, services, gallery photos and NuCinema titles. A few a week at most.

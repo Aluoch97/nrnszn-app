@@ -45,6 +45,8 @@ Owner: Nick (NuRenaissance Media). He reviews on his phone, so mobile comes firs
 
 - Versions + What's new (Nov 18, 2026, Nick: same simple numbering in every app, like PODI): the version people see is a short `1.1` / `1.2` / `2.0`, the newest `## x.y · date` heading in `CHANGELOG.md`. EVERY pull request that changes what visitors see adds a new block at the top of `CHANGELOG.md` (plain words) and bumps the number by one step (a redesign starts a new first number). `scripts/stamp-version.mjs` writes it to `dist/version.json` as `release` (the 8-letter fingerprint stays as `version`, the cache name); the footer and /admin show it; `/whats-new` (`src/pages/whats-new.astro`) is built from the same file.
 
+- Apps page "Add to Home Screen" (Nov 18, 2026, Nick): every card in `src/pages/apps.astro` has the button; data in `apps` in `src/data/site.js` (`home` = the app's own address, `oneTap`, `desktop`, `self`). A website cannot add ANOTHER app to the Home Screen: the sheet shows this phone's steps and links to the app's own address (a Home Screen icon opens the address it was added from). Certified's `home` is `play.nrnszn.com/?install=1`, which opens its install sheet at once (CERTIFIED repo `src/index.html`; Android one tap). The NuRenaissance card (`self`) installs this site on the page (Android `beforeinstallprompt`, like `/install`). Tests: `tests/apps-install.spec.ts`.
+
 ## "Status check" (Nick's standing preference, same in all five apps)
 When Nick says "status check", answer in this shape, in plain language:
 1. A table, one row per app (nrnszn site, CERTIFIED, NuDirectory, Soul Vault, PODI): grade, why, what would move it up. Say how confident the grade is, and what was run just now versus only known from earlier.

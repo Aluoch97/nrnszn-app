@@ -1,6 +1,10 @@
 ---
 // Apps: NuRenaissance's own apps. A moving header with the app icons floating in it,
 // then one big card per app, washed in that app's art and glowing in its color.
+// Each card: the whole card opens the app; "Add to Home Screen" opens a sheet with the steps for this phone and
+// a link to the app's OWN address (a Home Screen icon opens the address it was added from). A website can't add
+// another app to the Home Screen by itself: on iPhone it is always Share > Add to Home Screen; on Android an app
+// can offer a one-tap Install only for itself (Certified does, when opened with ?install=1).
 import Site from '../layouts/Site.astro';
 import Icon from '../components/Icon.astro';
 import PageHero from '../components/PageHero.astro';
@@ -15,26 +19,119 @@ import { apps } from '../data/site.js';
     kicker="Built by NuRenaissance"
     text="Tools and worlds for the scene: play along at the show, find your next stage, edit faster, dig through the vault."
     images={[{ src: '/img/portal-poster-640.webp', srcset: '/img/portal-poster-640.webp 640w, /img/portal-poster.webp 1280w' }]}
-    float={apps.map((a) => a.img)}
+    float={apps.filter((a) => !a.self).map((a) => a.img)}
     accent="#8520cc"
   />
   <ul class="apps">
     {apps.map((a, i) => (
       <li class="app" style={`--accent:${a.accent}; --art:url('${a.img}')`}>
-        <a class="app-link" href={a.href} {...(a.inApp ? {} : { target: '_blank', rel: 'noopener' })}>
+        <div class="app-link">
           <span class="app-wash" aria-hidden="true"></span>
           <img class="app-icon" src={a.img} alt="" width="160" height="160" loading={i < 2 ? 'eager' : 'lazy'} />
-          <span class="app-body">
-            <span class="app-tag">{a.inApp ? 'Opens here' : 'Opens in a new tab'}</span>
+          <div class="app-body">
+            <span class="app-tag">{a.self ? 'This website' : a.inApp ? 'Opens here' : 'Opens in a new tab'}</span>
             <h2 class="app-name">{a.name}</h2>
             <span class="app-text">{a.text}</span>
-            <span class="app-open">Open {a.name}{a.inApp ? <span aria-hidden="true">→</span> : <Icon name="external" size={16} />}</span>
-          </span>
-        </a>
+            <div class="app-actions">
+              <a class="app-open" href={a.href} {...(a.inApp || a.self ? {} : { target: '_blank', rel: 'noopener' })}>Open {a.name}{a.inApp || a.self ? <span aria-hidden="true">→</span> : <Icon name="external" size={16} />}</a>
+              <button type="button" class="app-add" data-name={a.name} data-home={a.home} data-img={a.img} data-onetap={a.oneTap ? '' : undefined} data-desktop={a.desktop ? '' : undefined} data-self={a.self ? '' : undefined} aria-haspopup="dialog">
+                <span aria-hidden="true">＋</span> Add to Home Screen
+              </button>
+            </div>
+          </div>
+        </div>
       </li>
     ))}
   </ul>
+
+  <dialog class="a2hs" id="a2hs" aria-labelledby="a2hs-title">
+    <button type="button" class="a2hs-x" data-close aria-label="Close">✕</button>
+    <img class="a2hs-icon" id="a2hs-icon" src={apps[0].img} alt="" width="72" height="72" />
+    <h2 class="a2hs-title" id="a2hs-title">Add <span data-n>{apps[0].name}</span> to your Home Screen</h2>
+    <p class="a2hs-lead">It opens full screen like an app. Free, and nothing to download from a store.</p>
+    <p class="a2hs-warn" data-os="inapp" hidden>You're in another app's browser (like Instagram), which can't add apps. Tap <b>•••</b> and choose <b>Open in browser</b> first, then come back to this button.</p>
+    <p class="a2hs-warn" id="a2hs-desktop" hidden><span data-n>PODI</span> is built for computers first. On a phone you can still add it, but it works best on a laptop.</p>
+    <ol class="a2hs-steps" data-os="ios" hidden>
+      <li>Tap <b>Open <span data-n></span></b> below. It opens in Safari.</li>
+      <li>Tap <b>Share</b> <span class="a2hs-glyph" aria-hidden="true">⬆</span> (the square with an arrow, at the bottom of Safari).</li>
+      <li>Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+    </ol>
+    <ol class="a2hs-steps" data-os="android-onetap" hidden>
+      <li>Tap <b>Open <span data-n></span></b> below.</li>
+      <li>Tap <b>Install</b> when it pops up. That's it.</li>
+      <li class="a2hs-fine">No pop-up? Tap <b>⋮</b> (top right of Chrome), then <b>Install app</b>.</li>
+    </ol>
+    <ol class="a2hs-steps" data-os="android" hidden>
+      <li>Tap <b>Open <span data-n></span></b> below. It opens in Chrome.</li>
+      <li>Tap <b>⋮</b> (top right), then <b>Install app</b> or <b>Add to Home screen</b>.</li>
+      <li>Tap <b>Install</b>.</li>
+    </ol>
+    <p class="a2hs-warn" data-os="installed" hidden>You already have NuRenaissance on your Home Screen. ✓</p>
+    <button type="button" class="a2hs-go a2hs-install" id="a2hs-install" hidden>Install <span data-n>NuRenaissance</span></button>
+    <ol class="a2hs-steps" data-os="ios-self" hidden>
+      <li>Tap <b>Share</b> <span class="a2hs-glyph" aria-hidden="true">⬆</span> (the square with an arrow, at the bottom of Safari).</li>
+      <li>Scroll down, tap <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+    </ol>
+    <ol class="a2hs-steps" data-os="android-self" hidden>
+      <li>Tap <b>⋮</b> (top right of Chrome), then <b>Install app</b> or <b>Add to Home screen</b>.</li>
+      <li>Tap <b>Install</b>.</li>
+    </ol>
+    <ol class="a2hs-steps" data-os="other-self" hidden>
+      <li><b>On a phone:</b> open nrnszn.com there and tap this button again for the exact steps.</li>
+      <li><b>On a computer:</b> click the install icon at the right end of the address bar (Chrome or Edge).</li>
+    </ol>
+    <ol class="a2hs-steps" data-os="other" hidden>
+      <li><b>On a phone:</b> open this page there and tap <b>Add to Home Screen</b> again for the exact steps.</li>
+      <li><b>On a computer:</b> tap <b>Open <span data-n></span></b> below, then click the install icon at the right end of the address bar (Chrome or Edge).</li>
+    </ol>
+    <a class="a2hs-go" id="a2hs-go" href={apps[0].home} target="_blank" rel="noopener">Open <span data-n>{apps[0].name}</span> <span aria-hidden="true">↗</span></a>
+  </dialog>
 </Site>
+
+<script>
+  // "Add to Home Screen": fill the sheet for this app and show the steps for this phone.
+  const dlg = document.getElementById('a2hs') as HTMLDialogElement;
+  const ua = navigator.userAgent || '';
+  const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(ua);
+  const inApp = /FBAN|FBAV|Instagram|Line\/|TikTok|Snapchat|Twitter|MicroMessenger/i.test(ua);
+  const installed = matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  // This website can offer its own one-tap Install on Android (as /install does); the other apps can't from here.
+  let deferred: any = null;
+  const installBtn = document.getElementById('a2hs-install') as HTMLButtonElement;
+  addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; if (dlg.open && dlg.dataset.self === '1') show(true); });
+  installBtn.addEventListener('click', async () => {
+    if (!deferred) return;
+    deferred.prompt();
+    try { await deferred.userChoice; } catch {}
+    deferred = null; dlg.close();
+  });
+  function show(self: boolean, btn?: HTMLButtonElement) {
+    const base = ios ? 'ios' : android ? (btn?.dataset.onetap !== undefined ? 'android-onetap' : 'android') : 'other';
+    const os = self ? (installed ? 'installed' : (ios ? 'ios' : android ? 'android' : 'other') + '-self') : base;
+    const oneTap = self && !installed && android && !!deferred;
+    dlg.querySelectorAll<HTMLElement>('[data-os]').forEach((el) => {
+      el.hidden = !((el.dataset.os === os && !oneTap) || (el.dataset.os === 'inapp' && inApp));
+    });
+    installBtn.hidden = !oneTap;
+    (document.getElementById('a2hs-go') as HTMLElement).hidden = self;
+  }
+  for (const btn of document.querySelectorAll<HTMLButtonElement>('.app-add')) {
+    btn.addEventListener('click', () => {
+      const { name = '', home = '', img = '' } = btn.dataset;
+      dlg.querySelectorAll('[data-n]').forEach((el) => { el.textContent = name; });
+      (document.getElementById('a2hs-icon') as HTMLImageElement).src = img;
+      (document.getElementById('a2hs-go') as HTMLAnchorElement).href = home;
+      const self = btn.dataset.self !== undefined;
+      dlg.dataset.self = self ? '1' : '';
+      show(self, btn);
+      (document.getElementById('a2hs-desktop') as HTMLElement).hidden = btn.dataset.desktop === undefined;
+      dlg.showModal();
+    });
+  }
+  dlg.querySelector('[data-close]')!.addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+</script>
 
 <style>
   .apps {
@@ -91,8 +188,44 @@ import { apps } from '../data/site.js';
     font-weight: 700; font-size: 15px;
   }
   .app-link:hover .app-open { background: #ffe08a; }
+  /* the Open link covers the whole card, so a tap anywhere opens the app; the Add button sits above it */
+  .app-open::after { content: ''; position: absolute; inset: 0; z-index: 0; border-radius: 22px; }
+  .app-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-1); }
+  .app-actions .app-open { margin-top: 0; text-decoration: none; }
+  .app-add {
+    position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px; min-height: 46px; padding: 0 18px;
+    border-radius: var(--radius-pill); border: 1.5px solid color-mix(in srgb, var(--accent) 70%, #f3f0fa); background: rgba(14, 11, 22, 0.55);
+    color: #f3f0fa; font: inherit; font-weight: 700; font-size: 15px; cursor: pointer;
+  }
+  .app-add:hover, .app-add:focus-visible { background: #241d34; }
+
+  /* Add to Home Screen sheet */
+  .a2hs {
+    width: min(460px, calc(100vw - 24px)); max-height: calc(100svh - 32px); overflow: auto; padding: var(--space-5) var(--space-4) var(--space-4);
+    border: 1px solid var(--gold-500); border-radius: 22px; background: #15111f; color: #f3f0fa;
+  }
+  .a2hs::backdrop { background: rgba(8, 6, 14, 0.82); backdrop-filter: blur(6px); }
+  .a2hs[open] { animation: a2hs-pop 220ms var(--ease-out); }
+  @keyframes a2hs-pop { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  .a2hs-x { position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.35); background: transparent; color: #fff; font-size: 18px; cursor: pointer; }
+  .a2hs-icon { display: block; width: 72px; height: 72px; border-radius: 22%; object-fit: cover; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+  .a2hs-title { margin: var(--space-3) 2.5rem 0 0; font-family: var(--font-poster); font-weight: 800; text-transform: uppercase; font-size: clamp(26px, 7vw, 32px); line-height: 1; color: #fff4dc; }
+  .a2hs-lead { margin: var(--space-2) 0 0; font-size: 15px; line-height: 1.5; color: #c9c0de; }
+  .a2hs-warn { margin: var(--space-3) 0 0; padding: var(--space-2) var(--space-3); border-radius: 12px; background: rgba(232, 187, 82, 0.12); border: 1px solid rgba(232, 187, 82, 0.5); font-size: 15px; line-height: 1.45; color: #f3e6c4; }
+  .a2hs-steps { margin: var(--space-3) 0 0; padding-left: 1.4rem; display: grid; gap: var(--space-2); font-size: 16px; line-height: 1.5; }
+  .a2hs-steps li::marker { color: var(--gold-300); font-weight: 700; }
+  .a2hs-steps .a2hs-fine { list-style: none; margin-left: -1.4rem; font-size: 14px; color: #b9b0cf; }
+  .a2hs-glyph { display: inline-block; padding: 0 4px; border: 1px solid #6d6290; border-radius: 4px; font-size: 13px; }
+  .a2hs-go {
+    display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; margin-top: var(--space-4);
+    border-radius: var(--radius-pill); background: var(--gold-300); color: var(--purple-900); font-weight: 700; font-size: 16px; text-decoration: none;
+  }
+  .a2hs-go:hover { background: #ffe08a; }
+  .a2hs-install { width: 100%; border: 0; font: inherit; font-weight: 700; font-size: 16px; cursor: pointer; }
+  .a2hs [hidden] { display: none !important; }
 
   @media (prefers-reduced-motion: reduce) {
+    .a2hs[open] { animation: none; }
     .app-link, .app-wash { transition: none; }
     .app-link:hover { transform: none; }
   }
