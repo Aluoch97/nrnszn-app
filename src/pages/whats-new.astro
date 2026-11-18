@@ -1,0 +1,33 @@
+---
+import Site from '../layouts/Site.astro';
+import changelog from '../../CHANGELOG.md?raw';
+
+// CHANGELOG.md is the one list of updates. Read it when the site is built: "## 1.1 · Nov 18, 2026" starts a release, "- " lines are its notes.
+const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+const inline = (s: string) => esc(s).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>');
+type Release = { title: string; intro: string[]; items: string[] };
+const releases: Release[] = [];
+for (const raw of changelog.split('\n')) {
+  const line = raw.trimEnd();
+  if (line.startsWith('## ')) releases.push({ title: line.slice(3), intro: [], items: [] });
+  else if (!releases.length) continue;
+  else if (line.startsWith('- ')) releases[releases.length - 1].items.push(line.slice(2));
+  else if (line.trim()) releases[releases.length - 1].intro.push(line.trim());
+}
+---
+<Site title="What's new | NuRenaissance" description="What changed in each update of the NuRenaissance site.">
+  <article class="doc">
+    <h1>What's new</h1>
+    {releases.map((r, i) => (
+      <section class="wn-rel" id={'v' + (r.title.split(' ')[0] || i)}>
+        <h2>{r.title}{i === 0 && <span class="wn-now">current</span>}</h2>
+        {r.intro.map((t) => <p set:html={inline(t)} />)}
+        <ul>{r.items.map((t) => <li set:html={inline(t)} />)}</ul>
+      </section>
+    ))}
+  </article>
+</Site>
+<style is:global>
+  .wn-rel { margin: 0 0 26px; }
+  .wn-now { margin-left: 10px; padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; vertical-align: middle; background: var(--accent, #c8175f); color: #fff; }
+</style>

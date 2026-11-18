@@ -42,3 +42,12 @@ test('it refuses to run (and says why) when sw.js has no VERSION line, instead o
   const dir = site({ 'sw.js': '// no version here\n' });
   assert.throws(() => execFileSync('node', [script, dir], { stdio: 'pipe' }), (e) => /could not find/.test(String(e.stderr)) && e.status === 1);
 });
+
+test("the short release number comes from the newest '## x.y' heading in CHANGELOG.md", () => {
+  const dir = site({}); const cl = join(dir, 'CHANGELOG.md');
+  writeFileSync(cl, '# Log\n\nnotes\n\n## 2.3 · Nov 1, 2026\n- a\n\n## 2.2 · Oct 1, 2026\n- b\n');
+  execFileSync('node', [script, dir], { stdio: 'pipe', env: { ...process.env, NRN_CHANGELOG: cl } });
+  assert.equal(JSON.parse(readFileSync(join(dir, 'version.json'), 'utf8')).release, '2.3');
+  const none = site({}); execFileSync('node', [script, none], { stdio: 'pipe', env: { ...process.env, NRN_CHANGELOG: join(none, 'nope.md') } });
+  assert.equal(JSON.parse(readFileSync(join(none, 'version.json'), 'utf8')).release, ''); rmSync(dir, { recursive: true }); rmSync(none, { recursive: true });
+});
