@@ -159,7 +159,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
 
     .tabbar {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-      display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+      display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
       height: var(--tab-h); padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
       background: rgba(14, 11, 22, 0.94);
       border-top: 1px solid var(--shell-line);
@@ -176,7 +176,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
     .tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     /* Icon sits in a pill; the current tab's pill fills in, so it reads by shape as well as color. */
     .tab :global(svg) {
-      box-sizing: content-box; padding: 3px 16px; border-radius: var(--radius-pill);
+      box-sizing: content-box; padding: 3px 11px; border-radius: var(--radius-pill);   /* six tabs now: the pill must fit a 320 px phone (53 px per tab) */
       transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-out);
     }
     .tab[aria-current='page'] { color: var(--gold-300); }

@@ -20,7 +20,7 @@ Owner: Nick (NuRenaissance Media). He reviews on his phone, so mobile comes firs
 
 ## Where things live
 - Pages: `src/pages/*.astro`. Main-site pages use `src/layouts/Site.astro` (dark header menu + footer).
-- Menu and footer links: `src/data/site.js`.
+- Menu and footer links: `src/data/site.js`. On phones the bottom bar is Home, Media, Events, Apps, Services and More (six; Nov 18, 2026, Nick moved Events out of More so More only holds About); the tab icon pill is 11px wide-padded so six fit a 320px phone.
 - Original widgets (Gallery, Cinema, Services, Support, Survey) are served from `public/widgets/` inside a
   frame via `src/components/WidgetFrame.astro`. Keep widget files as delivered; only make targeted fixes.
 - Colors, fonts, spacing: `src/styles/tokens.css`. Fonts are self-hosted via @fontsource (no Google Fonts).
