@@ -8,6 +8,7 @@
 //   GET  /api/admin?section=events | analytics&days=7|30|90  + token   the events list / the website numbers (need the D1 database binding DB).
 //   POST /api/admin {action:'event-save', event} | {action:'event-delete', id}  + token   add, edit or delete an event.
 //   GET  /api/admin?section=push  + token                   how many phones have notifications on, how many were sent today.
+//   POST /api/admin {action:'push-auto', auto:{events,videos,services,gallery,cinema}}  + token   switch the automatic notifications on or off (src/edge/autopush.js).
 //   POST /api/admin {action:'push-send', push:{title, body, url}}  + token   send one phone notification to everyone (at most 3 a day).
 //
 // Switches on only when the Cloudflare secret ADMIN_PASSWORD exists (at least 10 characters). The session token is signed with a key made
@@ -18,6 +19,7 @@ import { hasDb } from './db.js';
 import { listAll, saveEvent, deleteEvent } from './events.js';
 import { summary } from './analytics.js';
 import { pushStatus, pushSend } from './push.js';
+import { getAutoSettings, setAutoSettings, maybeAuto } from './autopush.js';
 
 const reply = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json;charset=utf-8', 'cache-control': 'no-store' } });
 export const SESSION_MS = 30 * 24 * 3600 * 1000;
@@ -101,7 +103,7 @@ export async function adminGet({ request, env }) {
   const url = new URL(request.url), section = url.searchParams.get('section');
   if (section === 'push') {
     if (!hasDb(env)) return reply({ ok: false, result: 'no-db', message: 'The site database is not connected yet (see docs/admin-setup.md).' }, 503);
-    try { return reply({ ok: true, ...(await pushStatus(env.DB, env)) }); } catch (e) { console.error('admin push', e); return reply({ ok: false, message: 'The database did not answer. Try again in a minute.' }, 502); }
+    try { return reply({ ok: true, ...(await pushStatus(env.DB, env)), auto: await getAutoSettings(env.DB) }); } catch (e) { console.error('admin push', e); return reply({ ok: false, message: 'The database did not answer. Try again in a minute.' }, 502); }
   }
   if (section === 'events' || section === 'analytics') {
     if (!hasDb(env)) return reply({ ok: false, result: 'no-db', message: 'The site database is not connected yet (see docs/admin-setup.md).' }, 503);
@@ -113,7 +115,7 @@ export async function adminGet({ request, env }) {
   return reply({ status: 'ok', mode: 'ready', signedIn: true, setup: setupChecklist(env), backup });
 }
 
-export async function adminPost({ request, env }) {
+export async function adminPost({ request, env, waitUntil }) {
   env = env || {};
   if (!adminReady(env)) return reply({ ok: false, message: 'Admin sign-in is not set up yet (see docs/admin-setup.md).' }, 503);
   let body; try { body = await request.json(); } catch { return reply({ ok: false, message: 'Bad request.' }, 400); }
@@ -134,8 +136,13 @@ export async function adminPost({ request, env }) {
     if (!hasDb(env)) return reply({ ok: false, result: 'no-db', message: 'The site database is not connected yet (see docs/admin-setup.md).' }, 503);
     try {
       const out = body.action === 'event-save' ? await saveEvent(env.DB, body.event) : await deleteEvent(env.DB, body.id);
+      if (out.ok && body.action === 'event-save' && waitUntil) waitUntil(maybeAuto(env, { force: true, origin: new URL(request.url).origin }));   // a new event goes out right away (if it is between 9 AM and 9 PM Central and the switch is on)
       return reply(out, out.ok ? 200 : 400);
     } catch (e) { console.error('admin event', e); return reply({ ok: false, message: 'The database did not answer. Try again in a minute.' }, 502); }
+  }
+  if (body && body.action === 'push-auto') {
+    if (!hasDb(env)) return reply({ ok: false, result: 'no-db', message: 'The site database is not connected yet (see docs/admin-setup.md).' }, 503);
+    try { return reply({ ok: true, auto: await setAutoSettings(env.DB, body.auto, env, Date.now(), undefined, new URL(request.url).origin) }); } catch (e) { console.error('admin push-auto', e); return reply({ ok: false, message: 'The database did not answer. Try again in a minute.' }, 502); }
   }
   if (body && body.action === 'push-send') {
     if (!hasDb(env)) return reply({ ok: false, result: 'no-db', message: 'The site database is not connected yet (see docs/admin-setup.md).' }, 503);
