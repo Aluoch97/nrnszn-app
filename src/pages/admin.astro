@@ -241,7 +241,7 @@ import Site from '../layouts/Site.astro';
     show('dash');
     drawSetup(data.setup || []);
     runChecks(); loadEvents(); loadAnalytics(); loadPush();
-    fetch('/version.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { $('ver-line').textContent = j && j.version ? `Version: ${String(j.version).replace(/^nrn-/, '')}` : 'Version: unknown'; }).catch(() => { $('ver-line').textContent = 'Version: unknown'; });
+    fetch('/version.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { $('ver-line').textContent = j && j.version ? `Version: ${j.release || String(j.version).replace(/^nrn-/, '')} (build ${String(j.version).replace(/^nrn-/, '')})` : 'Version: unknown'; }).catch(() => { $('ver-line').textContent = 'Version: unknown'; });
   }
 
   // remember which folders are open (this tab only)

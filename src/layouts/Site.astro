@@ -53,7 +53,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
       <p class="links">
         {footer.map((f, i) => (<>{i > 0 && <span aria-hidden="true"> · </span>}<a href={f.href}>{f.label}</a></>))}
       </p>
-      <p class="copy"><span>© {new Date().getFullYear()} NuRenaissance Media</span><a class="ver" href="/admin">Admin</a><span class="vtxt" data-version></span><button type="button" class="refresh" data-push-open hidden>Notifications</button><button type="button" class="refresh" data-refresh>Refresh</button></p>
+      <p class="copy"><span>© {new Date().getFullYear()} NuRenaissance Media</span><a class="ver" href="/admin">Admin</a><a class="ver" href="/whats-new">What's new</a><span class="vtxt" data-version></span><button type="button" class="refresh" data-push-open hidden>Notifications</button><button type="button" class="refresh" data-refresh>Refresh</button></p>
     </footer>
 
     <nav class="tabbar" aria-label="Tabs">
@@ -83,7 +83,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
         ))}
       </ul>
       <p class="sheet-foot"><a href="/privacy-policy">Privacy policy</a> · © {new Date().getFullYear()} NuRenaissance Media</p>
-      <p class="sheet-foot sheet-tools"><a class="ver" href="/admin">Admin</a><span class="vtxt" data-version></span><button type="button" class="refresh" data-push-open hidden>Notifications</button><button type="button" class="refresh" data-refresh>Refresh</button></p>
+      <p class="sheet-foot sheet-tools"><a class="ver" href="/admin">Admin</a><a class="ver" href="/whats-new">What's new</a><span class="vtxt" data-version></span><button type="button" class="refresh" data-push-open hidden>Notifications</button><button type="button" class="refresh" data-refresh>Refresh</button></p>
     </dialog>
   </div>
 </Base>
@@ -288,6 +288,6 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
   try { const u = new URL(location.href); if (u.searchParams.has('r')) { u.searchParams.delete('r'); history.replaceState(history.state, '', u.pathname + u.search + u.hash); } } catch { /* leave the address alone */ }
   fetch('/version.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => {
     if (!j || !j.version) return;
-    document.querySelectorAll<HTMLElement>('[data-version]').forEach((el) => { el.textContent = 'Version ' + String(j.version).replace(/^nrn-/, ''); });
+    document.querySelectorAll<HTMLElement>('[data-version]').forEach((el) => { el.textContent = 'Version ' + (j.release || String(j.version).replace(/^nrn-/, '')); });
   }).catch(() => { /* the link just keeps saying Status */ });
 </script>
