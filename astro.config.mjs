@@ -8,7 +8,7 @@ export default defineConfig({
   // Small stylesheets go inside each page so it can draw without waiting on another file.
   build: { inlineStylesheets: 'always' },
   integrations: [
-    // The admin page is for the owner, not for search results.
-    sitemap({ filter: (page) => !/\/admin\/?$/.test(page) }),
+    // The admin page and the version history are for the owner, not for search results.
+    sitemap({ filter: (page) => !/\/(admin|whats-new)\/?$/.test(page) }),
   ],
 });

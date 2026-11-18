@@ -1,8 +1,13 @@
 # What's new on nrnszn.com
 
-Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.1 to 3.2); a big redesign starts a new first number (4.0). The numbering was set to 3.0 on Nov 18, 2026 to match the work already done.
-The newest version is on top, and it is the number shown in the footer. Write each entry in plain words for visitors and for Nick.
+Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2 to 3.3); a big redesign starts a new first number (4.0). The numbering was set to 3.0 on Nov 18, 2026 to match the work already done.
+The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
+
+## 3.3 · Nov 18, 2026
+The version and What's new are for the owner only.
+- The footer and the phone More sheet no longer show the version number or a What's new link. You'll find both in **/admin** under **Account**.
+- The What's new page stays at /whats-new for the owner, but nothing links to it and it is kept out of search results.
 
 ## 3.2 · Nov 18, 2026
 Apps page: new icons and an Add to Home Screen button.
