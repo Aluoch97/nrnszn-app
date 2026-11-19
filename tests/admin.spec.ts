@@ -200,3 +200,29 @@ test('without the database, events and analytics explain how to connect it inste
   await expect(page.locator('#ev-msg')).toContainText('database is not connected'); await expect(page.locator('#ev-add')).toBeHidden();
   await expect(page.locator('#an-out')).toContainText('database is not connected');
 });
+
+test('the Account folder: the version line, then three full-width buttons that line up, and the version history has a way back to admin', async ({ page }, info) => {
+  only(info);
+  await fakeApi(page);
+  await page.addInitScript((t) => localStorage.setItem('nrn_admin', t), TOKEN);
+  await page.goto('/admin/');
+  await expect(page.locator('#banner')).toContainText('need attention', { timeout: 10000 });
+  await page.locator('details[data-folder="account"] > summary').click();
+  const box = async (sel: string) => (await page.locator(sel).boundingBox())!;
+  const link = page.locator('details[data-folder="account"] a.btn');
+  const [a, b, c] = [await box('details[data-folder="account"] a.btn'), await box('details[data-folder="account"] [data-refresh]'), await box('#sign-out')];
+  for (const x of [a, b, c]) expect(x.height).toBeGreaterThanOrEqual(44);
+  expect(Math.abs(a.width - b.width)).toBeLessThan(2); expect(Math.abs(b.width - c.width)).toBeLessThan(2);   // same width, so they line up
+  expect(a.y).toBeLessThan(b.y); expect(b.y).toBeLessThan(c.y);   // What's new, Refresh, Sign out
+  expect(await link.evaluate((el) => getComputedStyle(el).textDecorationLine)).toBe('none');   // a button, not an underlined link
+  const ver = await box('#ver-line'); expect(ver.y).toBeLessThan(a.y);   // the version is the line above the buttons
+  // the version history can be left again
+  await link.click();
+  await expect(page).toHaveURL(/\/whats-new\/?$/);
+  const back = page.locator('a.wn-backbtn');
+  await expect(back).toBeVisible(); await expect(back).toHaveAttribute('href', '/admin'); await expect(back).toContainText('Back to admin');
+  expect((await back.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await back.click();
+  await expect(page).toHaveURL(/\/admin\/?$/);
+});
+

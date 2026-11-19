@@ -132,11 +132,11 @@ import Site from '../layouts/Site.astro';
         <h2>Account</h2>
       <details class="folder" data-folder="account">
         <summary><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span class="ft"><b>Account</b><span>Sign out, refresh this device</span></span></summary>
-        <div class="actions">
-          <button type="button" class="btn" data-refresh>Refresh the app</button>
-          <button type="button" class="btn" id="sign-out">Sign out on this device</button>
+        <div class="actions stack">
           <p class="result" id="ver-line">Version: checking…</p>
           <a class="btn" href="/whats-new">What's new (version history)</a>
+          <button type="button" class="btn" data-refresh>Refresh the app</button>
+          <button type="button" class="btn quiet" id="sign-out">Sign out on this device</button>
         </div>
       </details>
       </section>
@@ -549,6 +549,11 @@ import Site from '../layouts/Site.astro';
   .admin .folder.hero > summary { min-height: 84px; }
   .admin .folder.hero > summary .si { width: 52px; height: 52px; border-radius: 16px; } .admin .folder.hero > summary .si svg { width: 24px; height: 24px; }
   .admin .folder.hero .ft b { font-family: var(--font-display); font-size: 22px; font-weight: 800; }
+  /* The Account folder: the version as a small line, then full-width buttons that all look and line up the same */
+  .admin .actions.stack { display: grid; gap: var(--space-3); }
+  .admin .actions.stack .result { margin: 0; font-size: 14px; color: #b9b0cf; }
+  .admin .actions.stack .btn { display: flex; align-items: center; justify-content: center; width: 100%; margin: 0; text-align: center; text-decoration: none; }
+  .admin .btn.quiet { background: transparent; border-color: #a33a55; color: #ffd0da; }
   .admin .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--space-3); align-items: baseline; padding: var(--space-3); border-radius: var(--radius-sm); background: #211b30; overflow-wrap: anywhere; }
   .admin .name { font-weight: 700; color: #fff; }
   .admin .tag { justify-self: end; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 10px; border-radius: var(--radius-pill); background: #2c2440; color: #e6e0f2; }
