@@ -1,0 +1,22 @@
+name: Version check
+# Fails a pull request that breaks the version list in CHANGELOG.md (a lower number, a number main already uses, a lost entry).
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch main
+        run: git fetch --no-tags origin ${{ github.base_ref }}
+      - name: Version numbers
+        run: node scripts/check-version.mjs origin/${{ github.base_ref }} 
+      - name: Version check tests
+        run: node --test tests/version-check.unit.mjs
