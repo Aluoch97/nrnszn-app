@@ -94,7 +94,7 @@ test('a session the server no longer accepts sends you back to the password box'
   expect(await page.evaluate(() => localStorage.getItem('nrn_admin'))).toBeNull();
 });
 
-test('the settings: eight folders, honest counts, the setup checklist, back up now, and sign out', async ({ page }, info) => {
+test('the settings: eight folders in four groups, honest counts, the setup checklist, back up now, and sign out', async ({ page }, info) => {
   only(info);
   const state = await fakeApi(page);
   await page.addInitScript((t) => localStorage.setItem('nrn_admin', t), TOKEN);
@@ -102,7 +102,11 @@ test('the settings: eight folders, honest counts, the setup checklist, back up n
   await expect(page.locator('#banner')).toContainText('3 of 10 need attention', { timeout: 10000 });
   await expect(page.locator('#banner')).toContainText('Services, Service requests, Nightly sheet backup');
   await expect.poll(async () => page.locator('#n-ok, #n-old, #n-todo').allTextContents()).toEqual(['7', '2', '1']);   // new, old fallback, to do
-  expect(await page.locator('details.folder').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.folder))).toEqual(['feeds', 'send', 'keep', 'events', 'push', 'analytics', 'setup', 'account']);
+  expect(await page.locator('details.folder').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.folder))).toEqual(['events', 'push', 'analytics', 'send', 'feeds', 'keep', 'setup', 'account']);   // in the order of their groups
+  // laid out like Soul Vault's Settings: coloured groups, one hero folder, an icon tile on every folder
+  expect(await page.locator('.grp > h2').allTextContents()).toEqual(['Create & send', 'Visitors & activity', 'Health & data', 'Account']);
+  expect(await page.locator('details.folder.hero').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.folder))).toEqual(['events']);
+  expect(await page.locator('details.folder > summary .si svg').count()).toBe(8);
   await expect(page.locator('#b-feeds')).toHaveText('1'); await expect(page.locator('#b-send')).toHaveText('1'); await expect(page.locator('#b-keep')).toHaveText('1');
   // the setup checklist says Set / Missing, never a value
   await page.locator('details[data-folder="setup"] > summary').click();
