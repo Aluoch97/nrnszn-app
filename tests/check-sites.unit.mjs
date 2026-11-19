@@ -29,7 +29,7 @@ test('version files need a version, and the sitemap needs a urlset', async () =>
   assert.equal((await checkSite(s, { ...fast, fetchImpl: reply('<urlset></urlset>', { type: 'application/xml' }) })).pass, true);
 });
 test('checkAll reports each site on its own', async () => {
-  const out = await checkAll(SITES, { ...fast, fetchImpl: async (u) => (String(u).includes('podi') ? new Response('', { status: 500 }) : reply(page)()) });
+  const out = await checkAll(SITES, { ...fast, fetchImpl: async (u) => { u = String(u); if (u.includes('podi')) return new Response('', { status: 500 }); if (u.endsWith('version.json')) return reply('{"version":"1.0"}', { type: 'application/json' })(); if (u.endsWith('sitemap.xml')) return reply('<urlset/>', { type: 'application/xml' })(); return reply(page)(); } });
   assert.ok(out.filter((r) => !r.pass).every((r) => r.name.startsWith('PODI')));
   assert.equal(out.length, SITES.length);
 });
