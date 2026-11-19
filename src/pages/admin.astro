@@ -38,24 +38,10 @@ import Site from '../layouts/Site.astro';
         <div><b id="n-todo">0</b><span>To do</span></div>
       </div>
 
-      <details class="folder" data-folder="feeds" open>
-        <summary><span class="ft"><b>What visitors see</b><span>Gallery, cinema, services, latest videos</span></span><span class="badge" id="b-feeds">…</span></summary>
-        <ul class="rows" data-group="feeds"></ul>
-      </details>
-      <details class="folder" data-folder="send">
-        <summary><span class="ft"><b>What visitors send</b><span>Survey, recap e-mail, payments, services</span></span><span class="badge" id="b-send">…</span></summary>
-        <ul class="rows" data-group="send"></ul>
-      </details>
-      <details class="folder" data-folder="keep">
-        <summary><span class="ft"><b>Backups</b><span>Nightly copy of your Google Sheets</span></span><span class="badge" id="b-keep">…</span></summary>
-        <ul class="rows" data-group="keep"></ul>
-        <div class="actions">
-          <button type="button" class="btn" id="backup-now">Back up now</button>
-          <p id="backup-result" class="result" role="status" aria-live="polite"></p>
-        </div>
-      </details>
-      <details class="folder" data-folder="events">
-        <summary><span class="ft"><b>Events</b><span>Add and edit the events on the Events page</span></span><span class="badge" id="b-events">…</span></summary>
+      <section class="grp g-create">
+        <h2>Create &amp; send</h2>
+      <details class="folder hero" data-folder="events">
+        <summary><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="ft"><b>Events</b><span>Add and edit the events on the Events page</span></span><span class="badge" id="b-events">…</span></summary>
         <div id="ev-box">
           <p id="ev-msg" class="result" role="status" aria-live="polite"></p>
           <ul class="rows" id="ev-list"></ul>
@@ -81,7 +67,7 @@ import Site from '../layouts/Site.astro';
         </div>
       </details>
       <details class="folder" data-folder="push">
-        <summary><span class="ft"><b>Phone notifications</b><span>Send a notification to everyone who turned them on</span></span><span class="badge" id="b-push">…</span></summary>
+        <summary><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span><span class="ft"><b>Phone notifications</b><span>Send a notification to everyone who turned them on</span></span><span class="badge" id="b-push">…</span></summary>
         <div id="push-box">
           <p id="push-msg" class="result" role="status" aria-live="polite">Loading…</p>
           <p id="push-done" class="result" role="status" aria-live="polite"></p>
@@ -107,20 +93,45 @@ import Site from '../layouts/Site.astro';
           <ul class="rows" id="push-last"></ul>
         </div>
       </details>
+      </section>
+      <section class="grp g-people">
+        <h2>Visitors &amp; activity</h2>
       <details class="folder" data-folder="analytics">
-        <summary><span class="ft"><b>Website analytics</b><span>Visitors, pages, where people come from</span></span><span class="badge" id="b-analytics">…</span></summary>
+        <summary><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span><span class="ft"><b>Website analytics</b><span>Visitors, pages, where people come from</span></span><span class="badge" id="b-analytics">…</span></summary>
         <div id="an-box">
           <div class="actions"><label for="an-days" class="inline">Show</label>
             <select id="an-days"><option value="7">the last 7 days</option><option value="30" selected>the last 30 days</option><option value="90">the last 90 days</option></select></div>
           <div id="an-out" aria-live="polite"><p class="result">Loading…</p></div>
         </div>
       </details>
+      <details class="folder" data-folder="send">
+        <summary><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></span><span class="ft"><b>What visitors send</b><span>Survey, recap e-mail, payments, services</span></span><span class="badge" id="b-send">…</span></summary>
+        <ul class="rows" data-group="send"></ul>
+      </details>
+      </section>
+      <section class="grp g-health">
+        <h2>Health &amp; data</h2>
+      <details class="folder" data-folder="feeds" open>
+        <summary><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="ft"><b>What visitors see</b><span>Gallery, cinema, services, latest videos</span></span><span class="badge" id="b-feeds">…</span></summary>
+        <ul class="rows" data-group="feeds"></ul>
+      </details>
+      <details class="folder" data-folder="keep">
+        <summary><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg></span><span class="ft"><b>Backups</b><span>Nightly copy of your Google Sheets</span></span><span class="badge" id="b-keep">…</span></summary>
+        <ul class="rows" data-group="keep"></ul>
+        <div class="actions">
+          <button type="button" class="btn" id="backup-now">Back up now</button>
+          <p id="backup-result" class="result" role="status" aria-live="polite"></p>
+        </div>
+      </details>
       <details class="folder" data-folder="setup">
-        <summary><span class="ft"><b>Setup checklist</b><span>Which secrets and connections exist (yes or no, never the value)</span></span><span class="badge" id="b-setup">…</span></summary>
+        <summary><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span class="ft"><b>Setup checklist</b><span>Which secrets and connections exist (yes or no, never the value)</span></span><span class="badge" id="b-setup">…</span></summary>
         <div id="setup-list"></div>
       </details>
+      </section>
+      <section class="grp g-acc">
+        <h2>Account</h2>
       <details class="folder" data-folder="account">
-        <summary><span class="ft"><b>Account</b><span>Sign out, refresh this device</span></span></summary>
+        <summary><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span class="ft"><b>Account</b><span>Sign out, refresh this device</span></span></summary>
         <div class="actions">
           <button type="button" class="btn" data-refresh>Refresh the app</button>
           <button type="button" class="btn" id="sign-out">Sign out on this device</button>
@@ -128,6 +139,7 @@ import Site from '../layouts/Site.astro';
           <a class="btn" href="/whats-new">What's new (version history)</a>
         </div>
       </details>
+      </section>
       <p class="foot-note" id="foot-note">&nbsp;</p>
     </section>
   </article>
@@ -522,6 +534,21 @@ import Site from '../layouts/Site.astro';
   .admin .folder .rows, .admin .folder > div { border-top: 1px solid #2e2640; padding: var(--space-3); }
   .admin .folder .rows { list-style: none; margin: 0; display: grid; gap: var(--space-2); }
   .admin .folder h3:first-child { margin-top: 0; }
+  /* Soul Vault's Settings look: a glowing number strip, coloured groups, a hero folder and icon tiles */
+  .admin .strip { background: radial-gradient(120% 140% at 0% 0%, rgba(245, 197, 66, 0.14), transparent 55%), linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)); border-radius: 22px; }
+  .admin .strip b { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .admin .grp { margin-top: var(--space-5); --acc: #3ddc84; }
+  .admin .grp.g-create { --acc: #f5c542; } .admin .grp.g-people { --acc: #5eb6ff; } .admin .grp.g-health { --acc: #3ddc84; } .admin .grp.g-acc { --acc: #a0a0ab; }
+  .admin .grp > h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 var(--space-3); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: #d9d2ea; }
+  .admin .grp > h2::before { content: ''; width: 18px; height: 3px; border-radius: 3px; background: var(--acc); }
+  .admin .folder > summary .si { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--acc); background: color-mix(in srgb, var(--acc) 14%, #0b0b0f); border: 1px solid color-mix(in srgb, var(--acc) 30%, transparent); }
+  .admin .folder > summary .si svg { width: 20px; height: 20px; }
+  .admin .folder .badge { color: var(--acc); background: color-mix(in srgb, var(--acc) 22%, transparent); }
+  .admin .folder .badge[data-tone='ok'] { background: #16401f; color: #bff2cf; } .admin .folder .badge[data-tone='warn'] { background: #4a3a0e; color: #ffe29a; }
+  .admin .folder.hero { border-color: color-mix(in srgb, var(--acc) 38%, transparent); background: radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--acc) 22%, transparent), transparent 60%), linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03)); }
+  .admin .folder.hero > summary { min-height: 84px; }
+  .admin .folder.hero > summary .si { width: 52px; height: 52px; border-radius: 16px; } .admin .folder.hero > summary .si svg { width: 24px; height: 24px; }
+  .admin .folder.hero .ft b { font-family: var(--font-display); font-size: 22px; font-weight: 800; }
   .admin .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--space-3); align-items: baseline; padding: var(--space-3); border-radius: var(--radius-sm); background: #211b30; overflow-wrap: anywhere; }
   .admin .name { font-weight: 700; color: #fff; }
   .admin .tag { justify-self: end; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 10px; border-radius: var(--radius-pill); background: #2c2440; color: #e6e0f2; }

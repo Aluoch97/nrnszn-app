@@ -4,6 +4,11 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.4 · Nov 19, 2026
+The admin page has a new look, like Soul Vault's Settings.
+- The folders are now in four coloured groups: **Create & send** (Events as the big card, Phone notifications), **Visitors & activity** (Website analytics, What visitors send), **Health & data** (What visitors see, Backups, Setup checklist) and **Account**.
+- Every folder has an icon, and the number strip at the top has a soft glow. Nothing was removed: every folder and its contents are the same.
+
 ## 3.3 · Nov 18, 2026
 The version and What's new are for the owner only.
 - The footer and the phone More sheet no longer show the version number or a What's new link. You'll find both in **/admin** under **Account**.
