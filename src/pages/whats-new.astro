@@ -15,8 +15,9 @@ for (const raw of changelog.split('\n')) {
   else if (line.trim()) releases[releases.length - 1].intro.push(line.trim());
 }
 ---
-<Site title="What's new | NuRenaissance" description="What changed in each update of the NuRenaissance site." noindex>
+<Site title="What's new | NuRenaissance" description="What changed in each update of the NuRenaissance site." noindex back={{ href: '/admin', label: 'Admin' }}>
   <article class="doc">
+    <p class="wn-back"><a class="wn-backbtn" href="/admin">&larr; Back to admin</a></p>
     <h1>What's new</h1>
     {releases.map((r, i) => (
       <section class="wn-rel" id={'v' + (r.title.split(' ')[0] || i)}>
@@ -28,6 +29,9 @@ for (const raw of changelog.split('\n')) {
   </article>
 </Site>
 <style is:global>
+  .wn-back { margin: 0 0 var(--space-3); }
+  .wn-backbtn { display: inline-flex; align-items: center; min-height: 48px; padding: 0 var(--space-4); border-radius: var(--radius-pill); background: #2c2440; border: 1px solid #5a4c78; color: #fff; font-weight: 700; text-decoration: none; }
+  .wn-backbtn:focus-visible { outline: 3px solid var(--gold-300); outline-offset: 2px; }
   .wn-rel { margin: 0 0 26px; }
   .wn-now { margin-left: 10px; padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; vertical-align: middle; background: var(--accent, #c8175f); color: #fff; }
 </style>
