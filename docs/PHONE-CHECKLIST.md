@@ -13,3 +13,4 @@ The tests use a browser at phone sizes, not a real phone. Do these on a real iPh
 - [ ] **Notifications** (once the keys are set): footer > Notifications > Turn on; /admin > Phone notifications > send a test; it arrives with the site closed.
 - [ ] **Admin on a phone:** sign in, open each folder, the What's new back button returns to Admin, no sideways scrolling.
 - [ ] **Update bar:** after a new version, "A new version is ready" shows; tap it.
+- [ ] **Offline:** open Home, Events, Gallery and Services once online, then airplane mode and reopen from the Home Screen icon. Pages open; Events, Gallery and Services still list what they last showed. Flyers and videos you had not opened do not load (expected).

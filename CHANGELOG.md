@@ -4,6 +4,11 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.16 · Nov 21, 2026
+The Events page works with no internet.
+- If your phone can't reach the site, the Events page now shows the last list of events it saved, instead of only the older show guide. Online you always get the live list.
+- Already offline-ready: the pages themselves, the Gallery, Cinema and Services lists. Not offline: flyers you hadn't opened, forms, and the live YouTube players.
+
 ## 3.15 · Nov 21, 2026
 - **Your account > luoh**: each saved project has a **Remove** button (it asks first). It takes the saved edit off your account, like Delete in luoh; your videos stay on your device.
 
