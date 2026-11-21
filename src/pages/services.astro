@@ -122,6 +122,16 @@ const SCRIPT_URL = SERVICES_API_URL;
   var chosenSlot = null;
   var leadName = '';
   var leadEmail = '';
+  // Signed in to a NuRenaissance account? Fill in the name and e-mail, and the request also shows up in Your account (Quote requested).
+  var leadSignedIn = false;
+  fetch('/api/account/me', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) {
+    if (!j || !j.user) return;
+    leadSignedIn = true;
+    if (!leadName) leadName = j.user.name || '';
+    if (!leadEmail) leadEmail = j.user.email || '';
+    var n = document.getElementById('nrn-intake-name'), e = document.getElementById('nrn-intake-email');
+    if (n && !n.value) n.value = leadName; if (e && !e.value) e.value = leadEmail;
+  }).catch(function () {});
   var leadPhone = '';
   var leadLocation = '';
   var leadDetails = '';
@@ -896,6 +906,7 @@ const SCRIPT_URL = SERVICES_API_URL;
         '<label class="nrn-config-label" for="nrn-intake-details" style="margin-top:14px;">📝 Anything else? (optional)</label>' +
         '<textarea id="nrn-intake-details" class="nrn-intake-field nrn-intake-textarea" placeholder="Event date, vision, specific requests...">' + escapeHtml(leadDetails) + '</textarea>' +
         '<div class="nrn-help-text" style="margin-top:14px;">What you enter here is used to prepare your quote and coordinate your booking. See our <a class="nrn-inline-link" href="/privacy-policy" target="_blank" rel="noopener noreferrer">Privacy Policy</a> for details.</div>' +
+        (leadSignedIn ? '<p class="nrn-intake-note">You are signed in: this request will also show in <a href="/account">Your account</a>.</p>' : '') +
         '<button id="nrn-intake-submit" type="button">Continue</button>' +
         '<div id="nrn-intake-error" role="alert"></div>' +
       '</div>';
@@ -1455,6 +1466,8 @@ const SCRIPT_URL = SERVICES_API_URL;
   #nrn-cta-estimate:hover { background: var(--nrn-soft); }
 
   select.nrn-intake-field { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--purple-500) 50%), linear-gradient(135deg, var(--purple-500) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 32px; }
+  .nrn-intake-note { margin: 12px 0 0; font-size: 14px; color: var(--ink-soft, #555); }
+  .nrn-intake-note a { color: inherit; font-weight: 600; }
   #nrn-intake-error, #nrn-book-error, #nrn-estimate-error { color: #b42318; font-size: 15px; margin-top: 10px; display: none; line-height: 1.5; }
   #nrn-actions { margin-top: 4px; }
 

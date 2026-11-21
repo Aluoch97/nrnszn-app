@@ -13,7 +13,7 @@ async function fake(page: Page, opts: { on?: boolean; user?: boolean; email?: bo
   const state = { mails: [] as any[], signedIn: !!opts.user, logouts: 0 };
   await page.route('**/api/account/**', async (route) => {
     const req = route.request(), path = new URL(req.url()).pathname.replace('/api/account/', '');
-    if (path === 'me') return route.fulfill(json({ on: opts.on !== false, google: false, email: opts.email !== false, clientId: '', user: state.signedIn ? { email: 'client@example.com', name: 'Jo Client', since: 1 } : null, ...(state.signedIn ? { projects: PROJECTS } : {}) }));
+    if (path === 'me') return route.fulfill(json({ on: opts.on !== false, google: false, email: opts.email !== false, clientId: '', user: state.signedIn ? { email: 'client@example.com', name: 'Jo Client', since: 1 } : null, ...(state.signedIn ? { projects: PROJECTS, payments: [{ amount: 40000, currency: 'usd', what: 'Music video', at: Date.UTC(2026, 10, 2) }], payLink: 'https://buy.stripe.com/test_link' } : {}) }));
     if (path === 'email') { state.mails.push(JSON.parse(req.postData() || '{}')); return route.fulfill(json({ ok: true, sent: true })); }
     if (path === 'logout') { state.signedIn = false; state.logouts++; return route.fulfill(json({ ok: true })); }
     return route.fulfill(json({ ok: false }, 404));
@@ -54,7 +54,11 @@ test('signed in: name, projects with total / paid / balance (drawn as text), the
   await expect(cards.first().locator('.nums')).toContainText('$1,200'); await expect(cards.first().locator('.nums')).toContainText('$400'); await expect(cards.first().locator('.owe dd')).toHaveText('$800');
   await expect(cards.first().locator('.chip')).toHaveText('In progress');
   await expect(cards.first().locator('a', { hasText: 'Open the files' })).toHaveAttribute('rel', /noopener/);
-  await expect(cards.nth(1).locator('a', { hasText: 'Pay a balance' })).toHaveCount(0);
+  await expect(cards.nth(1).locator('a', { hasText: 'Pay by card' })).toHaveCount(0);
+  const pay = cards.first().locator('a', { hasText: 'Pay by card' });
+  await expect(pay).toHaveAttribute('href', 'https://buy.stripe.com/test_link?prefilled_email=client%40example.com&client_reference_id=a1');
+  await expect(cards.first().locator('a', { hasText: 'Other ways to pay' })).toHaveAttribute('href', '/support');
+  await expect(page.locator('#pay-wrap')).toBeVisible(); await expect(page.locator('#pay-list .pay')).toHaveCount(1); await expect(page.locator('#pay-list')).toContainText('$400');
   await expect(page.locator('.apps a')).toHaveCount(4);
   await expect(page.locator('.apps a', { hasText: 'Soul Vault' })).toHaveAttribute('href', '/api/account/connect?return=' + encodeURIComponent('https://soulnicolas.com/'));
   // fits the phone, tap targets, accessibility
