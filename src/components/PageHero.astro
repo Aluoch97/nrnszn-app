@@ -21,11 +21,14 @@ interface Props {
   size?: 'tall' | 'medium';
   soft?: boolean;
   headingTag?: 'h1' | 'p';
+  /** Which /admin > Page videos slot this header uses (defaults to the title, e.g. "services"). */
+  page?: string;
 }
 const { title, kicker, text, images = [], video, float = [], mascot = false, accent = '#8520cc', size = 'medium', soft = false, headingTag = 'h1' } = Astro.props;
 const Heading = headingTag;
+const page = (Astro.props.page || title).toLowerCase().replace(/[^a-z]/g, '');
 ---
-<section class:list={['ph', `ph-${size}`]} style={`--ph-accent:${accent}`}>
+<section class:list={['ph', `ph-${size}`]} style={`--ph-accent:${accent}`} data-hero-page={page}>
   <div class="ph-bg" aria-hidden="true">
     {video ? (
       <video class="ph-video" autoplay muted loop playsinline preload="metadata" poster={video.poster}>
@@ -61,6 +64,9 @@ const Heading = headingTag;
 </section>
 
 <script>
+  import { heroVideo } from '../lib/heroVideo';
+  // A video Nick picked in /admin > Page videos goes over the pictures (src/lib/heroVideo.ts).
+  for (const hero of document.querySelectorAll<HTMLElement>('.ph[data-hero-page]')) heroVideo(hero.querySelector('.ph-bg'), hero.dataset.heroPage || '', { className: 'ph-video' });
   // Crossfade the stills every few seconds while the header is on screen (not with reduced motion).
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
   for (const hero of document.querySelectorAll<HTMLElement>('.ph')) {
@@ -98,6 +104,7 @@ const Heading = headingTag;
   .ph-bg { position: absolute; inset: 0; z-index: -3; }
   .ph-video, .ph-slide { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .ph-slide { opacity: 0; transform: scale(1.12); transition: opacity 1.6s ease; }
+  .ph-bg :global(.hv) { z-index: 1; }
   .ph-slide.on { opacity: 1; animation: ph-drift 9s ease-out both; }
   .ph-soft { filter: blur(5px) brightness(0.75) saturate(1.2); }
   @keyframes ph-drift {

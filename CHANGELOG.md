@@ -9,6 +9,9 @@ The Events page works with no internet.
 - If your phone can't reach the site, the Events page now shows the last list of events it saved, instead of only the older show guide. Online you always get the live list.
 - Already offline-ready: the pages themselves, the Gallery, Cinema and Services lists. Not offline: flyers you hadn't opened, forms, and the live YouTube players.
 
+## 3.16 · Nov 21, 2026
+- **Page videos**: the header at the top of Home, Services, Events, Media, Apps, About and Support can play a looping video chosen in /admin. Pages without one keep their pictures. If your phone is set to reduce motion or save data, you see a still picture instead.
+
 ## 3.15 · Nov 21, 2026
 - **Your account > luoh**: each saved project has a **Remove** button (it asks first). It takes the saved edit off your account, like Delete in luoh; your videos stay on your device.
 
