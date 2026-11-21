@@ -4,6 +4,13 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.12 · Nov 21, 2026
+More for your account.
+- **Services:** when you are signed in, the request form fills in your name and e-mail, and your request shows up in Your account right away as **Quote requested**.
+- **Your payments:** card and Apple Pay payments made with your e-mail are listed in Your account.
+- **A new-look sign-in e-mail**: the NuRenaissance logo and colors, a big Sign in button, the link written out in case the button is blocked, and who sent it.
+- **Pay by card** on a project with a balance: the payment is added to that project by itself, and the balance goes down. Other ways to pay (PayPal, Cash App, Venmo, Zelle) are still there.
+
 ## 3.11 · Nov 21, 2026
 Footer in two rows, and notifications move to your account.
 - The footer starts with **About** and **Your account** in bold; Add to Home Screen, Privacy policy and Admin sit underneath in smaller type.

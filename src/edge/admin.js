@@ -95,6 +95,7 @@ export function setupChecklist(env) {
       { name: 'ACCOUNTS_DB', label: 'Accounts database (D1 binding, the same one luoh uses)', present: hasAccountsDb(env) },
       { name: 'NRN_ACCOUNT_SECRET', label: 'Account sign-in secret (same value in luoh)', present: accountsOn(env) },
       { name: 'GOOGLE_CLIENT_ID', label: 'Google sign-in client id', present: has('GOOGLE_CLIENT_ID') },
+      { name: 'STRIPE_WEBHOOK_SECRET', label: 'Stripe payments reach accounts (webhook signing secret)', present: has('STRIPE_WEBHOOK_SECRET') },
       { name: 'ADMIN_EMAILS', label: 'Admin e-mails (sign in here with your account if you forget the password)', present: adminEmails(env).length > 0 },
     ] },
     { group: 'Backups and sign-in', items: [

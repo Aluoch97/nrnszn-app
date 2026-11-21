@@ -34,8 +34,10 @@ export const ORIGINS = [
 // Other sites: they get a one-time ticket instead of the cookie.
 export const TICKET_ORIGINS = ['https://soulnicolas.com', 'https://www.soulnicolas.com', 'https://app.soulnicolas.com'];
 
-export const STATUSES = ['quote', 'booked', 'in-progress', 'review', 'done', 'paused', 'cancelled'];
-export const STATUS_LABEL = { quote: 'Quote sent', booked: 'Booked', 'in-progress': 'In progress', review: 'Ready for review', done: 'Done', paused: 'Paused', cancelled: 'Cancelled' };
+// The Stripe Payment Link from the Support widget (public). "Pay a balance" adds the e-mail and the project id, so the payment lands on the project.
+export const PAY_LINK = 'https://buy.stripe.com/fZueVf0nt4Ws4fl7GPd3i01';
+export const STATUSES = ['requested', 'quote', 'booked', 'in-progress', 'review', 'done', 'paused', 'cancelled'];
+export const STATUS_LABEL = { requested: 'Quote requested', quote: 'Quote sent', booked: 'Booked', 'in-progress': 'In progress', review: 'Ready for review', done: 'Done', paused: 'Paused', cancelled: 'Cancelled' };
 export const METHODS = ['stripe', 'apple-pay', 'paypal', 'cash-app', 'venmo', 'zelle', 'cash', 'check', 'other'];
 
 const SCHEMA = [
@@ -53,6 +55,13 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS client_projects_email ON client_projects (email)`,
   `CREATE TABLE IF NOT EXISTS client_payments (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, amount_cents INTEGER NOT NULL, method TEXT NOT NULL DEFAULT 'other', paid_on TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL)`,
   `CREATE INDEX IF NOT EXISTS client_payments_project ON client_payments (project_id)`,
+  // Things a person saves in an app (Soul Vault liked songs, NuDirectory favorites), so they follow the account to any device.
+  `CREATE TABLE IF NOT EXISTS account_saved (user_id TEXT NOT NULL, app TEXT NOT NULL, kind TEXT NOT NULL, item_id TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', url TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL, PRIMARY KEY (user_id, app, kind, item_id))`,
+  // Card / Apple Pay payments that Stripe reported (src/edge/stripe.js), matched to the account by e-mail.
+  `CREATE TABLE IF NOT EXISTS account_payments (id TEXT PRIMARY KEY, email TEXT NOT NULL, amount_cents INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'usd', what TEXT NOT NULL DEFAULT '',
+    project_id TEXT NOT NULL DEFAULT '', paid_at INTEGER NOT NULL)`,
+  `CREATE INDEX IF NOT EXISTS account_payments_email ON account_payments (email, paid_at)`,
 ];
 
 const ready = new WeakSet();
@@ -147,7 +156,7 @@ export function safeReturn(v) {
 const corsFor = (request) => {
   const o = request.headers.get('origin');
   if (o && ORIGINS.includes(o)) return { 'access-control-allow-origin': o, 'access-control-allow-credentials': 'true', vary: 'Origin' };
-  if (o && TICKET_ORIGINS.includes(o)) return { 'access-control-allow-origin': o, vary: 'Origin' };
+  if (o && TICKET_ORIGINS.includes(o)) return { 'access-control-allow-origin': o, 'access-control-allow-headers': 'content-type, authorization', vary: 'Origin' };
   return { vary: 'Origin' };
 };
 
@@ -179,6 +188,48 @@ export async function verifyGoogle(token, env, now = Date.now()) {
 
 // ---- e-mail link -----------------------------------------------------------------------------------------------------------------
 const escHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/** The sign-in e-mail (Nov 21, 2026, Nick: "more official"): a branded card that works in Gmail, Apple Mail and Outlook (tables and inline
+ *  styles only, no web fonts, a PNG logo from the site, a light card so dark-mode apps do not invert it badly), a hidden preview line,
+ *  the button, the link written out in case the button is blocked, and a footer that says who sent it and why. Plain-text copy too. */
+export function signInEmail(link, origin = 'https://www.nrnszn.com') {
+  const site = /^https:\/\/[\w.-]+$/.test(origin) ? origin : 'https://www.nrnszn.com';
+  const L = escHtml(link), apps = 'Certified, NuDirectory, luoh and Soul Vault';
+  const subject = 'Sign in to NuRenaissance';
+  const text = `Sign in to NuRenaissance\n\nUse this link to sign in:\n${link}\n\nIt works once, for the next ${LINK_MINUTES} minutes, and signs you in to every NuRenaissance app (${apps}).\n\nDidn't ask for this? Ignore this e-mail: nobody can sign in without the link.\n\nNuRenaissance Media, Nashville, Tennessee\n${site.replace('https://', '')}`;
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>${subject}</title></head>
+<body style="margin:0;padding:0;background:#f3f0f8;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#f3f0f8;">Your one-time link to sign in. It works for ${LINK_MINUTES} minutes.&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f3f0f8;"><tr><td align="center" style="padding:32px 16px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #e4dcef;">
+    <tr><td align="center" style="background:#140f1f;padding:28px 24px 22px;">
+      <img src="${site}/email/mascot.png" width="72" height="72" alt="" style="display:block;border:0;width:72px;height:72px;">
+      <div style="font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:bold;color:#f5c542;letter-spacing:0.3px;padding-top:8px;">NuRenaissance</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#b9b0cf;padding-top:4px;">Empowering creatives</div>
+    </td></tr>
+    <tr><td style="padding:32px 32px 8px;font-family:Arial,Helvetica,sans-serif;color:#1d1528;">
+      <h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#1d1528;">Sign in to your account</h1>
+      <p style="margin:0 0 24px;font-size:16px;line-height:1.55;color:#3d3450;">Tap the button below to sign in. One sign-in works on every NuRenaissance app: ${apps}.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;"><tr><td align="center" bgcolor="#c8175f" style="border-radius:999px;">
+        <a href="${L}" style="display:inline-block;padding:15px 36px;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:999px;">Sign in to NuRenaissance</a>
+      </td></tr></table>
+      <p style="margin:24px 0 0;font-size:14px;line-height:1.5;color:#5b5170;text-align:center;">This link works <strong>once</strong>, for the next <strong>${LINK_MINUTES} minutes</strong>.</p>
+    </td></tr>
+    <tr><td style="padding:20px 32px 28px;font-family:Arial,Helvetica,sans-serif;">
+      <p style="margin:0 0 6px;font-size:13px;color:#6f6585;">Button not working? Copy this link into your browser:</p>
+      <p style="margin:0;font-size:13px;line-height:1.45;word-break:break-all;"><a href="${L}" style="color:#7a3cc4;">${L}</a></p>
+    </td></tr>
+    <tr><td style="padding:18px 32px;background:#faf8fd;border-top:1px solid #eee8f5;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#6f6585;">
+      Didn't ask for this? You can ignore this e-mail: nobody can sign in without the link, and your account stays as it is.
+    </td></tr>
+  </table>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;"><tr><td align="center" style="padding:18px 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#8a8199;">
+    NuRenaissance Media · Nashville, Tennessee<br><a href="${site}" style="color:#8a8199;">${site.replace('https://', '')}</a> · <a href="${site}/privacy-policy" style="color:#8a8199;">Privacy policy</a>
+  </td></tr></table>
+</td></tr></table>
+</body></html>`;
+  return { subject, text, html };
+}
+
 export async function sendLink(db, env, { email, returnTo, origin }, now = Date.now()) {
   if (!env.RESEND_API_KEY) return { ok: false, status: 503, message: 'E-mail sign-in is not set up yet. Use Google for now.' };
   const to = cleanEmail(email);
@@ -197,9 +248,7 @@ export async function sendLink(db, env, { email, returnTo, origin }, now = Date.
     method: 'POST', headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
     body: JSON.stringify({
       from: env.ACCOUNTS_FROM_EMAIL || 'NuRenaissance <account@mail.nrnszn.com>', to,
-      subject: 'Your NuRenaissance sign-in link',
-      text: `Tap to sign in to NuRenaissance:\n\n${link}\n\nThe link works once, for ${LINK_MINUTES} minutes, and signs you in to every NuRenaissance app. If you did not ask for it, ignore this e-mail.`,
-      html: `<div style="font-family:system-ui,sans-serif;font-size:16px;line-height:1.5"><p>Tap to sign in to NuRenaissance:</p><p><a href="${escHtml(link)}" style="display:inline-block;background:#c8175f;color:#fff;padding:12px 20px;border-radius:999px;text-decoration:none;font-weight:700">Sign in</a></p><p style="color:#666;font-size:13px">The link works once, for ${LINK_MINUTES} minutes, and signs you in to every NuRenaissance app. If you did not ask for it, ignore this e-mail.</p></div>`,
+      ...signInEmail(link, origin),
     }),
   });
   if (!r.ok) { console.error('resend', r.status); return { ok: false, status: 502, message: 'The e-mail could not be sent. Try again, or use Google.' }; }
@@ -228,15 +277,59 @@ export async function continueTo(db, userId, returnTo, now = Date.now()) {
   u.hash = `nrn_ticket=${t}`;
   return u.href;
 }
+/** A one-time ticket for a NuRenaissance site whose BACKEND (Supabase) must learn, for sure, who is signed in: the page asks for it
+ *  (POST /api/account/ticket, cookie), hands it to its backend, which trades it at /api/account/redeem with that site's Origin. */
+export async function makeTicket(db, userId, origin, now = Date.now()) {
+  const t = randomToken();
+  await db.prepare('INSERT INTO account_tickets (token_hash, user_id, origin, created_at, expires_at) VALUES (?, ?, ?, ?, ?)').bind(await sha256(t), userId, origin, now, now + TICKET_MS).run();
+  return t;
+}
 export async function redeemTicket(db, ticket, origin, now = Date.now()) {
-  if (!TICKET_ORIGINS.includes(origin)) return null;
+  if (!TICKET_ORIGINS.includes(origin) && !ORIGINS.includes(origin)) return null;
   const hash = await sha256(String(ticket || ''));
   const row = await db.prepare('SELECT * FROM account_tickets WHERE token_hash = ?').bind(hash).first();
   if (!row || row.used_at || Number(row.expires_at) < now || row.origin !== origin) return null;
   const done = await db.prepare('UPDATE account_tickets SET used_at = ? WHERE token_hash = ? AND used_at IS NULL').bind(now, hash).run();
   if (!done.meta || !done.meta.changes) return null;
   const u = await db.prepare('SELECT * FROM users WHERE id = ?').bind(row.user_id).first();
-  return u ? publicAccount(u) : null;
+  return u ? { ...publicAccount(u), id: u.id } : null;
+}
+
+// ---- app tokens: how soulnicolas.com (a different website, no shared cookie) stays signed in for saved songs -------------------
+const APP_DAYS = 180;
+export async function appToken(env, userId, origin, now = Date.now()) {
+  const exp = String(now + APP_DAYS * 86400_000);
+  return `a1.${userId}.${exp}.${await hmac(env.NRN_ACCOUNT_SECRET, `app|${origin}|${userId}|${exp}`)}`;
+}
+/** The account id in `Authorization: Bearer a1.…`, valid only for the site (Origin) it was made for. */
+export async function appTokenUser(request, env, now = Date.now()) {
+  const o = request.headers.get('origin') || '', m = /^Bearer\s+(a1\.[\w-]{1,64}\.\d{10,16}\.[\w-]{20,})$/.exec(request.headers.get('authorization') || '');
+  if (!m || !TICKET_ORIGINS.includes(o) || !accountsOn(env)) return null;
+  const [, id, exp, sig] = m[1].split('.');
+  if (Number(exp) < now) return null;
+  return (await same(sig, await hmac(env.NRN_ACCOUNT_SECRET, `app|${o}|${id}|${exp}`))) ? id : null;
+}
+
+// ---- saved items (Soul Vault liked songs, NuDirectory favorites) ----------------------------------------------------------------
+export const SAVED_APPS = { vault: ['song'], directory: ['listing'] };
+export const SAVED_MAX = 500;
+export async function listSaved(db, userId, app) {
+  return ((await db.prepare('SELECT kind, item_id AS id, title, url, created_at AS at FROM account_saved WHERE user_id = ? AND app = ? ORDER BY created_at DESC LIMIT ?').bind(userId, app, SAVED_MAX).all()).results || []);
+}
+export async function setSaved(db, userId, x, now = Date.now()) {
+  x = x || {};
+  const kinds = SAVED_APPS[x.app];
+  if (!kinds || !kinds.includes(x.kind)) return { ok: false, message: 'Unknown item.' };
+  const id = text(x.id, 100);
+  if (!id || !/^[\w:.\-]+$/.test(id)) return { ok: false, message: 'Unknown item.' };
+  if (!x.on) { await db.prepare('DELETE FROM account_saved WHERE user_id = ? AND app = ? AND kind = ? AND item_id = ?').bind(userId, x.app, x.kind, id).run(); return { ok: true, on: false }; }
+  const url = text(x.url, 500);
+  if (url && !(url.startsWith('/') && !url.startsWith('//')) && !httpsOk(url)) return { ok: false, message: 'Bad link.' };
+  const n = await db.prepare('SELECT COUNT(*) AS n FROM account_saved WHERE user_id = ? AND app = ?').bind(userId, x.app).first();
+  if (Number(n && n.n) >= SAVED_MAX) return { ok: false, message: `You can save up to ${SAVED_MAX}. Remove a few first.` };
+  await db.prepare('INSERT INTO account_saved (user_id, app, kind, item_id, title, url, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (user_id, app, kind, item_id) DO UPDATE SET title = excluded.title, url = excluded.url')
+    .bind(userId, x.app, x.kind, id, text(x.title, 200), url, now).run();
+  return { ok: true, on: true };
 }
 
 // ---- client projects ------------------------------------------------------------------------------------------------------------
@@ -252,7 +345,7 @@ function shapeProjects(rows, pays, { admin = false } = {}) {
     };
   });
 }
-const ORDER = `CASE status WHEN 'in-progress' THEN 0 WHEN 'review' THEN 1 WHEN 'booked' THEN 2 WHEN 'quote' THEN 3 WHEN 'paused' THEN 4 WHEN 'done' THEN 5 ELSE 6 END, updated_at DESC`;
+const ORDER = `CASE status WHEN 'in-progress' THEN 0 WHEN 'review' THEN 1 WHEN 'booked' THEN 2 WHEN 'requested' THEN 3 WHEN 'quote' THEN 3 WHEN 'paused' THEN 4 WHEN 'done' THEN 5 ELSE 6 END, updated_at DESC`;
 export async function projectsFor(db, email) {
   const rows = (await db.prepare(`SELECT * FROM client_projects WHERE email = ? ORDER BY ${ORDER}`).bind(email).all()).results || [];
   if (!rows.length) return [];
@@ -311,12 +404,37 @@ export async function addPayment(db, x, now = Date.now()) {
 }
 export async function deletePayment(db, id) { await db.prepare('DELETE FROM client_payments WHERE id = ?').bind(String(id || '')).run(); return { ok: true }; }
 
+/** Card / Apple Pay payments Stripe reported for this e-mail (src/edge/stripe.js), newest first. */
+export async function paymentsFor(db, email) {
+  return ((await db.prepare('SELECT amount_cents AS amount, currency, what, paid_at AS at FROM account_payments WHERE email = ? ORDER BY paid_at DESC LIMIT 100').bind(email).all()).results || []);
+}
+
+/** A Services request sent while signed in (functions/api/service-lead.js, after the lead was saved) also appears in Your projects as
+ *  "Quote requested", under the ACCOUNT's e-mail, with the estimate the page worked out. Our own page only; the same request twice within
+ *  ten minutes is kept once. Never throws: the lead itself is already saved. */
+export async function recordRequest(request, env, bodyText, now = Date.now()) {
+  try {
+    const o = request.headers.get('origin');
+    if (o && o !== new URL(request.url).origin) return null;
+    const uid = await sessionUserId(request, env); if (!uid) return null;
+    const db = await accountsDb(env), u = await db.prepare('SELECT * FROM users WHERE id = ?').bind(uid).first(); if (!u) return null;
+    let p = {}; try { p = JSON.parse(bodyText) || {}; } catch { return null; }
+    const title = text(p.summary, 120) || 'Service request';
+    const dup = await db.prepare("SELECT id FROM client_projects WHERE email = ? AND status = 'requested' AND title = ? AND created_at > ?").bind(u.email, title, now - 600_000).first();
+    if (dup) return dup.id;
+    const total = Number(p.total), out = await saveProject(db, { email: u.email, clientName: u.name || text(p.name, 120), title, service: text(p.role, 120), status: 'requested',
+      total: Number.isFinite(total) && total > 0 ? total : 0, note: 'We got your request and will send a quote soon.' }, now);
+    return out.ok ? out.id : null;
+  } catch (e) { console.error('account request', e); return null; }
+}
+
 /** Erase my account (luoh projects saved on it too, as luoh's own delete does). Client projects are Nick's business records and stay. */
 export async function deleteAccount(db, user) {
   await db.batch([
     db.prepare('DELETE FROM projects WHERE user_id = ?').bind(user.id),
     db.prepare('DELETE FROM login_links WHERE email = ?').bind(user.email),
     db.prepare('DELETE FROM account_tickets WHERE user_id = ?').bind(user.id),
+    db.prepare('DELETE FROM account_saved WHERE user_id = ?').bind(user.id),
     db.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
   ]);
 }
@@ -329,16 +447,17 @@ export async function accountRequest({ request, env, params }) {
   env = env || {};
   const url = new URL(request.url), what = [].concat((params && params.path) || []).join('/') || url.pathname.replace(/^\/api\/account\/?/, '');
   const host = url.host, method = request.method, cors = corsFor(request);
-  if (method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...cors, 'access-control-allow-methods': 'GET, POST', 'access-control-allow-headers': 'content-type', 'access-control-max-age': '600' } });
+  if (method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...cors, 'access-control-allow-methods': 'GET, POST', 'access-control-allow-headers': 'content-type, authorization', 'access-control-max-age': '600' } });
   try {
     if (what === 'me' && method === 'GET') {
       const info = { on: accountsOn(env), google: !!env.GOOGLE_CLIENT_ID, email: !!env.RESEND_API_KEY, clientId: env.GOOGLE_CLIENT_ID || '' };
       if (!info.on) return reply({ ...info, user: null }, 200, cors);
-      const u = await currentAccount(request, env);
+      const appId = await appTokenUser(request, env);
+      const u = appId ? await (await accountsDb(env)).prepare('SELECT * FROM users WHERE id = ?').bind(appId).first() : await currentAccount(request, env);
       if (!u) return reply({ ...info, user: null }, 200, cors);
       // Client projects (money) only for this site's own Account page, never for another site's script.
       const o = request.headers.get('origin');
-      if (url.searchParams.get('projects') === '1' && (!o || o === url.origin)) return reply({ ...info, user: publicAccount(u), projects: await projectsFor(await accountsDb(env), u.email) }, 200, cors);
+      if (url.searchParams.get('projects') === '1' && (!o || o === url.origin)) { const db = await accountsDb(env); return reply({ ...info, user: publicAccount(u), projects: await projectsFor(db, u.email), payments: await paymentsFor(db, u.email), payLink: PAY_LINK }, 200, cors); }
       return reply({ ...info, user: publicAccount(u) }, 200, cors);
     }
     if (!accountsOn(env)) return reply({ ok: false, message: offMsg }, 503, cors);
@@ -355,6 +474,22 @@ export async function accountRequest({ request, env, params }) {
       if (!u) return redirect(`/account?return=${encodeURIComponent(back)}`);
       return redirect(await continueTo(db, u.id, back));
     }
+    // Saved items: the cookie (NuRenaissance sites) or an app token (soulnicolas.com). Writes with the cookie only from our own sites.
+    if (what === 'saved') {
+      const o = request.headers.get('origin');
+      const cookieOk = !o || o === url.origin || ORIGINS.includes(o);
+      const uid = (await appTokenUser(request, env)) || (cookieOk ? await sessionUserId(request, env) : null);
+      if (!uid) return reply({ ok: false, message: 'Please sign in first.' }, 401, cors);
+      if (method === 'GET') {
+        const app = url.searchParams.get('app') || '';
+        if (!SAVED_APPS[app]) return reply({ ok: false, message: 'Unknown app.' }, 400, cors);
+        return reply({ ok: true, items: await listSaved(db, uid, app) }, 200, cors);
+      }
+      if (method !== 'POST') return reply({ ok: false, message: 'Unknown request.' }, 404, cors);
+      let b; try { b = await request.json(); } catch { return reply({ ok: false, message: 'Bad request.' }, 400, cors); }
+      const out = await setSaved(db, uid, b);
+      return reply(out, out.ok ? 200 : 400, cors);
+    }
     if (method !== 'POST') return reply({ ok: false, message: 'Unknown request.' }, 404, cors);
     let body; try { body = await request.json(); } catch { return reply({ ok: false, message: 'Bad request.' }, 400, cors); }
     body = body || {};
@@ -363,7 +498,17 @@ export async function accountRequest({ request, env, params }) {
       const o = request.headers.get('origin') || '';
       const who = await redeemTicket(db, body.ticket, o);
       const h = TICKET_ORIGINS.includes(o) ? { 'access-control-allow-origin': o, vary: 'Origin' } : { vary: 'Origin' };
-      return who ? reply({ ok: true, user: who }, 200, h) : reply({ ok: false, message: 'That sign-in has expired. Try again.' }, 400, h);
+      if (!who) return reply({ ok: false, message: 'That sign-in has expired. Try again.' }, 400, h);
+      // soulnicolas.com also gets an app token (for saved songs); the Supabase backends of our own sites get the account id.
+      return reply({ ok: true, user: who, ...(TICKET_ORIGINS.includes(o) ? { token: await appToken(env, who.id, o) } : {}) }, 200, h);
+    }
+    // A one-time ticket for this NuRenaissance site's own backend (Certified Passport, NuDirectory My listings). Cookie + our Origin only.
+    if (what === 'ticket') {
+      const o = request.headers.get('origin') || '';
+      if (!ORIGINS.includes(o) || o === url.origin) return reply({ ok: false, message: 'Not allowed.' }, 403, cors);
+      const uid = await sessionUserId(request, env);
+      if (!uid) return reply({ ok: false, message: 'Please sign in first.' }, 401, cors);
+      return reply({ ok: true, ticket: await makeTicket(db, uid, o) }, 200, cors);
     }
     // Everything below changes the signed-in state, so it must come from this site's own pages (not another site's script).
     const o = request.headers.get('origin');

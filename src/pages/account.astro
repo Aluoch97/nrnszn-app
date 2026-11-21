@@ -47,6 +47,12 @@ import Site from '../layouts/Site.astro';
       <h2>Your projects</h2>
       <div id="proj-list" class="projects" aria-live="polite"></div>
 
+      <section id="pay-wrap" hidden>
+        <h2>Your payments</h2>
+        <p class="small">Card and Apple Pay payments made with this e-mail. PayPal, Cash App, Venmo and Zelle payments show on the project once we mark them.</p>
+        <ul class="pays-list" id="pay-list"></ul>
+      </section>
+
       <section class="card notify" aria-labelledby="notify-h">
         <h2 class="card-h" id="notify-h">Phone notifications</h2>
         <p class="small">News, new videos and events from NuRenaissance on this phone, a few a month at most. Turn them on or off here any time.</p>
@@ -116,7 +122,13 @@ import Site from '../layouts/Site.astro';
       if (p.total) { const bar = el('div', 'bar'); bar.setAttribute('role', 'img'); bar.setAttribute('aria-label', `${Math.round((p.paid / p.total) * 100)}% paid`); const i = el('i'); i.style.width = `${Math.min(100, (p.paid / p.total) * 100)}%`; bar.appendChild(i); card.appendChild(bar); }
       if (p.note) card.appendChild(el('p', 'note', p.note));
       if (p.link) { const a = el('a', 'btn small', 'Open the files') as HTMLAnchorElement; a.href = p.link; a.target = '_blank'; a.rel = 'noopener noreferrer'; card.appendChild(a); }
-      if (p.balance && p.status !== 'cancelled') { const a = el('a', 'btn small primary', 'Pay a balance') as HTMLAnchorElement; a.href = '/support'; card.appendChild(a); }
+      if (p.balance && p.status !== 'cancelled' && p.status !== 'requested') {
+        // Card or Apple Pay through Stripe: the project id and e-mail go along, so the payment lands on this project by itself.
+        const a = el('a', 'btn small primary', 'Pay by card') as HTMLAnchorElement;
+        a.href = payLink ? `${payLink}?prefilled_email=${encodeURIComponent(meEmail)}&client_reference_id=${encodeURIComponent(p.id)}` : '/support';
+        a.target = '_blank'; a.rel = 'noopener noreferrer'; card.appendChild(a);
+        const o = el('a', 'btn small', 'Other ways to pay') as HTMLAnchorElement; o.href = '/support'; card.appendChild(o);
+      }
       if (p.payments.length) {
         const d = el('details', 'pays'); d.appendChild(el('summary', '', `${p.payments.length} ${p.payments.length === 1 ? 'payment' : 'payments'}`));
         const ul = el('ul'); for (const x of p.payments) ul.appendChild(el('li', '', `${niceDay(x.paidOn)} · ${usd(x.amount)} · ${METHOD[x.method] || x.method}${x.note ? ' · ' + x.note : ''}`)); d.appendChild(ul); card.appendChild(d);
@@ -125,12 +137,24 @@ import Site from '../layouts/Site.astro';
     }
   }
 
+  let payLink = '', meEmail = '';
+  function drawPayments(list: any[]) {
+    const box = $('pay-list'); box.textContent = '';
+    $('pay-wrap').hidden = !list.length;
+    for (const x of list) {
+      const li = el('li', 'pay');
+      li.append(el('span', 'pay-what', x.what || 'Payment'), el('span', 'pay-amt', (x.amount / 100).toLocaleString('en-US', { style: 'currency', currency: (x.currency || 'usd').toUpperCase() })), el('span', 'pay-day', new Date(x.at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })));
+      box.appendChild(li);
+    }
+  }
   function signedIn(j: any) {
+    payLink = j.payLink || ''; meEmail = j.user.email;
     show('acct-me');
     const u = j.user, name = u.name || u.email.split('@')[0];
     $('me-name').textContent = name; $('me-email').textContent = u.email; $('me-initial').textContent = name.trim().charAt(0).toUpperCase();
     (document.getElementById('me-name-in') as HTMLInputElement).value = u.name || '';
     drawProjects(j.projects || []);
+    drawPayments(j.payments || []);
     if (back) { $('me-continue-wrap').hidden = false; const a = $('me-continue') as HTMLAnchorElement; a.href = onward(); a.textContent = `Continue to ${host(back) || 'the app'}`; }
   }
 
@@ -232,6 +256,10 @@ import Site from '../layouts/Site.astro';
   .acct .apps img { flex: none; width: 48px; height: 48px; border-radius: 12px; object-fit: cover; }
   .acct .apps span { display: grid; min-width: 0; } .acct .apps small { color: #b9b0cf; font-size: 14px; }
   .acct .notify { margin-top: var(--space-4); }
+  .acct .pays-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+  .acct .pay { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--space-3); padding: var(--space-3); border-radius: 14px; background: #1a1526; border: 1px solid #2e2640; }
+  .acct .pay-what { color: #fff; font-weight: 700; overflow-wrap: anywhere; } .acct .pay-amt { color: #bff2cf; font-weight: 800; font-variant-numeric: tabular-nums; } .acct .pay-day { grid-column: 1 / -1; font-size: 14px; color: #b9b0cf; }
+  .acct .proj[data-status='requested'] .chip { background: #1d3550; color: #cfe6ff; }
   .acct .card-h { margin: 0 0 var(--space-1); font-size: 18px; }
   .acct .notify [data-push-open]:not([hidden]) ~ [data-push-off] { display: none; }
   .acct .more .mail { margin-top: var(--space-3); } .acct .more .danger { margin-top: var(--space-5); }

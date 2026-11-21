@@ -8,6 +8,7 @@ import {
   LINKS_PER_DAY, COOKIE,
 } from '../src/edge/accounts.js';
 import { adminGet, adminPost, makeToken, setupChecklist } from '../src/edge/admin.js';
+import { SAVED_MAX } from '../src/edge/accounts.js';
 
 const SECRET = 'a-long-shared-secret-for-tests-0123';
 const CLIENT = 'test-client.apps.googleusercontent.com';
@@ -148,7 +149,7 @@ test('soulnicolas.com hop: a one-time ticket for that site only, 2 minutes, trad
   assert.equal((await call('redeem', { method: 'POST', origin: 'https://evil.example', body: { ticket } })).status, 400, 'another site cannot use it');
   const r = await call('redeem', { method: 'POST', origin: 'https://soulnicolas.com', body: { ticket } });
   assert.equal(r.status, 200); assert.equal(r.headers.get('access-control-allow-origin'), 'https://soulnicolas.com');
-  assert.deepEqual(Object.keys((await r.json()).user).sort(), ['email', 'name', 'since']);
+  const rj = await r.json(); assert.deepEqual(Object.keys(rj.user).sort(), ['email', 'id', 'name', 'since']); assert.match(rj.token, /^a1\./, 'soulnicolas.com also gets an app token');
   assert.equal((await call('redeem', { method: 'POST', origin: 'https://soulnicolas.com', body: { ticket } })).status, 400, 'only once');
   const signedOut = await call('connect?return=' + encodeURIComponent('https://soulnicolas.com/'));
   assert.equal(signedOut.headers.get('location'), '/account?return=' + encodeURIComponent('https://soulnicolas.com/'));
@@ -227,4 +228,75 @@ test('/admin: forgot the password? An account on ADMIN_EMAILS gets in; anyone el
   const noList = await adminPost({ request: new Request('https://www.nrnszn.com/api/admin', { method: 'POST', body: JSON.stringify({ action: 'account-login' }), headers: { cookie: owner } }), env: { ...env, ADMIN_EMAILS: '' } });
   assert.equal(noList.status, 503, 'off until ADMIN_EMAILS exists');
   assert.equal((await (await adminGet({ request: new Request('https://www.nrnszn.com/api/admin'), env: { ...env, ADMIN_EMAILS: '' } })).json()).accountLogin, false);
+});
+
+
+test('tickets for our own sites\' backends: only from a NuRenaissance site with the cookie; the backend trades it once with that Origin and learns the account id', async () => {
+  const g = await googleKit(), { call, env } = setup(); env.__googleCerts = g.certs;
+  const c = pair(cookieOf(await call('google', { method: 'POST', body: { credential: await g.token(good()) } })));
+  assert.equal((await call('ticket', { method: 'POST', body: {}, origin: 'https://play.nrnszn.com' })).status, 401, 'signed out');
+  assert.equal((await call('ticket', { method: 'POST', body: {}, cookie: c, origin: 'https://evil.example' })).status, 403);
+  assert.equal((await call('ticket', { method: 'POST', body: {}, cookie: c })).status, 403, 'no Origin: refused');
+  const t = await call('ticket', { method: 'POST', body: {}, cookie: c, origin: 'https://play.nrnszn.com' });
+  assert.equal(t.headers.get('access-control-allow-origin'), 'https://play.nrnszn.com');
+  const { ticket } = await t.json();
+  assert.equal((await call('redeem', { method: 'POST', origin: 'https://directory.nrnszn.com', body: { ticket } })).status, 400, 'bound to the site it was made for');
+  const r = await (await call('redeem', { method: 'POST', origin: 'https://play.nrnszn.com', body: { ticket } })).json();
+  assert.equal(r.user.email, 'fan@example.com'); assert.ok(r.user.id); assert.equal(r.token, undefined, 'our own sites get no app token');
+  assert.equal((await call('redeem', { method: 'POST', origin: 'https://play.nrnszn.com', body: { ticket } })).status, 400, 'once');
+});
+
+test('saved items: the cookie on our sites, an app token on soulnicolas.com; each person sees only their own; bad items and floods refused', async () => {
+  const g = await googleKit(), { call, env } = setup(); env.__googleCerts = g.certs;
+  const a = pair(cookieOf(await call('google', { method: 'POST', body: { credential: await g.token(good()) } })));
+  const b = pair(cookieOf(await call('google', { method: 'POST', body: { credential: await g.token(good({ email: 'other@x.co' })) } })));
+  const save = (cookie, item, origin = 'https://directory.nrnszn.com', auth) => accountRequest({ request: new Request('https://www.nrnszn.com/api/account/saved', { method: 'POST', body: JSON.stringify(item), headers: { 'content-type': 'application/json', ...(cookie ? { cookie } : {}), ...(origin ? { origin } : {}), ...(auth ? { authorization: auth } : {}) } }), env, params: { path: ['saved'] } });
+  const list = async (cookie, app, origin = 'https://directory.nrnszn.com', auth) => (await accountRequest({ request: new Request(`https://www.nrnszn.com/api/account/saved?app=${app}`, { headers: { ...(cookie ? { cookie } : {}), ...(origin ? { origin } : {}), ...(auth ? { authorization: auth } : {}) } }), env, params: { path: ['saved'] } })).json();
+  assert.equal((await save(a, { app: 'directory', kind: 'listing', id: 'shows:1b2c', title: 'Open mic', url: 'https://directory.nrnszn.com/#x', on: true })).status, 200);
+  assert.equal((await list(a, 'directory')).items.length, 1);
+  assert.equal((await list(b, 'directory')).items.length, 0, 'not shared between people');
+  assert.equal((await save(a, { app: 'directory', kind: 'listing', id: 'shows:1b2c', on: false })).status, 200);
+  assert.equal((await list(a, 'directory')).items.length, 0);
+  for (const bad of [{ app: 'evil', kind: 'listing', id: 'x', on: true }, { app: 'directory', kind: 'song', id: 'x', on: true }, { app: 'directory', kind: 'listing', id: '<script>', on: true }, { app: 'directory', kind: 'listing', id: 'x', url: 'javascript:alert(1)', on: true }]) assert.equal((await save(a, bad)).status, 400, JSON.stringify(bad));
+  assert.equal((await save(a, { app: 'directory', kind: 'listing', id: 'x', on: true }, 'https://evil.example')).status, 401, 'another site cannot use the cookie');
+  assert.equal((await save(null, { app: 'vault', kind: 'song', id: 't1', on: true }, 'https://soulnicolas.com')).status, 401);
+  // soulnicolas.com: sign in through the hop, get an app token, save a liked song with it
+  const loc = new URL((await call('connect?return=' + encodeURIComponent('https://soulnicolas.com/'), { cookie: a })).headers.get('location'));
+  const red = await (await call('redeem', { method: 'POST', origin: 'https://soulnicolas.com', body: { ticket: loc.hash.split('=')[1] } })).json();
+  const bearer = 'Bearer ' + red.token;
+  assert.equal((await save(null, { app: 'vault', kind: 'song', id: 'trk_12', title: 'SIN CITY', on: true }, 'https://soulnicolas.com', bearer)).status, 200);
+  assert.equal((await list(null, 'vault', 'https://soulnicolas.com', bearer)).items[0].title, 'SIN CITY');
+  assert.equal((await save(null, { app: 'vault', kind: 'song', id: 'trk_13', on: true }, 'https://evil.example', bearer)).status, 401, 'the token only works from soulnicolas.com');
+  assert.equal((await save(null, { app: 'vault', kind: 'song', id: 'trk_13', on: true }, 'https://soulnicolas.com', bearer.slice(0, -2) + 'xx')).status, 401, 'forged token');
+  const me = await (await accountRequest({ request: new Request('https://www.nrnszn.com/api/account/me', { headers: { origin: 'https://soulnicolas.com', authorization: bearer } }), env, params: { path: ['me'] } })).json();
+  assert.equal(me.user.email, 'fan@example.com', 'the token also answers who is signed in');
+  const db = env.ACCOUNTS_DB;
+  for (let i = 0; i < SAVED_MAX; i++) await db.prepare("INSERT INTO account_saved (user_id, app, kind, item_id, created_at) SELECT id, 'directory', 'listing', ?, 1 FROM users WHERE email = 'other@x.co'").bind('i' + i).run();
+  assert.equal((await save(b, { app: 'directory', kind: 'listing', id: 'one-more', on: true })).status, 400, 'capped');
+  assert.equal((await call('delete', { method: 'POST', cookie: a, body: { confirm: 'fan@example.com' } })).status, 200);
+  assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM account_saved WHERE item_id = 'trk_12'").first()).n, 0, 'deleting the account deletes what it saved');
+});
+
+test('a Services request sent while signed in shows in Your projects as Quote requested (once), under the account e-mail; signed out or from another site, nothing', async () => {
+  const { recordRequest, projectsFor } = await import('../src/edge/accounts.js');
+  const g = await googleKit(), { call, env } = setup(); env.__googleCerts = g.certs;
+  const c = pair(cookieOf(await call('google', { method: 'POST', body: { credential: await g.token(good()) } })));
+  const req = (cookie, origin) => new Request('https://www.nrnszn.com/api/service-lead', { method: 'POST', headers: { ...(cookie ? { cookie } : {}), ...(origin ? { origin } : {}) } });
+  const body = JSON.stringify({ action: 'lead', name: 'Someone', email: 'typed@else.co', role: 'Artist', summary: 'Music video + photos', total: 850 });
+  assert.ok(await recordRequest(req(c), env, body));
+  await recordRequest(req(c), env, body);   // a double tap
+  assert.equal(await recordRequest(req(null), env, body), null);
+  assert.equal(await recordRequest(req(c, 'https://evil.example'), env, body), null);
+  const list = await projectsFor(await accountsDb(env), 'fan@example.com');
+  assert.equal(list.length, 1); assert.equal(list[0].status, 'requested'); assert.equal(list[0].statusLabel, 'Quote requested'); assert.equal(list[0].total, 85000); assert.equal(list[0].title, 'Music video + photos');
+});
+
+test('the sign-in e-mail: branded, the link in the button and written out (escaped), a plain-text copy, and who sent it', async () => {
+  const { signInEmail } = await import('../src/edge/accounts.js');
+  const m = signInEmail('https://www.nrnszn.com/api/account/verify?t=abc&x=<b>"', 'https://www.nrnszn.com');
+  assert.equal(m.subject, 'Sign in to NuRenaissance');
+  assert.ok(m.html.includes('https://www.nrnszn.com/email/mascot.png'), 'the logo is a PNG on the site');
+  assert.ok(!m.html.includes('<b>"'), 'the link is escaped'); assert.equal((m.html.match(/verify\?t=abc&amp;x=&lt;b&gt;&quot;/g) || []).length, 3, 'button href, written-out href and text');
+  assert.match(m.text, /verify\?t=abc/); assert.match(m.text, /30 minutes/); assert.match(m.html, /NuRenaissance Media · Nashville/);
+  assert.equal(signInEmail('x', 'javascript:alert(1)').html.includes('javascript:'), false, 'a strange origin is never used');
 });

@@ -49,6 +49,7 @@ async function fakeApi(page: Page, opts: { mode?: Mode; backupLast?: boolean } =
     if (path === '/api/feed/cinema') return route.fulfill(json({ source: 'sheet', films: [{}] }));
     if (path === '/api/feed/services') return route.fulfill(json({ services: [{}, {}, {}] }));   // no "source": the old fallback answered
     if (path === '/api/feed/latest') return route.fulfill(json({ ok: true, music: { publishedAt: '2026-07-31T17:00:06Z' } }));
+    if (path === '/api/stripe-webhook') return route.fulfill(json({ status: 'ok', mode: 'ready' }));
     if (path === '/api/account/me') return route.fulfill(json({ on: true, google: true, email: true, user: null }));
     if (path === '/api/survey') return route.fulfill(json({ status: 'ok', mode: 'sheet' }));
     if (path === '/api/survey-recap') return route.fulfill(json({ status: 'ok', mode: 'edge' }));
@@ -100,9 +101,9 @@ test('the settings: nine folders in four groups, honest counts, the setup checkl
   const state = await fakeApi(page);
   await page.addInitScript((t) => localStorage.setItem('nrn_admin', t), TOKEN);
   await page.goto('/admin/');
-  await expect(page.locator('#banner')).toContainText('3 of 11 need attention', { timeout: 10000 });
+  await expect(page.locator('#banner')).toContainText('3 of 12 need attention', { timeout: 10000 });
   await expect(page.locator('#banner')).toContainText('Services, Service requests, Nightly sheet backup');
-  await expect.poll(async () => page.locator('#n-ok, #n-old, #n-todo').allTextContents()).toEqual(['8', '2', '1']);   // new, old fallback, to do
+  await expect.poll(async () => page.locator('#n-ok, #n-old, #n-todo').allTextContents()).toEqual(['9', '2', '1']);   // new, old fallback, to do
   expect(await page.locator('details.folder').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.folder))).toEqual(['events', 'push', 'clients', 'analytics', 'send', 'feeds', 'keep', 'setup', 'account']);   // in the order of their groups
   // laid out like Soul Vault's Settings: coloured groups, one hero folder, an icon tile on every folder
   expect(await page.locator('.grp > h2').allTextContents()).toEqual(['Create & send', 'Visitors & activity', 'Health & data', 'Account']);
