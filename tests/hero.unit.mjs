@@ -80,3 +80,19 @@ test('files are served to anyone, with Range for phones, and only real paths', a
   for (const bad of ['media/cccccc33/../../manifest.json', 'hero/manifest.json', 'nope/cccccc33/large.mp4', 'media/cccccc33/large.html'])
     assert.equal((await call(env, '/api/hero?file=' + encodeURIComponent(bad))).status, 404, bad);
 });
+
+test('position: saved with an upload or on its own, checked, and handed to the pages', async () => {
+  const env = ENV(), t = await makeToken(env);
+  for (const [p, b] of [['large.mp4', mp4(200)], ['small.mp4', mp4(100)], ['poster.jpg', jpg()]]) await call(env, `/api/hero?page=about&v=dddddd44&part=${p}`, { method: 'PUT', body: b, token: t });
+  assert.equal((await call(env, '/api/hero', { method: 'POST', body: { action: 'set', page: 'about', v: 'dddddd44', frame: { x: 50, y: 500, z: 1 } }, token: t })).status, 400, 'out of range');
+  await call(env, '/api/hero', { method: 'POST', body: { action: 'set', page: 'about', v: 'dddddd44', frame: { x: 40, y: 20, z: 1.5 } }, token: t });
+  assert.deepEqual((await (await call(env, '/api/hero')).json()).frames, { about: { x: 40, y: 20, z: 1.5 } });
+  assert.equal((await call(env, '/api/hero', { method: 'POST', body: { action: 'frame', page: 'about', frame: { x: 50, y: 80, z: 1 } } })).status, 401, 'admin only');
+  assert.equal((await call(env, '/api/hero', { method: 'POST', body: { action: 'frame', page: 'home', frame: { x: 50, y: 80, z: 1 } }, token: t })).status, 400, 'no video there');
+  for (const bad of [null, { x: -1, y: 50, z: 1 }, { x: 50, y: 50, z: 9 }, { x: '50; color:red', y: 50, z: 1 }])
+    assert.equal((await call(env, '/api/hero', { method: 'POST', body: { action: 'frame', page: 'about', frame: bad }, token: t })).status, 400, JSON.stringify(bad));
+  const r = await (await call(env, '/api/hero', { method: 'POST', body: { action: 'frame', page: 'about', frame: { x: 50, y: 80, z: 1 } }, token: t })).json();
+  assert.deepEqual(r.frame, { x: 50, y: 80, z: 1 });
+  assert.deepEqual((await (await call(env, '/api/hero')).json()).frames.about, { x: 50, y: 80, z: 1 });
+  assert.equal(env.MEDIA.m.has('hero/about/dddddd44/large.mp4'), true, 'moving it never touches the video files');
+});

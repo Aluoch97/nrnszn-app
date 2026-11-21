@@ -23,6 +23,15 @@ const IDS = PAGES.map((p) => p.id);
 export const PARTS = { 'large.mp4': { type: 'video/mp4', max: 40_000_000 }, 'small.mp4': { type: 'video/mp4', max: 20_000_000 }, 'poster.jpg': { type: 'image/jpeg', max: 1_500_000 } };
 const MANIFEST = 'hero/manifest.json';
 const V_RE = /^[a-z0-9]{6,24}$/;
+// How the video sits in the header (Nov 21, 2026, Nick: "move the video up or down"): x / y = the point kept in view, in percent
+// (CSS object-position), z = zoom (1 = fill the header, up to 2.5). Applied when the page shows it, so it can change any time.
+export const DEFAULT_FRAME = { x: 50, y: 50, z: 1 };
+export function cleanFrame(f) {
+  if (!f || typeof f !== 'object') return null;
+  const n = (v, lo, hi) => (Number.isFinite(Number(v)) && Number(v) >= lo && Number(v) <= hi ? Math.round(Number(v) * 100) / 100 : null);
+  const x = n(f.x, 0, 100), y = n(f.y, 0, 100), z = n(f.z, 1, 2.5);
+  return x === null || y === null || z === null ? null : { x, y, z };
+}
 
 const json = (body, status = 200, extra = {}) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...extra } });
 export const heroOn = (env) => !!(env && env.MEDIA && typeof env.MEDIA.put === 'function');
@@ -83,9 +92,9 @@ export async function heroRequest({ request, env }) {
     if (!heroOn(env)) return json({ on: false, videos: {} }, 200, { 'cache-control': 'public, max-age=60' });
     const file = url.searchParams.get('file');
     if (file) return serveFile(env, request, file);
-    const m = await readManifest(env), videos = {};
-    for (const id of IDS) if (m[id] && V_RE.test(String(m[id].v))) videos[id] = m[id].v;
-    return json({ on: true, videos }, 200, { 'cache-control': 'public, max-age=60' });
+    const m = await readManifest(env), videos = {}, frames = {};
+    for (const id of IDS) if (m[id] && V_RE.test(String(m[id].v))) { videos[id] = m[id].v; frames[id] = cleanFrame(m[id].frame) || DEFAULT_FRAME; }
+    return json({ on: true, videos, frames }, 200, { 'cache-control': 'public, max-age=60' });
   }
   // Everything else is Nick's, from /admin: the admin token, and only from this site's own pages.
   const o = request.headers.get('origin');
@@ -114,10 +123,19 @@ export async function heroRequest({ request, env }) {
     const v = String(b.v || '');
     if (!V_RE.test(v)) return json({ ok: false, message: 'Unknown upload.' }, 400);
     for (const part of Object.keys(PARTS)) if (!(await env.MEDIA.head(`hero/${page}/${v}/${part}`))) return json({ ok: false, message: 'The upload is not complete. Try again.' }, 400);
-    m[page] = { v, at: Date.now() };
+    if (b.frame !== undefined && !cleanFrame(b.frame)) return json({ ok: false, message: 'Unknown position.' }, 400);
+    m[page] = { v, at: Date.now(), frame: cleanFrame(b.frame) || DEFAULT_FRAME };
     await writeManifest(env, m);
     await deletePrefix(env, `hero/${page}/`, `hero/${page}/${v}/`);   // older uploads for this page
     return json({ ok: true, videos: Object.fromEntries(Object.entries(m).map(([k, x]) => [k, x])) });
+  }
+  if (b.action === 'frame') {   // move / zoom the video already on a page (no new upload)
+    const f = cleanFrame(b.frame);
+    if (!f) return json({ ok: false, message: 'Unknown position.' }, 400);
+    if (!m[page]) return json({ ok: false, message: 'That page has no video yet.' }, 400);
+    m[page].frame = f;
+    await writeManifest(env, m);
+    return json({ ok: true, frame: f });
   }
   if (b.action === 'remove') {
     delete m[page];
