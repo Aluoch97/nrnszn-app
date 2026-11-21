@@ -323,3 +323,39 @@ test('NuDirectory My listings goes through this server: cookie + the directory\'
   assert.deepEqual([seen[1].body.action, seen[1].body.table], ['claim', 'shows']);
   assert.equal((await call('listings', { method: 'POST', body: { action: 'drop' }, cookie: c, origin: 'https://directory.nrnszn.com' })).status, 400);
 });
+
+test('the dashboard: me?projects=1 adds saved items and luoh projects (names only); Passport and My listings are read from the Account page only', async () => {
+  const g = await googleKit(), seen = [], { call, env } = setup(); env.__googleCerts = g.certs;
+  const mailFetch = env.__fetch;
+  env.__fetch = async (url, init) => {
+    if (String(url).includes('resend')) return mailFetch(url, init);
+    const body = JSON.parse(init.body); seen.push({ url: String(url), headers: init.headers, body });
+    if (String(url).includes('/widget')) {
+      // what Certified does: trade the ticket at /redeem as play.nrnszn.com, then answer with the stamps
+      const r = await (await call('redeem', { method: 'POST', origin: 'https://play.nrnszn.com', body: { ticket: body.ticket } })).json();
+      return new Response(JSON.stringify(r.ok ? { ok: true, linked: true, stamps: [{ day: '2025-11-08', method: 'game' }, { day: 'nope', method: 'x' }], today: { day: '2026-12-05', open: false } } : { ok: false, error: 'sign in again' }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ ok: true, listings: [{ title: 'Jo: Open mic', status: 'Live' }] }), { status: 200 });
+  };
+  const c = pair(cookieOf(await call('google', { method: 'POST', body: { credential: await g.token(good()) } })));
+  await call('saved', { method: 'POST', cookie: c, origin: 'https://www.nrnszn.com', body: { app: 'vault', kind: 'song', id: 'trk_1', title: 'SIN CITY', url: '/vault/2024-x', on: true } });
+  const db = await accountsDb(env), uid = (await db.prepare('SELECT id FROM users').first()).id;
+  await db.prepare('INSERT INTO projects (user_id, id, name, updated_at, data) VALUES (?, ?, ?, ?, ?)').bind(uid, 'p1', 'Lounge recap', 5, '{"secret":"edit"}').run();
+  const me = await (await call('me?projects=1', { cookie: c })).json();
+  assert.equal(me.saved.vault[0].title, 'SIN CITY'); assert.deepEqual(me.saved.directory, []);
+  assert.deepEqual(me.luoh, { count: 1, recent: [{ id: 'p1', name: 'Lounge recap', at: 5 }] });
+  assert.equal(JSON.stringify(me).includes('secret'), false, 'the luoh edit itself is never sent');
+  const other = await (await call('me?projects=1', { cookie: c, origin: 'https://play.nrnszn.com' })).json();
+  assert.equal(other.saved, undefined, 'another site never gets the dashboard data');
+
+  assert.equal((await call('passport', { method: 'POST', body: {}, origin: 'https://www.nrnszn.com' })).status, 401, 'signed out');
+  assert.equal((await call('passport', { method: 'POST', body: {}, cookie: c, origin: 'https://play.nrnszn.com' })).status, 403, 'only the Account page asks');
+  const p = await (await call('passport', { method: 'POST', body: {}, cookie: c, origin: 'https://www.nrnszn.com' })).json();
+  assert.equal(p.ok, true); assert.deepEqual(p.stamps, [{ day: '2025-11-08', method: 'game' }], 'odd rows from Certified are dropped');
+  const w = seen.find((x) => x.url.includes('/widget'));
+  assert.equal(w.body.action, 'passport_account'); assert.match(w.headers.apikey, /^sb_publishable_/);
+
+  const l = await call('listings', { method: 'POST', body: { action: 'mine' }, cookie: c, origin: 'https://www.nrnszn.com' });
+  assert.equal(l.status, 200); assert.equal((await l.json()).listings[0].status, 'Live');
+  assert.equal((await call('listings', { method: 'POST', body: { action: 'claim', table: 'shows', id: '00000000-0000-4000-8000-000000000001' }, cookie: c, origin: 'https://www.nrnszn.com' })).status, 403, 'the Account page may only read');
+});

@@ -330,6 +330,29 @@ export async function directoryListings(db, env, uid, b) {
     return { status: r.ok ? 200 : r.status, body: j.ok ? j : { ok: false, message: j.error || j.message || 'Could not load your listings right now.' } };
   } catch (e) { console.error('directory listings', e); return { status: 502, body: { ok: false, message: 'NuDirectory did not answer. Try again in a minute.' } }; }
 }
+// The account dashboard (/account) shows what each app keeps for this account. Certified's Passport lives in Certified's own database,
+// so this server makes a one-time ticket for play.nrnszn.com and asks Certified's function (`passport_account`, read only), which
+// trades the ticket at /api/account/redeem like the Certified page itself does. Its key is the public publishable key in play.nrnszn.com.
+export const CERTIFIED = 'https://play.nrnszn.com';
+export const CERTIFIED_FN = 'https://iimeihgrxvtuwcuyuzfh.supabase.co/functions/v1/widget';
+export const CERTIFIED_PUBLIC_KEY = 'sb_publishable_1G2xfrTIlTMwBnbofIKEeg_MRXYrueZ';
+export async function certifiedPassport(db, env, uid) {
+  const ticket = await makeTicket(db, uid, CERTIFIED);
+  try {
+    const r = await (env.__fetch || fetch)(CERTIFIED_FN, { method: 'POST', headers: { 'content-type': 'text/plain', apikey: CERTIFIED_PUBLIC_KEY }, body: JSON.stringify({ action: 'passport_account', ticket }), signal: AbortSignal.timeout(12000) });
+    const j = await r.json().catch(() => null);
+    if (!j || !j.ok) return { status: 502, body: { ok: false, message: 'Certified did not answer properly. Try again in a minute.' } };
+    const stamps = (Array.isArray(j.stamps) ? j.stamps : []).filter((x) => x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.day))).map((x) => ({ day: x.day, method: x.method === 'door' ? 'door' : 'game' }));
+    const today = j.today && /^\d{4}-\d{2}-\d{2}$/.test(String(j.today.day)) ? { day: j.today.day, open: !!j.today.open } : null;
+    return { status: 200, body: { ok: true, linked: !!j.linked, stamps, today } };
+  } catch (e) { console.error('certified passport', e); return { status: 502, body: { ok: false, message: 'Certified did not answer. Try again in a minute.' } }; }
+}
+/** luoh projects saved on this account (names and dates only, never the edit itself). */
+export async function luohFor(db, uid) {
+  const rows = (await db.prepare('SELECT id, name, updated_at AS at FROM projects WHERE user_id = ? ORDER BY updated_at DESC LIMIT 20').bind(uid).all()).results || [];
+  const n = await db.prepare('SELECT COUNT(*) AS n FROM projects WHERE user_id = ?').bind(uid).first();
+  return { count: Number((n && n.n) || 0), recent: rows.map((r) => ({ id: r.id, name: r.name || 'Untitled project', at: r.at })) };
+}
 export const SAVED_MAX = 500;
 export async function listSaved(db, userId, app) {
   return ((await db.prepare('SELECT kind, item_id AS id, title, url, created_at AS at FROM account_saved WHERE user_id = ? AND app = ? ORDER BY created_at DESC LIMIT ?').bind(userId, app, SAVED_MAX).all()).results || []);
@@ -475,7 +498,8 @@ export async function accountRequest({ request, env, params }) {
       if (!u) return reply({ ...info, user: null }, 200, cors);
       // Client projects (money) only for this site's own Account page, never for another site's script.
       const o = request.headers.get('origin');
-      if (url.searchParams.get('projects') === '1' && (!o || o === url.origin)) { const db = await accountsDb(env); return reply({ ...info, user: publicAccount(u), projects: await projectsFor(db, u.email), payments: await paymentsFor(db, u.email), payLink: PAY_LINK }, 200, cors); }
+      if (url.searchParams.get('projects') === '1' && (!o || o === url.origin)) { const db = await accountsDb(env); return reply({ ...info, user: publicAccount(u), projects: await projectsFor(db, u.email), payments: await paymentsFor(db, u.email), payLink: PAY_LINK,
+        saved: { vault: await listSaved(db, u.id, 'vault'), directory: await listSaved(db, u.id, 'directory') }, luoh: await luohFor(db, u.id) }, 200, cors); }
       return reply({ ...info, user: publicAccount(u) }, 200, cors);
     }
     if (!accountsOn(env)) return reply({ ok: false, message: offMsg }, 503, cors);
@@ -521,13 +545,22 @@ export async function accountRequest({ request, env, params }) {
       return reply({ ok: true, user: who, ...(TICKET_ORIGINS.includes(o) ? { token: await appToken(env, who.id, o) } : {}) }, 200, h);
     }
     // NuDirectory My listings, asked through this server (see directoryListings).
+    // Also asked by this site's own Account page (the dashboard), which may only read ('mine').
     if (what === 'listings') {
       const o = request.headers.get('origin') || '';
-      if (o !== DIRECTORY) return reply({ ok: false, message: 'Not allowed.' }, 403, cors);
+      if (o !== DIRECTORY && !(o === url.origin && body.action === 'mine')) return reply({ ok: false, message: 'Not allowed.' }, 403, cors);
       const uid = await sessionUserId(request, env);
       if (!uid) return reply({ ok: false, message: 'Please sign in first.' }, 401, cors);
       const out = await directoryListings(db, env, uid, body);
       return reply(out.body, out.status, cors);
+    }
+    // The Certified Passport for the dashboard: this site's own Account page only.
+    if (what === 'passport') {
+      if ((request.headers.get('origin') || '') !== url.origin) return reply({ ok: false, message: 'Not allowed.' }, 403);
+      const uid = await sessionUserId(request, env);
+      if (!uid) return reply({ ok: false, message: 'Please sign in first.' }, 401);
+      const out = await certifiedPassport(db, env, uid);
+      return reply(out.body, out.status);
     }
     // A one-time ticket for this NuRenaissance site's own backend (Certified Passport, NuDirectory My listings). Cookie + our Origin only.
     if (what === 'ticket') {
