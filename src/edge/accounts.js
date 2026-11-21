@@ -312,6 +312,24 @@ export async function appTokenUser(request, env, now = Date.now()) {
 
 // ---- saved items (Soul Vault liked songs, NuDirectory favorites) ----------------------------------------------------------------
 export const SAVED_APPS = { vault: ['song'], directory: ['listing'] };
+
+// NuDirectory "My listings" (Nov 21, 2026): its Supabase function (nu-account) only answers calls that carry a key, and a page cannot
+// send one without a CORS preflight that Supabase rejects. So the NuDirectory page asks HERE (cookie), and this server makes the
+// one-time ticket and calls the function with NuDirectory's PUBLIC (publishable) key, which is already in that public page.
+export const DIRECTORY = 'https://directory.nrnszn.com';
+export const DIRECTORY_FN = 'https://fmyvsejwtmrymyvpjhmc.supabase.co/functions/v1/nu-account';
+export const DIRECTORY_PUBLIC_KEY = 'sb_publishable_xM1xvQQllNzFM7dIBeS3mQ_U6KgDPyL';
+export async function directoryListings(db, env, uid, b) {
+  if (!b || !['mine', 'claim'].includes(b.action)) return { status: 400, body: { ok: false, message: 'Unknown request.' } };
+  const ticket = await makeTicket(db, uid, DIRECTORY);
+  const body = b.action === 'claim' ? { action: 'claim', ticket, table: String(b.table || ''), id: String(b.id || '') } : { action: 'mine', ticket };
+  try {
+    const r = await (env.__fetch || fetch)(DIRECTORY_FN, { method: 'POST', headers: { 'content-type': 'application/json', apikey: DIRECTORY_PUBLIC_KEY, origin: DIRECTORY }, body: JSON.stringify(body), signal: AbortSignal.timeout(12000) });
+    const j = await r.json().catch(() => null);
+    if (!j) return { status: 502, body: { ok: false, message: 'NuDirectory did not answer properly. Try again.' } };
+    return { status: r.ok ? 200 : r.status, body: j.ok ? j : { ok: false, message: j.error || j.message || 'Could not load your listings right now.' } };
+  } catch (e) { console.error('directory listings', e); return { status: 502, body: { ok: false, message: 'NuDirectory did not answer. Try again in a minute.' } }; }
+}
 export const SAVED_MAX = 500;
 export async function listSaved(db, userId, app) {
   return ((await db.prepare('SELECT kind, item_id AS id, title, url, created_at AS at FROM account_saved WHERE user_id = ? AND app = ? ORDER BY created_at DESC LIMIT ?').bind(userId, app, SAVED_MAX).all()).results || []);
@@ -501,6 +519,15 @@ export async function accountRequest({ request, env, params }) {
       if (!who) return reply({ ok: false, message: 'That sign-in has expired. Try again.' }, 400, h);
       // soulnicolas.com also gets an app token (for saved songs); the Supabase backends of our own sites get the account id.
       return reply({ ok: true, user: who, ...(TICKET_ORIGINS.includes(o) ? { token: await appToken(env, who.id, o) } : {}) }, 200, h);
+    }
+    // NuDirectory My listings, asked through this server (see directoryListings).
+    if (what === 'listings') {
+      const o = request.headers.get('origin') || '';
+      if (o !== DIRECTORY) return reply({ ok: false, message: 'Not allowed.' }, 403, cors);
+      const uid = await sessionUserId(request, env);
+      if (!uid) return reply({ ok: false, message: 'Please sign in first.' }, 401, cors);
+      const out = await directoryListings(db, env, uid, body);
+      return reply(out.body, out.status, cors);
     }
     // A one-time ticket for this NuRenaissance site's own backend (Certified Passport, NuDirectory My listings). Cookie + our Origin only.
     if (what === 'ticket') {

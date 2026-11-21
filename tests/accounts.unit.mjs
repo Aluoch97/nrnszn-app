@@ -300,3 +300,26 @@ test('the sign-in e-mail: branded, the link in the button and written out (escap
   assert.match(m.text, /verify\?t=abc/); assert.match(m.text, /30 minutes/); assert.match(m.html, /NuRenaissance Media · Nashville/);
   assert.equal(signInEmail('x', 'javascript:alert(1)').html.includes('javascript:'), false, 'a strange origin is never used');
 });
+
+
+test('NuDirectory My listings goes through this server: cookie + the directory\'s Origin only; the call carries the public key and a fresh ticket the function can trade', async () => {
+  const g = await googleKit(), seen = [], { call, env } = setup(); env.__googleCerts = g.certs;
+  const mailFetch = env.__fetch;
+  env.__fetch = async (url, init) => {
+    if (String(url).includes('resend')) return mailFetch(url, init);
+    seen.push({ url, headers: init.headers, body: JSON.parse(init.body) });
+    return new Response(JSON.stringify({ ok: true, listings: [{ title: 'Jo: Open mic', status: 'Live' }] }), { status: 200 });
+  };
+  const c = pair(cookieOf(await call('google', { method: 'POST', body: { credential: await g.token(good()) } })));
+  assert.equal((await call('listings', { method: 'POST', body: { action: 'mine' }, origin: 'https://directory.nrnszn.com' })).status, 401, 'signed out');
+  assert.equal((await call('listings', { method: 'POST', body: { action: 'mine' }, cookie: c, origin: 'https://play.nrnszn.com' })).status, 403, 'only the directory asks');
+  const r = await call('listings', { method: 'POST', body: { action: 'mine' }, cookie: c, origin: 'https://directory.nrnszn.com' });
+  assert.equal(r.status, 200); assert.equal(r.headers.get('access-control-allow-origin'), 'https://directory.nrnszn.com');
+  assert.equal((await r.json()).listings[0].status, 'Live');
+  assert.match(seen[0].url, /functions\/v1\/nu-account$/); assert.match(seen[0].headers.apikey, /^sb_publishable_/); assert.equal(seen[0].headers.origin, 'https://directory.nrnszn.com');
+  const back = await (await call('redeem', { method: 'POST', origin: 'https://directory.nrnszn.com', body: { ticket: seen[0].body.ticket } })).json();
+  assert.equal(back.user.email, 'fan@example.com', 'the ticket it sent is one the function can trade for the e-mail');
+  await call('listings', { method: 'POST', body: { action: 'claim', table: 'shows', id: '00000000-0000-4000-8000-000000000001' }, cookie: c, origin: 'https://directory.nrnszn.com' });
+  assert.deepEqual([seen[1].body.action, seen[1].body.table], ['claim', 'shows']);
+  assert.equal((await call('listings', { method: 'POST', body: { action: 'drop' }, cookie: c, origin: 'https://directory.nrnszn.com' })).status, 400);
+});
