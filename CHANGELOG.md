@@ -4,6 +4,9 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.17 · Nov 21, 2026
+- **Page videos**: the header at the top of Home, Services, Events, Media, Apps, About and Support can play a looping video chosen in /admin. Pages without one keep their pictures. If your phone is set to reduce motion or save data, you see a still picture instead.
+
 ## 3.16 · Nov 21, 2026
 The Events page works with no internet.
 - If your phone can't reach the site, the Events page now shows the last list of events it saved, instead of only the older show guide. Online you always get the live list.

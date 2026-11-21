@@ -76,6 +76,29 @@ import Site from '../layouts/Site.astro';
           </form>
         </div>
       </details>
+      <details class="folder" data-folder="videos">
+        <summary><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="15" height="14" rx="2"/><path d="m22 8-5 4 5 4V8z"/></svg></span><span class="ft"><b>Page videos</b><span>The moving picture at the top of each page</span></span><span class="badge" id="b-videos">…</span></summary>
+        <div id="hv-box">
+          <p id="hv-msg" class="result" role="status" aria-live="polite">Loading…</p>
+          <ul class="rows" id="hv-list"></ul>
+          <form id="hv-form" class="evform" hidden>
+            <h3 id="hv-form-title">Video</h3>
+            <label for="hv-file">Pick a video <span class="hint">(from your camera roll; sideways videos fill the header best)</span></label>
+            <input id="hv-file" type="file" accept="video/*" />
+            <video id="hv-prev" muted playsinline preload="metadata" hidden></video>
+            <div id="hv-trim" hidden>
+              <label for="hv-start">Where the loop starts: <span id="hv-start-t">0:00</span></label>
+              <input id="hv-start" type="range" min="0" max="0" step="0.1" value="0" />
+              <label for="hv-len">How long the loop is</label>
+              <select id="hv-len"><option value="8">8 seconds</option><option value="12">12 seconds</option><option value="15" selected>15 seconds</option><option value="20">20 seconds</option></select>
+              <p class="result">It plays with no sound, over and over. This phone makes it small first (a phone size and a computer size), so it loads fast for visitors.</p>
+            </div>
+            <p id="hv-progress" class="result" role="status" aria-live="polite"></p>
+            <p id="hv-error" class="error" role="alert"></p>
+            <div class="actions"><button type="submit" class="btn primary" id="hv-save" disabled>Make and upload</button><button type="button" class="btn" id="hv-cancel">Cancel</button></div>
+          </form>
+        </div>
+      </details>
       <details class="folder" data-folder="push">
         <summary><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span><span class="ft"><b>Phone notifications</b><span>Send a notification to everyone who turned them on</span></span><span class="badge" id="b-push">…</span></summary>
         <div id="push-box">
@@ -298,7 +321,7 @@ import Site from '../layouts/Site.astro';
   async function openDash(data: any) {
     show('dash');
     drawSetup(data.setup || []);
-    runChecks(); loadEvents(); loadAnalytics(); loadPush(); loadClients();
+    runChecks(); loadEvents(); loadAnalytics(); loadPush(); loadClients(); loadVideos();
     fetch('/version.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { $('ver-line').textContent = j && j.version ? `Version: ${j.release || String(j.version).replace(/^nrn-/, '')} (build ${String(j.version).replace(/^nrn-/, '')})` : 'Version: unknown'; }).catch(() => { $('ver-line').textContent = 'Version: unknown'; });
   }
 
@@ -639,6 +662,126 @@ import Site from '../layouts/Site.astro';
     } catch { show('gate'); ($('login') as HTMLElement).hidden = false; $('login-error').textContent = 'Could not reach the site. Check your connection and reload.'; }
   }
   start();
+
+  // ---- Page videos (src/edge/hero.js): pick a video, choose where the loop starts, and this device makes a silent phone size,
+  // a computer size and a still picture (mediabunny, the engine luoh uses), then sends them. Pages show it within a minute. ----
+  const HV_PAGES: [string, string, string][] = [['home', 'Home', '/'], ['services', 'Services', '/services'], ['events', 'Events', '/events'], ['media', 'Media', '/media'], ['apps', 'Apps', '/apps'], ['about', 'About', '/about'], ['support', 'Support', '/support']];
+  let hvVideos: Record<string, { v: string; at: number }> = {}, hvPage = '', hvFile: File | null = null, hvUrl = '';
+  const mmss = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  function hvApi(init: RequestInit, query = '') {
+    const token = store.get();
+    return fetch('/api/hero' + query, { cache: 'no-store', ...init, headers: { ...(init.headers || {}), ...(token ? { authorization: `Bearer ${token}` } : {}) } });
+  }
+  async function loadVideos() {
+    try {
+      const res = await hvApi({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'list' }) });
+      if (res.status === 401) { signedOut('Please sign in again.'); return; }
+      const j = await res.json().catch(() => ({}));
+      if (res.status === 503) { $('hv-msg').textContent = 'Not set up yet: the site needs a storage bucket for videos. Steps: docs/hero-videos-setup.md (and the Setup checklist below).'; $('b-videos').textContent = '!'; $('b-videos').dataset.tone = 'warn'; $('hv-list').textContent = ''; return; }
+      if (!j.ok) { $('hv-msg').textContent = j.message || 'Could not load the page videos.'; return; }
+      hvVideos = j.videos || {}; drawVideos();
+    } catch { $('hv-msg').textContent = 'Could not reach the site. Reload this page to try again.'; }
+  }
+  function drawVideos() {
+    const ul = $('hv-list'); ul.textContent = '';
+    const n = HV_PAGES.filter(([id]) => hvVideos[id]).length;
+    $('hv-msg').textContent = n ? `${plural(n, 'page has', 'pages have')} your video. The others show their pictures.` : 'No page videos yet: every page shows its pictures. Pick a page to add one.';
+    $('b-videos').textContent = String(n); $('b-videos').dataset.tone = 'ok';
+    for (const [id, name, path] of HV_PAGES) {
+      const has = hvVideos[id], li = document.createElement('li'); li.className = 'row hv-row'; li.dataset.tone = has ? 'ok' : 'todo'; li.dataset.page = id;
+      li.innerHTML = '<span class="name"></span><span class="tag"></span><span class="note"></span><span class="hv-acts"></span>';
+      (li.querySelector('.name') as HTMLElement).textContent = name;
+      (li.querySelector('.tag') as HTMLElement).textContent = has ? 'Video' : 'Pictures';
+      (li.querySelector('.note') as HTMLElement).textContent = has ? `Your video, since ${new Date(has.at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}` : (id === 'home' ? 'The archway video (built in)' : 'The built-in pictures');
+      const acts = li.querySelector('.hv-acts') as HTMLElement;
+      const up = document.createElement('button'); up.type = 'button'; up.className = 'btn small primary'; up.textContent = has ? 'Change video' : 'Add a video'; up.setAttribute('aria-label', `${up.textContent} for ${name}`); up.addEventListener('click', () => hvOpen(id, name)); acts.appendChild(up);
+      if (has) { const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'btn small'; rm.textContent = 'Remove'; rm.setAttribute('aria-label', `Remove the video on ${name}`); rm.addEventListener('click', () => hvRemove(id, name)); acts.appendChild(rm); }
+      const view = document.createElement('a'); view.className = 'btn small'; view.href = path; view.target = '_blank'; view.rel = 'noopener'; view.textContent = 'View page'; view.setAttribute('aria-label', `View the ${name} page`); acts.appendChild(view);
+      ul.appendChild(li);
+    }
+  }
+  function hvReset() {
+    hvFile = null; if (hvUrl) URL.revokeObjectURL(hvUrl); hvUrl = '';
+    const prev = $('hv-prev') as HTMLVideoElement; prev.removeAttribute('src'); prev.load(); prev.hidden = true;
+    ($('hv-file') as HTMLInputElement).value = ''; $('hv-trim').hidden = true; ($('hv-save') as HTMLButtonElement).disabled = true;
+    $('hv-progress').textContent = ''; $('hv-error').textContent = '';
+  }
+  function hvOpen(id: string, name: string) {
+    hvPage = id; hvReset(); $('hv-form-title').textContent = `Video for ${name}`; $('hv-form').hidden = false; $('hv-list').hidden = true;
+    ($('hv-file') as HTMLInputElement).focus();
+  }
+  function hvClose() { hvReset(); $('hv-form').hidden = true; $('hv-list').hidden = false; }
+  async function hvRemove(id: string, name: string) {
+    if (!confirm(`Remove the video on ${name}? The page goes back to its pictures.`)) return;
+    const res = await hvApi({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'remove', page: id }) }).catch(() => null);
+    const j = res ? await res.json().catch(() => ({})) : {};
+    if (j.ok) { delete hvVideos[id]; drawVideos(); $('hv-msg').textContent = `Removed. ${name} shows its pictures again within a minute.`; }
+    else $('hv-msg').textContent = j.message || 'Could not remove it. Try again.';
+  }
+  $('hv-cancel').addEventListener('click', hvClose);
+  $('hv-file').addEventListener('change', () => {
+    const f = ($('hv-file') as HTMLInputElement).files?.[0]; $('hv-error').textContent = '';
+    if (!f) return;
+    if (!/^video\//.test(f.type) && !/\.(mov|mp4|m4v|webm)$/i.test(f.name)) { $('hv-error').textContent = 'Pick a video file.'; return; }
+    hvFile = f; if (hvUrl) URL.revokeObjectURL(hvUrl); hvUrl = URL.createObjectURL(f);
+    const prev = $('hv-prev') as HTMLVideoElement; prev.src = hvUrl; prev.hidden = false;
+    prev.onloadedmetadata = () => {
+      const r = $('hv-start') as HTMLInputElement; r.max = String(Math.max(0, Math.floor((prev.duration - 2) * 10) / 10)); r.value = '0'; $('hv-start-t').textContent = '0:00';
+      $('hv-trim').hidden = false; ($('hv-save') as HTMLButtonElement).disabled = false;
+    };
+    prev.onerror = () => { $('hv-error').textContent = 'This browser cannot open that video. Try another one, or a newer phone or computer.'; };
+  });
+  $('hv-start').addEventListener('input', () => {
+    const t = Number(($('hv-start') as HTMLInputElement).value); $('hv-start-t').textContent = mmss(t);
+    const prev = $('hv-prev') as HTMLVideoElement; prev.currentTime = t;
+  });
+  const fitSize = (w: number, h: number, max: number) => { const k = Math.min(1, max / Math.max(w, h)); return { width: Math.max(2, Math.round((w * k) / 2) * 2), height: Math.max(2, Math.round((h * k) / 2) * 2) }; };
+  async function hvPoster(prev: HTMLVideoElement, t: number): Promise<Blob> {
+    await new Promise<void>((ok) => { const done = () => { prev.removeEventListener('seeked', done); ok(); }; prev.addEventListener('seeked', done); prev.currentTime = t + 0.05; setTimeout(done, 3000); });
+    const s = fitSize(prev.videoWidth, prev.videoHeight, 1280), c = document.createElement('canvas'); c.width = s.width; c.height = s.height;
+    c.getContext('2d')!.drawImage(prev, 0, 0, s.width, s.height);
+    return new Promise((ok, no) => c.toBlob((b) => (b ? ok(b) : no(new Error('poster'))), 'image/jpeg', 0.82));
+  }
+  $('hv-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); if (!hvFile) return;
+    const btn = $('hv-save') as HTMLButtonElement, prog = $('hv-progress'), err = $('hv-error'); btn.disabled = true; err.textContent = '';
+    const prev = $('hv-prev') as HTMLVideoElement, start = Number(($('hv-start') as HTMLInputElement).value), len = Number(($('hv-len') as HTMLSelectElement).value);
+    const end = Math.min(prev.duration || start + len, start + len);
+    try {
+      prog.textContent = 'Getting ready…';
+      const M = await import('mediabunny');
+      if (!(await M.canEncodeVideo('avc'))) throw new Error('This browser cannot make videos. Use Chrome, or Safari on iPhone with iOS 17 or newer.');
+      const make = async (max: number, bitrate: number, from: number, to: number) => {
+        const input = new M.Input({ formats: M.ALL_FORMATS, source: new M.BlobSource(hvFile!) });
+        const output = new M.Output({ format: new M.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new M.BufferTarget() });
+        const conv = await M.Conversion.init({ input, output, video: { ...fitSize(prev.videoWidth, prev.videoHeight, max), fit: 'fill', codec: 'avc', bitrate, frameRate: 30, keyFrameInterval: 2 }, audio: { discard: true }, trim: { start, end } });
+        if (!conv.isValid) throw new Error('That video could not be read. Try another one.');
+        conv.onProgress = (p: number) => { prog.textContent = `Making the video… ${Math.round(from + (to - from) * p)}%`; };
+        await conv.execute();
+        return new Blob([(output.target as any).buffer], { type: 'video/mp4' });
+      };
+      const large = await make(1280, 2_500_000, 0, 60);
+      const small = await make(720, 1_100_000, 60, 90);
+      const poster = await hvPoster(prev, start);
+      const v = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      let i = 0;
+      for (const [part, blob] of [['large.mp4', large], ['small.mp4', small], ['poster.jpg', poster]] as [string, Blob][]) {
+        prog.textContent = `Uploading… ${90 + i * 3}%`; i++;
+        const res = await hvApi({ method: 'PUT', headers: { 'content-type': blob.type }, body: blob }, `?page=${hvPage}&v=${v}&part=${part}`);
+        const j = await res.json().catch(() => ({}));
+        if (res.status === 401) { signedOut('Please sign in again.'); return; }
+        if (!j.ok) throw new Error(j.message || 'The upload did not work. Try again.');
+      }
+      const res = await hvApi({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'set', page: hvPage, v }) });
+      const j = await res.json().catch(() => ({}));
+      if (!j.ok) throw new Error(j.message || 'The upload did not work. Try again.');
+      const name = (HV_PAGES.find((x) => x[0] === hvPage) || [])[1] || 'the page';
+      hvVideos[hvPage] = { v, at: Date.now() }; hvClose(); drawVideos();
+      $('hv-msg').textContent = `Saved (${(large.size / 1e6).toFixed(1)} MB for computers, ${(small.size / 1e6).toFixed(1)} MB for phones). ${name} shows it within a minute.`;
+    } catch (x) {
+      err.textContent = x instanceof Error && x.message ? x.message : 'Something went wrong. Try again.'; prog.textContent = ''; btn.disabled = false;
+    }
+  });
 </script>
 
 <style is:global>
@@ -712,6 +855,10 @@ import Site from '../layouts/Site.astro';
   .admin .row[data-tone='ok'] .tag { background: #16401f; color: #bff2cf; }
   .admin .row[data-tone='old'] .tag, .admin .row[data-tone='todo'] .tag { background: #4a3a0e; color: #ffe29a; }
   .admin .row[data-tone='bad'] .tag { background: #55202e; color: #ffc9d4; }
+  .admin .hv-acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+  .admin .hv-acts .btn { margin: 0; }
+  .admin #hv-prev { width: 100%; max-height: 260px; border-radius: var(--radius-sm); background: #000; margin: var(--space-2) 0; }
+  .admin #hv-start { width: 100%; min-height: 44px; }
   .admin .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
   .admin .result { margin: 0; flex: 1 1 100%; font-size: 14px; color: #cfc7e0; } .result:empty { display: none; }
   .admin .foot-note { margin: var(--space-4) 0 0; font-size: 14px; color: #b9b0cf; }

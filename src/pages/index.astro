@@ -142,6 +142,9 @@ const links = [
   const video = document.querySelector<HTMLVideoElement>('.hero-bg');
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator as any).connection?.saveData;
   if (video && still) { video.removeAttribute('autoplay'); video.pause(); }
+  // A Home video picked in /admin > Page videos replaces the archway once it is playing.
+  import { heroVideo } from '../lib/heroVideo';
+  heroVideo(document.querySelector('.hero'), 'home', { className: 'hero-bg', replace: video });
 </script>
 
 <style>

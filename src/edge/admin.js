@@ -98,6 +98,9 @@ export function setupChecklist(env) {
       { name: 'STRIPE_WEBHOOK_SECRET', label: 'Stripe payments reach accounts (webhook signing secret)', present: has('STRIPE_WEBHOOK_SECRET') },
       { name: 'ADMIN_EMAILS', label: 'Admin e-mails (sign in here with your account if you forget the password)', present: adminEmails(env).length > 0 },
     ] },
+    { group: 'Page videos', items: [
+      { name: 'MEDIA', label: 'Page video storage bucket (R2 binding)', present: !!(env.MEDIA && typeof env.MEDIA.put === 'function') },
+    ] },
     { group: 'Backups and sign-in', items: [
       { name: 'BACKUPS', label: 'Backup storage bucket (R2 binding)', present: !!(env.BACKUPS && typeof env.BACKUPS.put === 'function') },
       { name: 'BACKUP_CRON_TOKEN', label: 'Nightly backup job password', present: has('BACKUP_CRON_TOKEN') },
