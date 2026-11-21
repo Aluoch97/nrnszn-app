@@ -1,4 +1,5 @@
-// YouTube playlist reader for /api/playlist?list=<id> (used by the Certified Lounge app's video screen).
+// YouTube playlist reader for /api/playlist?list=<id> (used by the Certified Lounge app's video screen):
+// the playlist's title, its description (shown under the player in the app) and its videos.
 // Main path: the official YouTube Data API, with the key in the Cloudflare secret YOUTUBE_API_KEY.
 // Backup path (no key, or the API fails): read the public playlist page and take the video list out
 // of the data the page carries (ytInitialData). If both fail, nothing is cached, the last good copy
@@ -40,7 +41,8 @@ export function parsePlaylist(data) {
   };
   walk(data);
   const title = text(data?.metadata?.playlistMetadataRenderer?.title) || text(data?.header?.pageHeaderRenderer?.pageTitle) || '';
-  return { title, videos };
+  const description = text(data?.metadata?.playlistMetadataRenderer?.description).trim();
+  return { title, description, videos };
 }
 
 export function extractInitialData(html) {
@@ -123,7 +125,8 @@ export async function loadPlaylistViaApi(list, key, now = Date.now()) {
     duration: durations[ids[i]] || '',
     age: timeAgo(it.contentDetails?.videoPublishedAt, now),
   }));
-  return { ok: true, list, title: meta.items?.[0]?.snippet?.title || '', videos, source: 'api' };
+  const sn = meta.items?.[0]?.snippet || {};
+  return { ok: true, list, title: sn.title || '', description: (sn.description || '').trim(), videos, source: 'api' };
 }
 
 // key: the YouTube API key, if set. Falls back to reading the page when there's no key or the API fails.
@@ -152,9 +155,9 @@ async function loadPlaylistFromPage(list) {
     signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) throw new Error(`youtube ${res.status}`);
-  const { title, videos } = parsePlaylist(extractInitialData(await res.text()));
+  const { title, description, videos } = parsePlaylist(extractInitialData(await res.text()));
   if (!videos.length) throw new Error('no videos found');
-  return { ok: true, list, title, videos, source: 'page' };
+  return { ok: true, list, title, description, videos, source: 'page' };
 }
 
 export const isPlaylistId = (v) => ID.test(v || '');

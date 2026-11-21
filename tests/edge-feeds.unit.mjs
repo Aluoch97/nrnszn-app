@@ -105,13 +105,14 @@ const lockup = (id, title, duration, parts) => ({ lockupViewModel: {
 } });
 
 test('playlist reader: current YouTube page format', () => {
-  const data = { metadata: { playlistMetadataRenderer: { title: 'Certified Tour' } }, contents: { list: [
+  const data = { metadata: { playlistMetadataRenderer: { title: 'Certified Tour', description: 'On the road with the crew. ' } }, contents: { list: [
     lockup('akcFv16N6s8', 'SXSW - Live From Austin ', '15:02', ['NuRenaissance', '165', '1y ago']),
     lockup('x3V8pIsS-Jo', 'A Taste of Phoenix', '14:26', ['NuRenaissance', 'and Underground Music Collective', '133', '11mo ago']),
     { lockupViewModel: { contentId: 'PLabcdefghijk', contentType: 'LOCKUP_CONTENT_TYPE_PLAYLIST' } },
   ] } };
   const r = parsePlaylist(data);
   assert.equal(r.title, 'Certified Tour');
+  assert.equal(r.description, 'On the road with the crew.');
   assert.deepEqual(r.videos, [
     { id: 'akcFv16N6s8', title: 'SXSW - Live From Austin', duration: '15:02', age: '1y ago' },
     { id: 'x3V8pIsS-Jo', title: 'A Taste of Phoenix', duration: '14:26', age: '11mo ago' },
@@ -123,6 +124,7 @@ test('playlist reader: older format, and pages without data', () => {
   assert.deepEqual(r.videos, [{ id: 'KVPq322ZwwY', title: 'Kansas City Blues', duration: '10:58', age: '4 months ago' }]);
   assert.throws(() => extractInitialData('<html>consent</html>'), /ytInitialData/);
   assert.equal(parsePlaylist({}).videos.length, 0);
+  assert.equal(parsePlaylist({}).description, ''); // a playlist without one
 });
 
 // ---------- Playlist reader: YouTube Data API path ----------
@@ -136,7 +138,7 @@ const fakeYoutube = (u) => {
   const url = new URL(u);
   if (url.hostname !== 'www.googleapis.com') throw new Error('unexpected ' + u);
   assert.equal(url.searchParams.get('key'), 'k123');
-  if (url.pathname.endsWith('/playlists')) return json({ items: [{ snippet: { title: 'Certified Tour' } }] });
+  if (url.pathname.endsWith('/playlists')) return json({ items: [{ snippet: { title: 'Certified Tour', description: 'Certified Tour takes you on the road.\n' } }] });
   if (url.pathname.endsWith('/playlistItems')) {
     return url.searchParams.get('pageToken') === 'P2'
       ? json({ items: [apiItem('x3V8pIsS-Jo', 'A Taste of Phoenix', '2025-12-01T00:00:00Z'), apiItem('dddddddddd1', 'Deleted video', '')] })
@@ -154,6 +156,7 @@ test('playlist API: same shape as the page reader, private and deleted videos le
   const r = await loadPlaylistViaApi('PLVprhlbgSo1vgKbKRq7c3tsY-Y1tl4D3X', 'k123', Date.parse('2026-11-10T00:00:00Z'));
   assert.equal(r.title, 'Certified Tour');
   assert.equal(r.source, 'api');
+  assert.equal(r.description, 'Certified Tour takes you on the road.');
   assert.deepEqual(r.videos, [
     { id: 'akcFv16N6s8', title: 'SXSW - Live From Austin', duration: '15:02', age: '1 year ago' },
     { id: 'x3V8pIsS-Jo', title: 'A Taste of Phoenix', duration: '1:04:26', age: '11 months ago' },
