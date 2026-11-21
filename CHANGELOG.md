@@ -6,7 +6,8 @@ To release: add a new `## x.y · date` block at the top of this file in the same
 
 ## 3.11 · Nov 21, 2026
 Footer in two rows, and notifications move to your account.
-- The footer starts with **About** and **Your account** in bold; Add to Home Screen, Privacy policy, Admin and Refresh sit underneath in smaller type.
+- The footer starts with **About** and **Your account** in bold; Add to Home Screen, Privacy policy and Admin sit underneath in smaller type.
+- The footer **Refresh** button is gone: the "A new version is ready. Tap to update" bar does that job. (Refresh is still in /admin > Account, for troubleshooting.)
 - **Phone notifications** are now turned on and off on your account page (Your account), once you are signed in, instead of from the footer. Phones that already have them on keep getting them.
 
 ## 3.10 · Nov 21, 2026
