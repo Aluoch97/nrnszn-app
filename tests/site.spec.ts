@@ -142,7 +142,7 @@ for (const route of ROUTES) {
       const hrefs = await page.evaluate(() =>
         [...new Set([...document.querySelectorAll<HTMLAnchorElement>('a[href]')]
           .map((a) => a.href)
-          .filter((h) => h.startsWith(location.origin)))],
+          .filter((h) => h.startsWith(location.origin) && !new URL(h).pathname.startsWith('/api/')))],   // /api/* are Cloudflare Functions, not in this static server (unit-tested instead)
       );
       const bad: string[] = [];
       for (const h of hrefs) {

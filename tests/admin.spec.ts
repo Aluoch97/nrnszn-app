@@ -49,6 +49,7 @@ async function fakeApi(page: Page, opts: { mode?: Mode; backupLast?: boolean } =
     if (path === '/api/feed/cinema') return route.fulfill(json({ source: 'sheet', films: [{}] }));
     if (path === '/api/feed/services') return route.fulfill(json({ services: [{}, {}, {}] }));   // no "source": the old fallback answered
     if (path === '/api/feed/latest') return route.fulfill(json({ ok: true, music: { publishedAt: '2026-07-31T17:00:06Z' } }));
+    if (path === '/api/account/me') return route.fulfill(json({ on: true, google: true, email: true, user: null }));
     if (path === '/api/survey') return route.fulfill(json({ status: 'ok', mode: 'sheet' }));
     if (path === '/api/survey-recap') return route.fulfill(json({ status: 'ok', mode: 'edge' }));
     if (path === '/api/payment') return route.fulfill(json({ status: 'ok', mode: 'sheet' }));
@@ -94,19 +95,19 @@ test('a session the server no longer accepts sends you back to the password box'
   expect(await page.evaluate(() => localStorage.getItem('nrn_admin'))).toBeNull();
 });
 
-test('the settings: eight folders in four groups, honest counts, the setup checklist, back up now, and sign out', async ({ page }, info) => {
+test('the settings: nine folders in four groups, honest counts, the setup checklist, back up now, and sign out', async ({ page }, info) => {
   only(info);
   const state = await fakeApi(page);
   await page.addInitScript((t) => localStorage.setItem('nrn_admin', t), TOKEN);
   await page.goto('/admin/');
-  await expect(page.locator('#banner')).toContainText('3 of 10 need attention', { timeout: 10000 });
+  await expect(page.locator('#banner')).toContainText('3 of 11 need attention', { timeout: 10000 });
   await expect(page.locator('#banner')).toContainText('Services, Service requests, Nightly sheet backup');
-  await expect.poll(async () => page.locator('#n-ok, #n-old, #n-todo').allTextContents()).toEqual(['7', '2', '1']);   // new, old fallback, to do
-  expect(await page.locator('details.folder').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.folder))).toEqual(['events', 'push', 'analytics', 'send', 'feeds', 'keep', 'setup', 'account']);   // in the order of their groups
+  await expect.poll(async () => page.locator('#n-ok, #n-old, #n-todo').allTextContents()).toEqual(['8', '2', '1']);   // new, old fallback, to do
+  expect(await page.locator('details.folder').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.folder))).toEqual(['events', 'push', 'clients', 'analytics', 'send', 'feeds', 'keep', 'setup', 'account']);   // in the order of their groups
   // laid out like Soul Vault's Settings: coloured groups, one hero folder, an icon tile on every folder
   expect(await page.locator('.grp > h2').allTextContents()).toEqual(['Create & send', 'Visitors & activity', 'Health & data', 'Account']);
   expect(await page.locator('details.folder.hero').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.folder))).toEqual(['events']);
-  expect(await page.locator('details.folder > summary .si svg').count()).toBe(8);
+  expect(await page.locator('details.folder > summary .si svg').count()).toBe(9);
   await expect(page.locator('#b-feeds')).toHaveText('1'); await expect(page.locator('#b-send')).toHaveText('1'); await expect(page.locator('#b-keep')).toHaveText('1');
   // the setup checklist says Set / Missing, never a value
   await page.locator('details[data-folder="setup"] > summary').click();
@@ -226,3 +227,36 @@ test('the Account folder: the version line, then three full-width buttons that l
   await expect(page).toHaveURL(/\/admin\/?$/);
 });
 
+
+test('clients & projects: add a project, record a payment, see the balance; without the accounts database it explains', async ({ page }, info) => {
+  only(info);
+  await fakeApi(page);
+  const projects: any[] = []; const saves: any[] = [];
+  const json = (body: unknown, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
+  const view = () => ({ ok: true, projects: projects.map((p) => { const paid = p.payments.reduce((s: number, x: any) => s + x.amount, 0); return { ...p, paid, balance: p.total - paid }; }), totals: { projects: projects.length, open: projects.length, owed: projects.reduce((s, p) => s + p.total - p.payments.reduce((t: number, x: any) => t + x.amount, 0), 0), accounts: 0 } });
+  await page.route('**/api/admin**', async (route) => {
+    const req = route.request(), url = new URL(req.url());
+    if (req.method() === 'GET' && url.searchParams.get('section') === 'clients') return route.fulfill(json(view()));
+    if (req.method() === 'POST') {
+      const b = JSON.parse(req.postData() || '{}');
+      if (b.action === 'client-save') { saves.push(b.project); projects.push({ id: 'c1', email: b.project.email, clientName: '', title: b.project.title, service: '', status: b.project.status, statusLabel: 'Booked', total: Math.round(Number(b.project.total) * 100), due: '', note: '', link: '', hasAccount: false, payments: [] }); return route.fulfill(json({ ok: true, id: 'c1' })); }
+      if (b.action === 'client-pay') { projects[0].payments.unshift({ id: 'x1', amount: Math.round(Number(b.payment.amount) * 100), method: b.payment.method, paidOn: b.payment.paidOn, note: '' }); return route.fulfill(json({ ok: true })); }
+    }
+    return route.fallback();
+  });
+  await page.addInitScript((t) => localStorage.setItem('nrn_admin', t), TOKEN);
+  await page.goto('/admin/');
+  await page.locator('details[data-folder="clients"] > summary').click();
+  await expect(page.locator('#cl-msg')).toContainText('No client projects yet');
+  await page.click('#cl-add');
+  await page.fill('#cl-email', 'jo@example.com'); await page.fill('#cl-title', 'Music video'); await page.fill('#cl-total', '1200');
+  await page.click('#cl-save');
+  await expect(page.locator('#cl-list .row')).toHaveCount(1);
+  expect(saves[0]).toMatchObject({ email: 'jo@example.com', title: 'Music video', total: '1200', status: 'booked' });
+  await page.locator('#cl-list button', { hasText: 'Add payment' }).click();
+  await expect(page.locator('#cp-amount')).toHaveValue('1200');
+  await page.fill('#cp-amount', '400'); await page.selectOption('#cp-method', 'zelle');
+  await page.locator('#cp-form button[type="submit"]').click();
+  await expect(page.locator('#cl-list .row')).toContainText('Balance $800.00');
+  await expect(page.locator('#cl-list .row')).toContainText('by Zelle');
+});

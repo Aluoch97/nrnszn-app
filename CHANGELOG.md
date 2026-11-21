@@ -4,6 +4,14 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.8 · Nov 21, 2026
+One NuRenaissance account for every app.
+- **Your account** (nrnszn.com/account, also in the footer and the More sheet): sign in with Google, or with a one-time link by e-mail (no password). One sign-in works on this site, Certified, NuDirectory, luoh and Soul Vault.
+- People who already have a luoh account already have a NuRenaissance account: same e-mail, nothing to do.
+- **Your projects**: clients see each project with us, its status (booked, in progress, ready for review, done), the total, what they paid and what is left, plus any note or files link.
+- In /admin, a new **Clients & projects** folder: add a project for a client's e-mail, change its status, and record payments (Cash App, Zelle, PayPal, Stripe and so on). The balance updates by itself.
+- The privacy policy says what an account keeps.
+
 ## 3.7 · Nov 21, 2026
 PODI is now luoh.
 - **luoh** (said like the name Luo, with an h) has its new name and logo on the Apps page, and opens at its new address, luoh.nrnszn.com.
