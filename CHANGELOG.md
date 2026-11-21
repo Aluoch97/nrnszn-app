@@ -4,6 +4,12 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.11 · Nov 21, 2026
+Footer in two rows, and notifications move to your account.
+- The footer starts with **About** and **Your account** in bold; Add to Home Screen, Privacy policy and Admin sit underneath in smaller type.
+- The footer **Refresh** button is gone: the "A new version is ready. Tap to update" bar does that job. (Refresh is still in /admin > Account, for troubleshooting.)
+- **Phone notifications** are now turned on and off on your account page (Your account), once you are signed in, instead of from the footer. Phones that already have them on keep getting them.
+
 ## 3.10 · Nov 21, 2026
 A tidier footer, and a way back into /admin if you forget the password.
 - **Forgot your password?** under the admin sign-in: if your NuRenaissance account (Google) is on the admin list, you get in without the password, with one tap (or by itself when you are already signed in). It also says how to set a new password in Cloudflare.

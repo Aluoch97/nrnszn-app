@@ -1,4 +1,4 @@
-/* Phone notifications for visitors (Nov 17, 2026, Nick). A "Notifications" link in the footer (hidden until /api/push says it is switched on: both VAPID keys set in
+/* Phone notifications for visitors (Nov 17, 2026, Nick). A "Notifications" button on /account, for signed-in people only (Nov 21, 2026; it used to be in the footer), hidden until /api/push says it is switched on: both VAPID keys set in
    Cloudflare) opens a small dialog with one button, "Turn on notifications". It asks the phone, subscribes to web push with the public key from /api/push and saves the
    subscription through POST /api/push. /sw.js shows each notification. Plain static text only. Never inside a frame. */
 (function () {
