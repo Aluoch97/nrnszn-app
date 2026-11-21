@@ -60,3 +60,9 @@ Each event (old and new) has its own page at `/events/<name>/`. Events you add i
 4. Open https://www.nrnszn.com on your phone: a **Notifications** link appears in the footer (and in the More sheet). Tap it, then **Turn on notifications**. On iPhone, add the site to the Home Screen first.
 5. Open /admin > **Phone notifications**: it shows how many phones are on. Write a title, tap **Send**, confirm. A notification should arrive. At most 3 can be sent per 24 hours.
 
+
+
+## Forgot the admin password?
+Two ways back in:
+1. **With your NuRenaissance account** (set this up now, before you need it): Cloudflare > Workers & Pages > nrnszn-app > Settings > Variables and Secrets > Add > type **Text**, name `ADMIN_EMAILS`, value = your e-mail (the one you sign in with at nrnszn.com/account; several can be separated by commas) > Save, then Deployments > latest > ⋯ > Retry deployment. From then on, /admin lets you in without the password whenever you are signed in to that account (Forgot your password? > Sign in with my account). Only e-mails on that list get in.
+2. **Set a new password**: same place > `ADMIN_PASSWORD` > Edit > a new value (10+ characters) > Save > Retry deployment. Every device is signed out.

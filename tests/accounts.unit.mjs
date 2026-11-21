@@ -209,3 +209,22 @@ test('/admin: the Clients folder needs the owner sign-in, and the checklist list
   assert.deepEqual(names, [true, true, false]);
   assert.equal((await adminGet({ request: new Request('https://x/api/admin?section=clients', { headers: { authorization: `Bearer ${token}` } }), env: { ADMIN_PASSWORD: env.ADMIN_PASSWORD } })).status, 503);
 });
+
+test('/admin: forgot the password? An account on ADMIN_EMAILS gets in; anyone else, or a signed-out visitor, or another site, does not', async () => {
+  const g = await googleKit(), { call, env } = setup(); env.__googleCerts = g.certs;
+  Object.assign(env, { ADMIN_PASSWORD: 'correct horse battery staple', ADMIN_EMAILS: 'Owner@Example.com, other@x.co' });
+  const signIn = async (email) => pair(cookieOf(await call('google', { method: 'POST', body: { credential: await g.token(good({ email })) } })));
+  const door = (cookie, origin) => adminPost({ request: new Request('https://www.nrnszn.com/api/admin', { method: 'POST', body: JSON.stringify({ action: 'account-login' }), headers: { ...(cookie ? { cookie } : {}), ...(origin ? { origin } : {}) } }), env });
+  assert.equal((await (await adminGet({ request: new Request('https://www.nrnszn.com/api/admin'), env })).json()).accountLogin, true);
+  const owner = await signIn('owner@example.com');
+  const ok = await (await door(owner)).json(); assert.equal(ok.ok, true);
+  const dash = await adminGet({ request: new Request('https://www.nrnszn.com/api/admin', { headers: { authorization: `Bearer ${ok.token}` } }), env });
+  assert.equal((await dash.json()).signedIn, true, 'the token works like a password sign-in');
+  assert.equal((await door(await signIn('fan@example.com'))).status, 403, 'not on the list');
+  assert.equal((await door(null)).status, 401, 'signed out');
+  assert.equal((await door(owner, 'https://evil.example')).status, 403, 'another site');
+  assert.equal((await door(owner.replace(/\.[\w-]+$/, '.forged'))).status, 401, 'forged cookie');
+  const noList = await adminPost({ request: new Request('https://www.nrnszn.com/api/admin', { method: 'POST', body: JSON.stringify({ action: 'account-login' }), headers: { cookie: owner } }), env: { ...env, ADMIN_EMAILS: '' } });
+  assert.equal(noList.status, 503, 'off until ADMIN_EMAILS exists');
+  assert.equal((await (await adminGet({ request: new Request('https://www.nrnszn.com/api/admin'), env: { ...env, ADMIN_EMAILS: '' } })).json()).accountLogin, false);
+});

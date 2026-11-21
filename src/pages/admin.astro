@@ -18,6 +18,16 @@ import Site from '../layouts/Site.astro';
         <input id="pw" name="password" type="password" autocomplete="current-password" required />
         <button type="submit" class="btn primary">Sign in</button>
         <p id="login-error" class="error" role="alert"></p>
+        <details class="forgot" id="forgot">
+          <summary>Forgot your password?</summary>
+          <div id="acct-door" hidden>
+            <p>Sign in with your NuRenaissance account instead (the Google account or e-mail you use at <a href="/account">Your account</a>).</p>
+            <button type="button" class="btn" id="acct-login">Sign in with my account</button>
+            <p id="acct-error" class="error" role="alert"></p>
+          </div>
+          <p>Or set a new password: Cloudflare → <strong>Workers &amp; Pages</strong> → nrnszn-app → <strong>Settings</strong> → <strong>Variables and Secrets</strong> → <code>ADMIN_PASSWORD</code> → <strong>Edit</strong> → type a new one (10+ characters) → <strong>Save</strong>, then <strong>Deployments</strong> → latest → <strong>⋯</strong> → <strong>Retry deployment</strong>. This signs every device out.</p>
+          <p id="acct-door-off" class="hint">To be able to sign in with your account here, add a <strong>Text</strong> variable <code>ADMIN_EMAILS</code> with your e-mail in the same place.</p>
+        </details>
       </form>
       <div id="not-set-up" hidden class="callout">
         <p><strong>Sign-in is not set up yet.</strong> To switch it on:</p>
@@ -312,6 +322,17 @@ import Site from '../layouts/Site.astro';
     } catch { err.textContent = 'Could not reach the site. Check your connection and try again.'; }
     btn.disabled = false;
   });
+  $('acct-login').addEventListener('click', async () => {
+    const btn = $('acct-login') as HTMLButtonElement, err = $('acct-error'); btn.disabled = true; err.textContent = '';
+    try {
+      const res = await fetch('/api/admin', { method: 'POST', cache: 'no-store', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'account-login' }) });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok && j.token) { store.set(j.token); await start(); }
+      else if (j.result === 'signed-out') { location.href = '/account?return=' + encodeURIComponent('/admin/?account=1'); return; }
+      else err.textContent = j.message || 'Could not sign in. Try again.';
+    } catch { err.textContent = 'Could not reach the site. Check your connection and try again.'; }
+    btn.disabled = false;
+  });
   $('sign-out').addEventListener('click', () => signedOut('You are signed out on this device.'));
   $('backup-now').addEventListener('click', async () => {
     const btn = $('backup-now') as HTMLButtonElement, out = $('backup-result');
@@ -596,6 +617,7 @@ import Site from '../layouts/Site.astro';
     if (await clientPost({ action: 'client-pay', payment }, 'cp-error')) { $('cp-form').hidden = true; payFor = null; }
   });
 
+  let triedAccount = false;
   async function start() {
     show('loading');
     try {
@@ -605,6 +627,14 @@ import Site from '../layouts/Site.astro';
       if (j.mode === 'not-set-up') { show('gate'); ($('login') as HTMLElement).hidden = true; $('not-set-up').hidden = false; return; }
       if (j.signedIn) { await openDash(j); return; }
       show('gate'); ($('login') as HTMLElement).hidden = false; $('not-set-up').hidden = true;
+      $('acct-door').hidden = !j.accountLogin; $('acct-door-off').hidden = !!j.accountLogin;
+      if (j.accountLogin && !triedAccount) {   // signed in to an admin's NuRenaissance account already? Then no password is needed (tried once, quietly)
+        triedAccount = true;
+        const r = await fetch('/api/admin', { method: 'POST', cache: 'no-store', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'account-login' }) }).catch(() => null);
+        const t = r && r.ok ? await r.json().catch(() => ({})) : {};
+        if (t.token) { store.set(t.token); await start(); return; }
+        if (new URLSearchParams(location.search).has('account')) $('forgot').setAttribute('open', '');
+      }
     } catch { show('gate'); ($('login') as HTMLElement).hidden = false; $('login-error').textContent = 'Could not reach the site. Check your connection and reload.'; }
   }
   start();
@@ -625,6 +655,11 @@ import Site from '../layouts/Site.astro';
   .admin .btn.primary { background: #c8175f; border-color: #c8175f; }
   .admin .btn:disabled { opacity: 0.6; cursor: progress; }
   .admin .error { margin: 0; min-height: 1.4em; color: #ffc9d4; }
+  .admin .forgot { margin-top: var(--space-2); color: #cfc7e0; font-size: 15px; }
+  .admin .forgot summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--gold-300); font-weight: 600; }
+  .admin .forgot p { margin: 0 0 var(--space-2); }
+  .admin .forgot a { color: var(--gold-300); }
+  .admin .forgot .btn { margin: 0 0 var(--space-2); }
   .admin .callout { padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: #33290f; border: 1px solid #8a6d1c; color: #ffe9a8; }
   .admin .callout p { margin: 0 0 var(--space-2); } .callout ol { margin: 0; padding-left: 1.2em; } .callout li { margin: 0 0 var(--space-2); }
   .admin code { font-size: 0.92em; padding: 1px 6px; border-radius: 6px; background: rgba(0, 0, 0, 0.35); overflow-wrap: anywhere; }

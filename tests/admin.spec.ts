@@ -260,3 +260,24 @@ test('clients & projects: add a project, record a payment, see the balance; with
   await expect(page.locator('#cl-list .row')).toContainText('Balance $800.00');
   await expect(page.locator('#cl-list .row')).toContainText('by Zelle');
 });
+
+test('forgot the password: the help explains how to reset it, and an admin signed in to their account gets in with one tap', async ({ page }, info) => {
+  only(info);
+  await fakeApi(page);
+  let door = 0;
+  await page.route('**/api/admin', async (route) => {
+    const req = route.request();
+    if (req.method() === 'GET' && !req.headers()['authorization']) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'ok', mode: 'ready', accountLogin: true }) });
+    if (req.method() === 'POST' && JSON.parse(req.postData() || '{}').action === 'account-login') { door++; return route.fulfill(door === 1 ? { status: 401, contentType: 'application/json', body: JSON.stringify({ ok: false, result: 'not-admin-yet' }) } : { status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, token: TOKEN, days: 30 }) }); }
+    return route.fallback();
+  });
+  await page.goto('/admin/');
+  await expect(page.locator('#login')).toBeVisible();
+  expect(door).toBe(1);   // tried quietly once; not signed in to an admin account, so the password box stays
+  await page.locator('#forgot > summary').click();
+  await expect(page.locator('#forgot')).toContainText('ADMIN_PASSWORD');
+  await expect(page.locator('#acct-door')).toBeVisible(); await expect(page.locator('#acct-door-off')).toBeHidden();
+  await page.click('#acct-login');
+  await expect(page.locator('#dash')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('nrn_admin'))).toBe(TOKEN);
+});
