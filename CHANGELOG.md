@@ -4,6 +4,12 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.13 · Nov 21, 2026
+Your account is now a dashboard for every NuRenaissance app.
+- **One tile per app** (NuRenaissance, Certified, NuDirectory, Soul Vault, luoh), each with a quick summary: open projects and what's due, Passport stamps, listings sent and saved, saved songs, saved edits.
+- **Tap a tile** to see that app's page: your **projects and payments**; your **Certified Passport** stamps with the show names; your **NuDirectory listings** (Live, Waiting for review) and saved listings; your **saved Soul Vault songs**; your **luoh projects**. Saved songs and listings can be removed right there.
+- Your name card now says when you joined.
+
 ## 3.12 · Nov 21, 2026
 More for your account.
 - **Services:** when you are signed in, the request form fills in your name and e-mail, and your request shows up in Your account right away as **Quote requested**.

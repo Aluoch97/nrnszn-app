@@ -3,6 +3,17 @@
 // balance) and jump into the apps already signed in. Backend: src/edge/accounts.js (/api/account/*). Everything drawn from the
 // server is put in with textContent, never as HTML.
 import Site from '../layouts/Site.astro';
+import { pastEvents } from '../data/events.js';
+// The five apps on the dashboard. `open` is where "Open" goes; Soul Vault is another website, so it goes through the sign-in hop.
+const APPS = [
+  { id: 'nrn', name: 'NuRenaissance', tag: 'Projects and payments', icon: '/img/apps/nrnszn-icon.webp', open: '/services' },
+  { id: 'certified', name: 'Certified', tag: 'Your Passport stamps', icon: '/img/apps/certified-icon.webp', open: 'https://play.nrnszn.com/?tab=about' },
+  { id: 'directory', name: 'NuDirectory', tag: 'Your listings and saves', icon: '/img/apps/nudirectory-icon.webp', open: 'https://directory.nrnszn.com/' },
+  { id: 'vault', name: 'Soul Vault', tag: 'Your saved songs', icon: '/img/apps/soul-vault-icon.webp', open: '/api/account/connect?return=' + encodeURIComponent('https://soulnicolas.com/') },
+  { id: 'luoh', name: 'luoh', tag: 'Your saved edits', icon: '/img/apps/luoh-icon.webp', open: 'https://luoh.nrnszn.com/' },
+];
+// Show names for the Passport, by date (the same shows as the Events page).
+const SHOW_NAMES = Object.fromEntries(pastEvents.map((e) => [e.day, e.title]));
 ---
 <Site
   title="Your account | NuRenaissance"
@@ -40,54 +51,104 @@ import Site from '../layouts/Site.astro';
     <section id="acct-me" hidden>
       <div class="card who">
         <div class="avatar" aria-hidden="true" id="me-initial"></div>
-        <div class="who-t"><b id="me-name"></b><span id="me-email"></span></div>
+        <div class="who-t"><b id="me-name"></b><span id="me-email"></span><span id="me-since" class="since"></span></div>
       </div>
       <p id="me-continue-wrap" hidden><a class="btn primary wide" id="me-continue">Continue</a></p>
 
-      <h2>Your projects</h2>
-      <div id="proj-list" class="projects" aria-live="polite"></div>
+      <!-- The dashboard: one tile per app with a quick summary; a tile opens that app's page (#nrn, #certified, ... so Back works). -->
+      <div id="dash-home">
+        <h2 id="apps-h">Your apps</h2>
+        <p class="small">One account, five apps. Tap one to see what it keeps for you.</p>
+        <ul class="tiles" aria-labelledby="apps-h">
+          {APPS.map((x) => (
+            <li class={x.id === 'nrn' ? 'wide' : ''}><a class="tile" href={'#' + x.id} data-app={x.id}>
+              <img src={x.icon} alt="" width="44" height="44" loading="lazy" />
+              <span class="t-txt"><b>{x.name}</b><span class="t-sum" data-sum={x.id}>{x.tag}</span></span>
+              <span class="t-go" aria-hidden="true">›</span>
+            </a></li>
+          ))}
+        </ul>
 
-      <section id="pay-wrap" hidden>
-        <h2>Your payments</h2>
-        <p class="small">Card and Apple Pay payments made with this e-mail. PayPal, Cash App, Venmo and Zelle payments show on the project once we mark them.</p>
-        <ul class="pays-list" id="pay-list"></ul>
-      </section>
+        <section class="card notify" aria-labelledby="notify-h">
+          <h2 class="card-h" id="notify-h">Phone notifications</h2>
+          <p class="small">News, new videos and events from NuRenaissance on this phone, a few a month at most. Turn them on or off here any time.</p>
+          <button type="button" class="btn wide" data-push-open hidden>Phone notifications on this device</button>
+          <p class="small" data-push-off>Not switched on for this site yet.</p>
+        </section>
 
-      <section class="card notify" aria-labelledby="notify-h">
-        <h2 class="card-h" id="notify-h">Phone notifications</h2>
-        <p class="small">News, new videos and events from NuRenaissance on this phone, a few a month at most. Turn them on or off here any time.</p>
-        <button type="button" class="btn wide" data-push-open hidden>Phone notifications on this device</button>
-        <p class="small" data-push-off>Not switched on for this site yet.</p>
-      </section>
+        <details class="card more">
+          <summary>Account settings</summary>
+          <form id="name-form" class="mail">
+            <label for="me-name-in">Your name</label>
+            <input id="me-name-in" type="text" maxlength="80" autocomplete="name" />
+            <button type="submit" class="btn">Save name</button>
+            <p id="name-st" class="hint" role="status"></p>
+          </form>
+          <form id="del-form" class="mail danger">
+            <label for="del-in">Delete my account</label>
+            <p class="hint">This erases your account, your saved songs and listings, and any luoh projects saved on it, on every app. Your project history with NuRenaissance stays with us as a business record. Type your e-mail to confirm.</p>
+            <input id="del-in" type="email" autocomplete="off" />
+            <button type="submit" class="btn danger">Delete my account</button>
+            <p id="del-st" class="hint" role="alert"></p>
+          </form>
+        </details>
+        <button type="button" class="btn quiet wide" id="sign-out">Sign out of every app</button>
+      </div>
 
-      <h2>Your apps</h2>
-      <p class="small">You are signed in to these too.</p>
-      <ul class="apps">
-        <li><a href="https://play.nrnszn.com/"><img src="/img/apps/certified-icon.webp" alt="" width="48" height="48" loading="lazy" /><span><b>Certified</b><small>Play along at the show</small></span></a></li>
-        <li><a href="https://directory.nrnszn.com/"><img src="/img/apps/nudirectory-icon.webp" alt="" width="48" height="48" loading="lazy" /><span><b>NuDirectory</b><small>Nashville's creative directory</small></span></a></li>
-        <li><a href="https://luoh.nrnszn.com/"><img src="/img/apps/luoh-icon.webp" alt="" width="48" height="48" loading="lazy" /><span><b>luoh</b><small>Edit multi-camera video</small></span></a></li>
-        <li><a href={'/api/account/connect?return=' + encodeURIComponent('https://soulnicolas.com/')}><img src="/img/apps/soul-vault-icon.webp" alt="" width="48" height="48" loading="lazy" /><span><b>Soul Vault</b><small>Nicólas Soul's music</small></span></a></li>
-      </ul>
+      <!-- One app's page. -->
+      <div id="dash-app" hidden>
+        <a class="back" href="#" id="app-back">‹ All apps</a>
+        <div class="app-head">
+          <img id="app-icon" alt="" width="56" height="56" />
+          <div class="app-head-t"><h2 id="app-name" tabindex="-1"></h2><p id="app-tag" class="small"></p></div>
+        </div>
 
-      <details class="card more">
-        <summary>Account settings</summary>
-        <form id="name-form" class="mail">
-          <label for="me-name-in">Your name</label>
-          <input id="me-name-in" type="text" maxlength="80" autocomplete="name" />
-          <button type="submit" class="btn">Save name</button>
-          <p id="name-st" class="hint" role="status"></p>
-        </form>
-        <form id="del-form" class="mail danger">
-          <label for="del-in">Delete my account</label>
-          <p class="hint">This erases your account and any luoh projects saved on it, on every app. Your project history with NuRenaissance stays with us as a business record. Type your e-mail to confirm.</p>
-          <input id="del-in" type="email" autocomplete="off" />
-          <button type="submit" class="btn danger">Delete my account</button>
-          <p id="del-st" class="hint" role="alert"></p>
-        </form>
-      </details>
-      <button type="button" class="btn quiet wide" id="sign-out">Sign out of every app</button>
+        <div data-panel="nrn" hidden>
+          <dl class="nums stats" id="nrn-stats"></dl>
+          <h3 class="sec">Your projects</h3>
+          <div id="proj-list" class="projects" aria-live="polite"></div>
+          <section id="pay-wrap" hidden>
+            <h3 class="sec">Your payments</h3>
+            <p class="small">Card and Apple Pay payments made with this e-mail. PayPal, Cash App, Venmo and Zelle payments show on the project once we mark them.</p>
+            <ul class="pays-list" id="pay-list"></ul>
+          </section>
+        </div>
+
+        <div data-panel="certified" hidden>
+          <dl class="nums stats" id="cert-stats"></dl>
+          <h3 class="sec">Your Certified Passport</h3>
+          <p class="small">One stamp for every Certified show you check in at, saved to your account so every phone shows them.</p>
+          <div id="cert-body" aria-live="polite"></div>
+        </div>
+
+        <div data-panel="directory" hidden>
+          <dl class="nums stats" id="dir-stats"></dl>
+          <h3 class="sec">Your listings</h3>
+          <p class="small">What you sent to NuDirectory while signed in, and whether it is live.</p>
+          <div id="dir-mine" aria-live="polite"></div>
+          <h3 class="sec">Saved listings</h3>
+          <div id="dir-saved"></div>
+        </div>
+
+        <div data-panel="vault" hidden>
+          <dl class="nums stats" id="vault-stats"></dl>
+          <h3 class="sec">Saved songs</h3>
+          <p class="small">Songs you saved with ♡ in Soul Vault's Now Playing.</p>
+          <div id="vault-saved"></div>
+        </div>
+
+        <div data-panel="luoh" hidden>
+          <dl class="nums stats" id="luoh-stats"></dl>
+          <h3 class="sec">Saved projects</h3>
+          <p class="small">Edits you saved to your account in luoh. Your videos themselves stay on your device.</p>
+          <div id="luoh-list"></div>
+        </div>
+
+        <a class="btn primary wide" id="app-open" target="_blank" rel="noopener">Open</a>
+      </div>
     </section>
   </article>
+  <script is:inline type="application/json" id="dash-data" set:html={JSON.stringify({ apps: APPS, shows: SHOW_NAMES }).replace(/</g, '\\u003c')}></script>
 </Site>
 
 <script>
@@ -98,7 +159,7 @@ import Site from '../layouts/Site.astro';
   const METHOD: Record<string, string> = { stripe: 'Card (Stripe)', 'apple-pay': 'Apple Pay', paypal: 'PayPal', 'cash-app': 'Cash App', venmo: 'Venmo', zelle: 'Zelle', cash: 'Cash', check: 'Check', other: 'Other' };
   const niceDay = (d: string) => (d ? new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '');
   const el = (tag: string, cls?: string, txt?: string) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
-  const show = (id: string) => { for (const s of ['acct-loading', 'acct-off', 'acct-in', 'acct-me']) $(s).hidden = s !== id; };
+  const show = (id: string) => { for (const s of ['acct-loading', 'acct-off', 'acct-in', 'acct-me']) $(s).hidden = s !== id; if (id !== 'acct-me') me = null; };
   // Where to go after signing in: through /api/account/connect, which adds a one-time ticket for soulnicolas.com and sends nrnszn sites straight on.
   const onward = () => (back ? `/api/account/connect?return=${encodeURIComponent(back)}` : '');
   const host = (u: string) => { try { return new URL(u, location.href).host.replace(/^www\./, ''); } catch { return ''; } };
@@ -111,7 +172,7 @@ import Site from '../layouts/Site.astro';
 
   function drawProjects(list: any[]) {
     const box = $('proj-list'); box.textContent = '';
-    if (!list.length) { box.appendChild(el('p', 'small', 'No projects with us yet. When you book a service, it shows up here with its status and balance.')); const a = el('a', 'btn wide', 'See our services') as HTMLAnchorElement; a.href = '/services'; box.appendChild(a); return; }
+    if (!list.length) { box.appendChild(el('p', 'empty', 'No projects with us yet. When you book a service, it shows up here with its status and balance.')); return; }
     for (const p of list) {
       const card = el('article', 'card proj'); card.dataset.status = p.status;
       const top = el('div', 'proj-top'); top.append(el('h3', '', p.title), el('span', 'chip', p.statusLabel)); card.appendChild(top);
@@ -147,15 +208,150 @@ import Site from '../layouts/Site.astro';
       box.appendChild(li);
     }
   }
+  // ---- the dashboard ------------------------------------------------------------------------------------------------------------
+  const DATA = JSON.parse(document.getElementById('dash-data')?.textContent || '{}');
+  const APPS: { id: string; name: string; tag: string; icon: string; open: string }[] = DATA.apps || [];
+  const SHOWS: Record<string, string> = DATA.shows || {};
+  let me: any = null;
+  let passport: any = null, passportP: Promise<void> | null = null;
+  let listings: any = null, listingsP: Promise<void> | null = null;
+  const day = (ms: number) => new Date(ms).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  const plural = (n: number, one: string, many = one + 's') => `${n} ${n === 1 ? one : many}`;
+  const sum = (id: string, t: string) => { const e = document.querySelector(`[data-sum="${id}"]`); if (e) e.textContent = t; };
+  function stats(id: string, rows: [string, string, string?][]) {
+    const box = $(id); box.textContent = '';
+    for (const [k, v, c] of rows) { const d = el('div', c || ''); d.append(el('dt', '', k), el('dd', '', v)); box.appendChild(d); }
+  }
+  function empty(box: HTMLElement, t: string) { box.textContent = ''; box.appendChild(el('p', 'empty', t)); }
+  // A list row: title (a link when there is one), a line under it, a status chip, and an optional Remove button.
+  function row(title: string, sub: string, href: string, chip?: string, onRemove?: () => void) {
+    const li = el('li', 'row');
+    const main = el(href ? 'a' : 'div', 'row-main') as HTMLAnchorElement;
+    if (href) { main.href = href; main.target = '_blank'; main.rel = 'noopener noreferrer'; }
+    main.append(el('b', '', title || 'Untitled')); if (sub) main.append(el('span', '', sub)); li.appendChild(main);
+    if (chip) { const c = el('span', 'chip', chip); c.dataset.status = chip; li.appendChild(c); }
+    if (onRemove) { const b = el('button', 'rm', 'Remove') as HTMLButtonElement; b.type = 'button'; b.setAttribute('aria-label', `Remove ${title || 'this'}`); b.addEventListener('click', () => { b.disabled = true; onRemove(); }); li.appendChild(b); }
+    return li;
+  }
+  const httpsOk = (u: string) => /^https:\/\//i.test(u);
+
+  function summaries() {
+    const open = (me.projects || []).filter((p: any) => p.status !== 'done' && p.status !== 'cancelled');
+    const due = (me.projects || []).filter((p: any) => p.status !== 'cancelled').reduce((s: number, p: any) => s + p.balance, 0);
+    sum('nrn', (me.projects || []).length ? [plural(open.length, 'open project'), due ? `${usd(due)} due` : 'all paid'].join(' · ') : 'No projects yet');
+    const dSaved = (me.saved?.directory || []).length;
+    sum('directory', [`${dSaved} saved`, listings ? `${listings.length} sent` : ''].filter(Boolean).join(' · '));
+    sum('vault', plural((me.saved?.vault || []).length, 'saved song'));
+    sum('luoh', plural(me.luoh?.count || 0, 'saved project'));
+    sum('certified', passport ? (passport.ok ? plural(passport.stamps.length, 'Passport stamp') : 'Passport') : 'Your Passport stamps');
+  }
+
+  async function loadPassport() {
+    if (!passportP) passportP = api('passport', {}).then((j) => { passport = j.ok ? j : { ok: false, message: j.message }; if (!j.ok) passportP = null; summaries(); if (current() === 'certified') drawCertified(); }).catch(() => { passport = { ok: false }; passportP = null; });
+    return passportP;
+  }
+  async function loadListings() {
+    if (!listingsP) listingsP = api('listings', { action: 'mine' }).then((j) => { listings = j.ok ? (j.listings || []) : null; if (!j.ok) { listingsP = null; listingsErr = j.message || ''; } summaries(); if (current() === 'directory') drawDirectory(); }).catch(() => { listingsP = null; });
+    return listingsP;
+  }
+  let listingsErr = '';
+
+  function drawNrn() {
+    const ps = me.projects || [], pays = me.payments || [];
+    const due = ps.filter((p: any) => p.status !== 'cancelled').reduce((s: number, p: any) => s + p.balance, 0);
+    const paid = ps.reduce((s: number, p: any) => s + p.paid, 0);
+    stats('nrn-stats', [['Projects', String(ps.length)], ['Balance due', usd(due), due ? 'owe' : 'clear'], ['Paid', usd(paid)]]);
+    drawProjects(ps); drawPayments(pays);
+  }
+  function drawCertified() {
+    const box = $('cert-body');
+    if (!passport) { stats('cert-stats', [['Stamps', '…'], ['Latest', '…']]); empty(box, 'Loading your Passport…'); loadPassport(); return; }
+    if (!passport.ok) { stats('cert-stats', [['Stamps', '–'], ['Latest', '–']]); empty(box, passport.message || 'Certified did not answer. Try again in a minute.'); const b = el('button', 'btn small', 'Try again') as HTMLButtonElement; b.type = 'button'; b.addEventListener('click', () => { passport = null; drawCertified(); }); box.appendChild(b); return; }
+    const st = [...passport.stamps].sort((a: any, b: any) => (a.day < b.day ? 1 : -1));
+    stats('cert-stats', [['Stamps', String(st.length)], ['Latest', st.length ? niceDay(st[0].day) : '–']]);
+    box.textContent = '';
+    if (passport.today?.open && !st.some((s: any) => s.day === passport.today.day)) box.appendChild(el('p', 'tonight', 'There is a Certified show today. Open Certified and check in to collect tonight\'s stamp.'));
+    if (!st.length) { box.appendChild(el('p', 'empty', 'No stamps yet. Check in at the next Certified show (join the game or scan the code on the screen) to get your first one.')); return; }
+    const ul = el('ul', 'stamps');
+    for (const s of st) { const li = el('li', 'stamp'); li.append(el('b', '', SHOWS[s.day] || 'Certified show'), el('span', '', `${niceDay(s.day)} · ${s.method === 'door' ? 'checked in at the door' : 'played along'}`)); ul.appendChild(li); }
+    box.appendChild(ul);
+  }
+  function drawDirectory() {
+    const saved = me.saved?.directory || [];
+    stats('dir-stats', [['Sent', listings ? String(listings.length) : '…'], ['Live', listings ? String(listings.filter((x: any) => x.status === 'Live').length) : '…'], ['Saved', String(saved.length)]]);
+    const mine = $('dir-mine');
+    if (!listings) { empty(mine, listingsErr || 'Loading your listings…'); if (!listingsP) loadListings(); }
+    else if (!listings.length) empty(mine, 'Nothing sent yet. Listings you send while signed in show up here with their status.');
+    else { mine.textContent = ''; const ul = el('ul', 'rows'); for (const x of listings) ul.appendChild(row(x.title, [x.kind, x.sent ? 'sent ' + day(new Date(x.sent).getTime()) : ''].filter(Boolean).join(' · '), '', x.status)); mine.appendChild(ul); }
+    const sv = $('dir-saved');
+    if (!saved.length) { empty(sv, 'Nothing saved yet. Open a listing in NuDirectory and tap ♡ Save to keep it here.'); return; }
+    sv.textContent = ''; const ul = el('ul', 'rows');
+    for (const x of saved) ul.appendChild(row(x.title, x.at ? 'saved ' + day(x.at) : '', httpsOk(x.url) ? x.url : 'https://directory.nrnszn.com/?l=' + encodeURIComponent(x.id), '', () => unsave('directory', 'listing', x.id)));
+    sv.appendChild(ul);
+  }
+  function drawVault() {
+    const saved = me.saved?.vault || [];
+    stats('vault-stats', [['Saved songs', String(saved.length)]]);
+    const box = $('vault-saved');
+    if (!saved.length) { empty(box, 'No saved songs yet. In Soul Vault, play a song and tap ♡ in Now Playing.'); return; }
+    box.textContent = ''; const ul = el('ul', 'rows');
+    for (const x of saved) {
+      const href = httpsOk(x.url) ? x.url : x.url && x.url.startsWith('/') && !x.url.startsWith('//') ? 'https://soulnicolas.com' + x.url : 'https://soulnicolas.com/vault';
+      ul.appendChild(row(x.title, x.at ? 'saved ' + day(x.at) : '', href, '', () => unsave('vault', 'song', x.id)));
+    }
+    box.appendChild(ul);
+  }
+  function drawLuoh() {
+    const l = me.luoh || { count: 0, recent: [] };
+    stats('luoh-stats', [['Saved projects', String(l.count)], ['Last edit', l.recent.length ? day(l.recent[0].at) : '–']]);
+    const box = $('luoh-list');
+    if (!l.recent.length) { empty(box, 'No projects saved to your account yet. In luoh, use Save to account and they show up here.'); return; }
+    box.textContent = ''; const ul = el('ul', 'rows');
+    for (const x of l.recent) ul.appendChild(row(x.name, 'edited ' + day(x.at), ''));
+    box.appendChild(ul);
+    if (l.count > l.recent.length) box.appendChild(el('p', 'small', `and ${l.count - l.recent.length} more in luoh.`));
+  }
+  async function unsave(app: string, kind: string, id: string) {
+    const j = await api('saved', { app, kind, id, on: false }).catch(() => ({ ok: false }));
+    if (j.ok && me.saved?.[app]) me.saved[app] = me.saved[app].filter((x: any) => x.id !== id);
+    summaries(); show_(current());
+  }
+
+  const DRAW: Record<string, () => void> = { nrn: drawNrn, certified: drawCertified, directory: drawDirectory, vault: drawVault, luoh: drawLuoh };
+  const current = () => { const h = location.hash.slice(1); return DRAW[h] ? h : ''; };
+  function show_(id: string) {
+    if (!me) return;
+    $('dash-home').hidden = !!id; $('dash-app').hidden = !id;
+    if (!id) return;
+    const a = APPS.find((x) => x.id === id)!;
+    ($('app-icon') as HTMLImageElement).src = a.icon; $('app-name').textContent = a.name; $('app-tag').textContent = a.tag;
+    const open = $('app-open') as HTMLAnchorElement; open.href = a.open; open.textContent = id === 'nrn' ? 'Book a service' : `Open ${a.name}`;
+    if (id === 'nrn') { open.removeAttribute('target'); } else open.target = '_blank';
+    document.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== id; });
+    DRAW[id]();
+  }
+  let lastView = '';
+  function route() {
+    const id = current(); show_(id);
+    if (id && id !== lastView) { scrollTo(0, 0); $('app-name').focus({ preventScroll: true }); }
+    else if (!id && lastView) { const t = document.querySelector<HTMLElement>(`[data-app="${lastView}"]`); t?.focus({ preventScroll: true }); t?.scrollIntoView({ block: 'center' }); }
+    lastView = id;
+  }
+  addEventListener('hashchange', route);
+  $('app-back').addEventListener('click', (e) => { e.preventDefault(); if (history.state?.dash) history.back(); else location.hash = ''; });
+  document.querySelectorAll<HTMLAnchorElement>('.tile').forEach((t) => t.addEventListener('click', (e) => { e.preventDefault(); history.pushState({ dash: 1 }, '', '#' + t.dataset.app); route(); }));
+
   function signedIn(j: any) {
-    payLink = j.payLink || ''; meEmail = j.user.email;
+    payLink = j.payLink || ''; meEmail = j.user.email; me = j;
     show('acct-me');
     const u = j.user, name = u.name || u.email.split('@')[0];
     $('me-name').textContent = name; $('me-email').textContent = u.email; $('me-initial').textContent = name.trim().charAt(0).toUpperCase();
+    $('me-since').textContent = u.since ? `Member since ${new Date(u.since).toLocaleDateString([], { month: 'long', year: 'numeric' })}` : '';
     (document.getElementById('me-name-in') as HTMLInputElement).value = u.name || '';
-    drawProjects(j.projects || []);
-    drawPayments(j.payments || []);
     if (back) { $('me-continue-wrap').hidden = false; const a = $('me-continue') as HTMLAnchorElement; a.href = onward(); a.textContent = `Continue to ${host(back) || 'the app'}`; }
+    passport = null; passportP = null; listings = null; listingsP = null; listingsErr = '';
+    summaries(); route();
+    loadPassport(); loadListings();   // fill the Certified and NuDirectory tiles in the background
   }
 
   function loadGoogle(clientId: string) {
@@ -263,4 +459,42 @@ import Site from '../layouts/Site.astro';
   .acct .card-h { margin: 0 0 var(--space-1); font-size: 18px; }
   .acct .notify [data-push-open]:not([hidden]) ~ [data-push-off] { display: none; }
   .acct .more .mail { margin-top: var(--space-3); } .acct .more .danger { margin-top: var(--space-5); }
+  /* dashboard */
+  .acct .since { font-size: 13px; color: #9f95b8; }
+  .acct .tiles { list-style: none; margin: 0 0 var(--space-4); padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .acct .tiles li { min-width: 0; } .acct .tiles li.wide { grid-column: 1 / -1; }
+  .acct .tile { display: flex; align-items: center; gap: var(--space-3); min-height: 76px; height: 100%; box-sizing: border-box; padding: var(--space-3); border-radius: 18px; background: linear-gradient(160deg, #221a33, #1a1526); border: 1px solid #2e2640; color: #fff; text-decoration: none; }
+  .acct .tile:hover { border-color: #5a4c78; }
+  .acct .tile:focus-visible { outline: 3px solid var(--gold-300); outline-offset: 2px; }
+  .acct .tile img { flex: none; width: 44px; height: 44px; border-radius: 12px; object-fit: cover; }
+  .acct .t-txt { display: grid; min-width: 0; flex: 1; } .acct .t-txt b { font-size: 16px; overflow-wrap: anywhere; }
+  .acct .t-sum { font-size: 14px; color: #cfc7e0; overflow-wrap: anywhere; }
+  .acct .tiles li.wide .tile { background: linear-gradient(135deg, #3a1630, #221a33 60%); border-color: #5a2a4a; }
+  .acct .t-go { flex: none; font-size: 24px; color: #9f95b8; }
+  /* the four small tiles: icon on top, text under it, so names never break mid-word on a phone */
+  .acct .tiles li:not(.wide) .tile { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+  .acct .tiles li:not(.wide) .t-go { display: none; }
+  .acct .tiles li:not(.wide) .t-txt b { overflow-wrap: normal; }
+  @media (max-width: 359px) { .acct .tiles { grid-template-columns: minmax(0, 1fr); } .acct .tiles li:not(.wide) .tile { flex-direction: row; align-items: center; } }
+  .acct .back { display: inline-flex; align-items: center; min-height: 44px; color: var(--gold-300); font-weight: 700; text-decoration: none; margin-bottom: var(--space-2); }
+  .acct .back:focus-visible { outline: 3px solid var(--gold-300); outline-offset: 2px; }
+  .acct .app-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+  .acct .app-head img { flex: none; width: 56px; height: 56px; border-radius: 14px; }
+  .acct .app-head-t { min-width: 0; } .acct .app-head h2 { margin: 0; color: #fff; font-size: 26px; } .acct .app-head h2:focus { outline: none; } .acct .app-head .small { margin: 0; }
+  .acct .stats { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+  .acct h3.sec { font-family: var(--font-display); font-size: 20px; color: var(--gold-300); margin: var(--space-5) 0 var(--space-1); }
+  .acct .empty { margin: var(--space-2) 0; padding: var(--space-4); border: 1px dashed #3d3352; border-radius: 14px; color: #cfc7e0; font-size: 15px; }
+  .acct .rows, .acct .stamps { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: grid; gap: var(--space-2); }
+  .acct .row { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); min-height: 56px; border-radius: 14px; background: #1a1526; border: 1px solid #2e2640; }
+  .acct .row-main { display: grid; flex: 1; min-width: 0; min-height: 44px; align-content: center; color: #fff; text-decoration: none; }
+  .acct a.row-main:focus-visible, .acct .rm:focus-visible { outline: 3px solid var(--gold-300); outline-offset: 2px; border-radius: 8px; }
+  .acct .row-main b { overflow-wrap: anywhere; } .acct .row-main span { font-size: 14px; color: #b9b0cf; overflow-wrap: anywhere; }
+  .acct a.row-main b { text-decoration: underline; text-decoration-color: #5a4c78; text-underline-offset: 3px; }
+  .acct .rm { flex: none; min-height: 44px; padding: 0 var(--space-3); font: inherit; font-size: 14px; color: #ffd0da; background: transparent; border: 1px solid #5a3346; border-radius: 999px; cursor: pointer; }
+  .acct .row .chip[data-status='Live'] { background: #16401f; color: #bff2cf; } .acct .row .chip[data-status='Not approved'] { background: #55202e; color: #ffc9d4; }
+  .acct .row .chip { white-space: nowrap; }
+  .acct .stamp { display: grid; padding: var(--space-3); border-radius: 14px; background: linear-gradient(135deg, #2b1f12, #1a1526 70%); border: 1px solid #5a4520; }
+  .acct .stamp b { color: #ffe29a; overflow-wrap: anywhere; } .acct .stamp span { font-size: 14px; color: #cfc7e0; }
+  .acct .tonight { padding: var(--space-3); border-radius: 14px; background: #4a3a0e; color: #ffe29a; font-weight: 700; }
+  .acct #app-open { margin-top: var(--space-5); }
 </style>
