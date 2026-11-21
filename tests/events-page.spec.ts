@@ -47,3 +47,30 @@ test('with no added events (or no database) the page is exactly as before', asyn
   await expect(page.locator('#ev-more .ev-dyn-card')).toHaveCount(0); await expect(page.locator('#ev-past > li').first()).toBeVisible();
   expect(await page.locator('#ev-past > li.ev-dyn').count()).toBe(0);
 });
+
+test('offline: the events this phone last saw still show (the page does not go blank when the list cannot load)', async ({ page }, info) => {
+  only(info);
+  await page.route('**/api/events', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, events }) }));
+  await page.route('**/api/flyer**', (r) => r.fulfill({ status: 200, contentType: 'image/png', body: PNG }));
+  await page.goto('/events/');
+  await expect(page.locator('#ev-more .ev-dyn-card')).toHaveCount(2);
+  await page.waitForTimeout(500);   // the copy is saved after the live answer arrives
+  await page.unroute('**/api/events');
+  await page.route('**/api/events', (r) => r.abort('internetdisconnected'));   // now offline
+  await page.goto('/events/');
+  await expect(page.locator('#ev-more .ev-dyn-card')).toHaveCount(2);
+  await expect(page.locator('#ev-more .ev-dyn-card').first()).toContainText('Spring Showcase');
+});
+
+test('a bad answer (an error page, no list) is never saved over the good copy', async ({ page }, info) => {
+  only(info);
+  await page.route('**/api/events', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, events }) }));
+  await page.goto('/events/'); await expect(page.locator('#ev-more .ev-dyn-card')).toHaveCount(2); await page.waitForTimeout(500);
+  await page.unroute('**/api/events');
+  await page.route('**/api/events', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'db down' }) }));
+  await page.goto('/events/'); await page.waitForTimeout(500);
+  await page.unroute('**/api/events');
+  await page.route('**/api/events', (r) => r.abort('internetdisconnected'));
+  await page.goto('/events/');
+  await expect(page.locator('#ev-more .ev-dyn-card')).toHaveCount(2);
+});

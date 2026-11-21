@@ -172,6 +172,7 @@ const backdrop = pastEvents[0]?.img ? `/img/events/${pastEvents[0].img}-480.webp
   })();
 </script>
 
+<script is:inline src="/feed-cache.js"></script>
 <script is:inline>
   // Events added in /admin (stored in the site database): upcoming ones become cards, past ones join the flyer wall in date order.
   // Every flyer tile is a link straight to that event's own page.
@@ -230,7 +231,8 @@ const backdrop = pastEvents[0]?.img ? `/img/events/${pastEvents[0].img}-480.webp
       var cap = el('span', 'ev-tile-cap'); cap.appendChild(el('span', 'ev-tile-title', e.title)); cap.appendChild(el('span', 'ev-tile-when', when(e).split('·')[0].trim())); btn.appendChild(cap);
       li.appendChild(btn); return li;
     }
-    fetch('/api/events').then(function (r) { return r.json(); }).then(function (r) {
+    // Online: always the live list (maxAge 0). Offline or failing: the last list this phone saved (see /feed-cache.js), so the events still show.
+    nrnFeed('/api/events', null, { maxAge: 0, valid: function (d) { return !!d && d.ok === true && Array.isArray(d.events); } }).then(function (r) {
       var list = r && r.ok && Array.isArray(r.events) ? r.events : [];
       var up = list.filter(function (e) { return e.day >= today; }).sort(function (a, b) { return a.day < b.day ? -1 : 1; });
       var past = list.filter(function (e) { return e.day < today; });   // newest first already
