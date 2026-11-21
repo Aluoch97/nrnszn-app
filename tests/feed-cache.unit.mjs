@@ -77,3 +77,14 @@ test('no Cache Storage (private windows, old browsers): it simply loads live', a
   win.caches = undefined; vm.runInNewContext(code, sandbox);
   assert.deepEqual(await win.nrnFeed('/api/feed/x', '', { valid }), { items: [7] });
 });
+
+test('a live failure that arrives before the saved copy has been looked up is not reported as an unhandled error (it showed as a page error)', async () => {
+  const seen = []; const onBad = (e) => seen.push(String(e && e.message || e)); process.on('unhandledRejection', onBad);
+  try {
+    net = () => { throw new Error('boom'); };
+    win.caches.open = async () => { await new Promise((r) => setTimeout(r, 30)); return { match: async () => undefined, put: async () => {} }; };   // the lookup is slower than the failing request
+    await assert.rejects(win.nrnFeed('/api/feed/x', '', { valid }));   // the caller still gets the failure
+    await settle(); await settle();
+  } finally { process.off('unhandledRejection', onBad); }
+  assert.deepEqual(seen, []);
+});

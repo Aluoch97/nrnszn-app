@@ -38,6 +38,7 @@
     var maxAge = options.maxAge == null ? HOUR : options.maxAge;
     var valid = options.valid || function (d) { return !!d && !d.error; };
     var fresh = live(path, direct).then(function (data) { if (valid(data)) save(path, data); return data; });
+    fresh.catch(function () { /* handled below; this stops the browser calling a quick failure "unhandled" while the kept copy is still being looked up */ });
     return kept(path).then(function (k) {
       if (k && valid(k.data) && k.age >= 0 && k.age < maxAge) { fresh.catch(function () { /* the kept copy is on screen; nothing to do */ }); return k.data; }
       return fresh.catch(function (err) { if (k && valid(k.data)) return k.data; throw err; });
