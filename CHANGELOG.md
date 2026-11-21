@@ -5,7 +5,8 @@ The newest version is on top, and it is the number shown in /admin (Account). Th
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
 ## 3.9 · Nov 21, 2026
-The old Portal page is gone.
+A shorter menu, and the old Portal page is gone.
+- **About** is no longer in the menu. The footer (social icons, About, Your account, Add to Home Screen, Privacy policy, Admin, Refresh) now shows at the bottom of every page on phones too, not only on computers.
 - nrnszn.com/portal (the old link-in-bio page with the two latest videos) now opens the home page, which already has the same videos and links. Old links to it keep working.
 - The "page not found" screen now leads back to the home page.
 

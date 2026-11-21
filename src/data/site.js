@@ -10,11 +10,10 @@ export const nav = [
   { label: 'Media', href: '/media', icon: 'media', also: ['/gallery', '/cinema'] },
   { label: 'Events', href: '/events', icon: 'events' },
   { label: 'Apps', href: '/apps', icon: 'apps', also: ['/directory', '/play', '/vault'] },
-  { label: 'About', href: '/about', icon: 'about', also: ['/support'] }, // About and Support are one page
 ];
 
 export const tabs = ['/', '/media', '/events', '/apps', '/services'];
-export const more = ['/about'];
+export const more = [];   // (Nov 21, 2026, Nick: About left the menu; it is in the footer, which shows at the bottom of every page, phones too)
 
 // The apps on the Apps page. `inApp`: opens inside this site (full screen with a back bar).
 // `accent`: the glow color of its card, taken from the app's art.

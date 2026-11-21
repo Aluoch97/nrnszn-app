@@ -191,8 +191,8 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
     }
     .tab-home[aria-current='page'] :global(svg) { background: var(--gold-300); }
     .tab-home:not([aria-current='page']) :global(svg) { background: #2c2440; color: var(--gold-300); }
-    /* Phones: the More sheet has the footer links, so no footer (like an app). */
-    .site .foot { display: none; }
+    /* Phones: the footer shows at the bottom of every page too (Nov 21, 2026, Nick), above the tab bar. */
+    .site .foot { padding-bottom: var(--space-5); }
 
     .sheet[open] {
       display: block;
@@ -253,7 +253,8 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
   .ver, .refresh { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--space-2); color: var(--shell-text); font: inherit; text-decoration: underline; background: none; border: 0; cursor: pointer; }
   .sheet-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--space-3); margin-top: var(--space-2); }
   .sheet-tools .ver, .sheet-tools .refresh { color: var(--shell-muted); font-size: 14px; }
-  .links a { color: var(--shell-text); }
+  .links { text-align: center; line-height: 1.4; }
+  .links a { color: var(--shell-text); display: inline-flex; align-items: center; min-height: 44px; }
 </style>
 
 <script>
