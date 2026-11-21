@@ -1,0 +1,211 @@
+// The one NuRenaissance account (src/edge/accounts.js): shared cookie, Google + e-mail sign-in, the soulnicolas.com ticket hop,
+// who may read what (CORS), and client projects. Real SQLite (tests/_d1.mjs), fake Google keys and a fake Resend. No network.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { fakeD1 } from './_d1.mjs';
+import {
+  accountRequest, sessionCookie, sessionUserId, cookieDomain, safeReturn, saveProject, addPayment, allProjects, projectsFor, accountsDb,
+  LINKS_PER_DAY, COOKIE,
+} from '../src/edge/accounts.js';
+import { adminGet, adminPost, makeToken, setupChecklist } from '../src/edge/admin.js';
+
+const SECRET = 'a-long-shared-secret-for-tests-0123';
+const CLIENT = 'test-client.apps.googleusercontent.com';
+const enc = new TextEncoder();
+const b64u = (b) => Buffer.from(b).toString('base64url');
+
+async function googleKit() {
+  const pair = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+  const jwk = { ...(await crypto.subtle.exportKey('jwk', pair.publicKey)), kid: 'k1', alg: 'RS256', use: 'sig' };
+  const token = async (claims, { kid = 'k1', key = pair.privateKey } = {}) => {
+    const head = b64u(JSON.stringify({ alg: 'RS256', kid, typ: 'JWT' })), body = b64u(JSON.stringify(claims));
+    return `${head}.${body}.${b64u(new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, enc.encode(`${head}.${body}`))))}`;
+  };
+  return { certs: async () => ({ keys: [jwk] }), token };
+}
+const good = (over = {}) => ({ iss: 'https://accounts.google.com', aud: CLIENT, email: 'Fan@Example.com', email_verified: true, name: 'Fan One', exp: Math.floor(Date.now() / 1000) + 600, ...over });
+
+function setup(over = {}) {
+  const mails = [];
+  const env = {
+    ACCOUNTS_DB: fakeD1(), NRN_ACCOUNT_SECRET: SECRET, GOOGLE_CLIENT_ID: CLIENT, RESEND_API_KEY: 're_test',
+    __fetch: async (url, init) => { mails.push(JSON.parse(init.body)); return new Response('{}', { status: 200 }); },
+    ...over,
+  };
+  const call = (path, { method = 'GET', body, cookie, origin, host = 'www.nrnszn.com' } = {}) => {
+    const headers = {}; if (cookie) headers.cookie = cookie; if (origin) headers.origin = origin; if (body !== undefined) headers['content-type'] = 'application/json';
+    return accountRequest({ request: new Request(`https://${host}/api/account/${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) }), env, params: { path: path.split('?')[0].split('/') } });
+  };
+  return { env, call, mails };
+}
+const cookieOf = (res) => (res.headers.getSetCookie ? res.headers.getSetCookie() : [res.headers.get('set-cookie')]).find((c) => c && c.startsWith(`${COOKIE}=`) && !c.includes('Max-Age=0'));
+const pair = (c) => c.split(';')[0];
+
+test('switched off until the database AND a long secret exist; it says so plainly', async () => {
+  for (const over of [{ ACCOUNTS_DB: undefined }, { NRN_ACCOUNT_SECRET: '' }, { NRN_ACCOUNT_SECRET: 'short' }]) {
+    const { call } = setup(over);
+    const me = await (await call('me')).json();
+    assert.equal(me.on, false); assert.equal(me.user, null);
+    assert.equal((await call('email', { method: 'POST', body: { email: 'a@b.co' } })).status, 503);
+  }
+});
+
+test('the cookie covers every nrnszn.com site, is HttpOnly + Secure + Lax, and only on the real domain', async () => {
+  assert.equal(cookieDomain('www.nrnszn.com'), 'nrnszn.com'); assert.equal(cookieDomain('nrnszn.com'), 'nrnszn.com'); assert.equal(cookieDomain('play.nrnszn.com:443'), 'nrnszn.com');
+  for (const h of ['nrnszn-app.pages.dev', 'localhost', 'evilnrnszn.com', 'nrnszn.com.evil.io']) assert.equal(cookieDomain(h), '', h);
+  const c = await sessionCookie({ NRN_ACCOUNT_SECRET: SECRET }, 'u1', 'www.nrnszn.com');
+  assert.match(c, /HttpOnly/); assert.match(c, /Secure/); assert.match(c, /SameSite=Lax/); assert.match(c, /Domain=nrnszn\.com/); assert.match(c, /Max-Age=15552000/);
+  assert.doesNotMatch(await sessionCookie({ NRN_ACCOUNT_SECRET: SECRET }, 'u1', 'x.pages.dev'), /Domain=/);
+});
+
+test('a cookie is only believed with the right signature and before it expires', async () => {
+  const env = { ACCOUNTS_DB: fakeD1(), NRN_ACCOUNT_SECRET: SECRET };
+  const v = pair(await sessionCookie(env, 'user-1', 'www.nrnszn.com'));
+  const req = (cookie) => new Request('https://www.nrnszn.com/', { headers: { cookie } });
+  assert.equal(await sessionUserId(req(v), env), 'user-1');
+  assert.equal(await sessionUserId(req(`other=1; ${v}`), env), 'user-1');
+  assert.equal(await sessionUserId(req(v.replace('user-1', 'user-2')), env), null, 'someone else\'s id with my signature');
+  assert.equal(await sessionUserId(req(v), { ...env, NRN_ACCOUNT_SECRET: SECRET + 'x' }), null, 'a changed secret signs everyone out');
+  assert.equal(await sessionUserId(req(v), env, Date.now() + 181 * 86400_000), null, 'expired');
+  assert.equal(await sessionUserId(req(`${COOKIE}=garbage`), env), null);
+  assert.equal(await sessionUserId(req(`${COOKIE}=bad.1.x; ${v}`), env), 'user-1', 'a stale cookie next to a good one does not block it');
+});
+
+test('Google sign-in: a real token signs in (account made once, by e-mail); forged, wrong-audience, expired or unverified ones do not', async () => {
+  const g = await googleKit(), { call, env } = setup({ __googleCerts: undefined });
+  env.__googleCerts = g.certs;
+  const res = await call('google', { method: 'POST', body: { credential: await g.token(good()), return: '/account' }, origin: 'https://www.nrnszn.com' });
+  assert.equal(res.status, 200);
+  const j = await res.json(); assert.equal(j.user.email, 'fan@example.com'); assert.equal(j.user.name, 'Fan One'); assert.equal(j.next, '/account');
+  const c = cookieOf(res); assert.ok(c);
+  const me = await (await call('me', { cookie: pair(c) })).json(); assert.equal(me.user.email, 'fan@example.com');
+  await call('google', { method: 'POST', body: { credential: await g.token(good({ email: 'fan@example.com' })) } });
+  assert.equal((await env.ACCOUNTS_DB.prepare('SELECT COUNT(*) AS n FROM users').first()).n, 1, 'same person, one account');
+  const other = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign']);
+  for (const bad of [
+    await g.token(good(), { key: other.privateKey }), await g.token(good({ aud: 'someone-else' })), await g.token(good({ exp: 1 })),
+    await g.token(good({ email_verified: false })), await g.token(good({ iss: 'https://evil.example' })), await g.token(good(), { kid: 'nope' }), 'not.a.token', '',
+  ]) assert.equal((await call('google', { method: 'POST', body: { credential: bad } })).status, 401);
+});
+
+test('sign-in requests from another site are refused (no signing people in from someone else\'s page)', async () => {
+  const g = await googleKit(), { call, env } = setup(); env.__googleCerts = g.certs;
+  assert.equal((await call('google', { method: 'POST', origin: 'https://evil.example', body: { credential: await g.token(good()) } })).status, 403);
+  assert.equal((await call('email', { method: 'POST', origin: 'https://play.nrnszn.com', body: { email: 'a@b.co' } })).status, 403);
+});
+
+test('e-mail link: sent once, works once for 30 minutes, signs in and goes back where the person came from', async () => {
+  const { call, mails, env } = setup();
+  const r = await call('email', { method: 'POST', body: { email: ' New@Fan.com ', return: 'https://luoh.nrnszn.com/' } });
+  assert.equal(r.status, 200); assert.equal(mails.length, 1); assert.equal(mails[0].to, 'new@fan.com');
+  assert.match(mails[0].from, /mail\.nrnszn\.com/);
+  const link = mails[0].text.match(/https:\/\/\S+/)[0], t = new URL(link).searchParams.get('t');
+  assert.ok(!JSON.stringify(await env.ACCOUNTS_DB.prepare('SELECT * FROM login_links').all()).includes(t), 'only a hash of the link is stored');
+  const v = await call(`verify?t=${t}`);
+  assert.equal(v.status, 303); assert.equal(v.headers.get('location'), 'https://luoh.nrnszn.com/'); assert.ok(cookieOf(v));
+  const again = await call(`verify?t=${t}`); assert.equal(again.headers.get('location'), '/account?expired=1'); assert.equal(cookieOf(again), undefined);
+  assert.equal((await call('verify?t=made-up')).headers.get('location'), '/account?expired=1');
+});
+
+test('e-mail link limits: 3 per address per 10 minutes, and a daily total so the shared Resend allowance is kept', async () => {
+  const { call, mails, env } = setup();
+  for (let i = 0; i < 3; i++) assert.equal((await call('email', { method: 'POST', body: { email: 'x@y.co' } })).status, 200);
+  assert.equal((await call('email', { method: 'POST', body: { email: 'x@y.co' } })).status, 429);
+  const now = Date.now(), db = env.ACCOUNTS_DB;
+  for (let i = 0; i < LINKS_PER_DAY; i++) await db.prepare('INSERT INTO login_links (token_hash, email, marketing, created_at, expires_at) VALUES (?, ?, 0, ?, ?)').bind(`h${i}`, `p${i}@q.co`, now - 1000, now).run();
+  const r = await call('email', { method: 'POST', body: { email: 'fresh@person.co' } });
+  assert.equal(r.status, 429); assert.match((await r.json()).message, /Google/);
+  assert.equal(mails.length, 3);
+  assert.equal((await call('email', { method: 'POST', body: { email: 'not an email' } })).status, 400);
+});
+
+test('where a sign-in may return: this site, the NuRenaissance sites and soulnicolas.com only', () => {
+  for (const ok of ['/account', '/apps', 'https://play.nrnszn.com/', 'https://directory.nrnszn.com/#settings', 'https://luoh.nrnszn.com/x', 'https://soulnicolas.com/vault']) assert.equal(safeReturn(ok), ok);
+  for (const bad of ['//evil.com', '/\\evil.com', 'https://evil.com/', 'http://play.nrnszn.com/', 'https://play.nrnszn.com.evil.com/', 'javascript:alert(1)', 'https://user:pw@play.nrnszn.com/', '', undefined]) assert.equal(safeReturn(bad), '/account', String(bad));
+});
+
+test('who is signed in can be read by the NuRenaissance sites only, and never the money', async () => {
+  const g = await googleKit(), { call, env } = setup(); env.__googleCerts = g.certs;
+  const c = pair(cookieOf(await call('google', { method: 'POST', body: { credential: await g.token(good()) } })));
+  await saveProject(await accountsDb(env), { email: 'fan@example.com', title: 'Music video', total: '500' });
+  const play = await call('me?projects=1', { cookie: c, origin: 'https://play.nrnszn.com' });
+  assert.equal(play.headers.get('access-control-allow-origin'), 'https://play.nrnszn.com'); assert.equal(play.headers.get('access-control-allow-credentials'), 'true');
+  const pj = await play.json(); assert.equal(pj.user.email, 'fan@example.com'); assert.equal(pj.projects, undefined, 'another site never gets the projects');
+  const sv = await call('me', { origin: 'https://soulnicolas.com' });
+  assert.equal(sv.headers.get('access-control-allow-origin'), 'https://soulnicolas.com'); assert.equal(sv.headers.get('access-control-allow-credentials'), null, 'soulnicolas.com reads on/off only');
+  const evil = await call('me', { cookie: c, origin: 'https://evil.example' });
+  assert.equal(evil.headers.get('access-control-allow-origin'), null);
+  const own = await (await call('me?projects=1', { cookie: c })).json();
+  assert.equal(own.projects.length, 1); assert.equal(own.projects[0].balance, 50000);
+});
+
+test('soulnicolas.com hop: a one-time ticket for that site only, 2 minutes, traded once', async () => {
+  const g = await googleKit(), { call, env } = setup(); env.__googleCerts = g.certs;
+  const c = pair(cookieOf(await call('google', { method: 'POST', body: { credential: await g.token(good()) } })));
+  const out = await call('connect?return=' + encodeURIComponent('https://soulnicolas.com/vault'), { cookie: c });
+  const loc = new URL(out.headers.get('location')); assert.equal(loc.origin, 'https://soulnicolas.com'); assert.equal(loc.pathname, '/vault');
+  const ticket = new URLSearchParams(loc.hash.slice(1)).get('nrn_ticket'); assert.ok(ticket && ticket.length > 30);
+  assert.equal((await call('redeem', { method: 'POST', origin: 'https://evil.example', body: { ticket } })).status, 400, 'another site cannot use it');
+  const r = await call('redeem', { method: 'POST', origin: 'https://soulnicolas.com', body: { ticket } });
+  assert.equal(r.status, 200); assert.equal(r.headers.get('access-control-allow-origin'), 'https://soulnicolas.com');
+  assert.deepEqual(Object.keys((await r.json()).user).sort(), ['email', 'name', 'since']);
+  assert.equal((await call('redeem', { method: 'POST', origin: 'https://soulnicolas.com', body: { ticket } })).status, 400, 'only once');
+  const signedOut = await call('connect?return=' + encodeURIComponent('https://soulnicolas.com/'));
+  assert.equal(signedOut.headers.get('location'), '/account?return=' + encodeURIComponent('https://soulnicolas.com/'));
+  const nrn = await call('connect?return=' + encodeURIComponent('https://play.nrnszn.com/'), { cookie: c });
+  assert.equal(nrn.headers.get('location'), 'https://play.nrnszn.com/', 'nrnszn sites need no ticket (the cookie is shared)');
+  const late = new URL((await call('connect?return=' + encodeURIComponent('https://soulnicolas.com/'), { cookie: c })).headers.get('location')).hash.split('=')[1];
+  await env.ACCOUNTS_DB.prepare('UPDATE account_tickets SET expires_at = 1').run();
+  assert.equal((await call('redeem', { method: 'POST', origin: 'https://soulnicolas.com', body: { ticket: late } })).status, 400, 'expired');
+});
+
+test('sign out clears both the domain cookie and any old host-only one; delete needs the e-mail typed', async () => {
+  const g = await googleKit(), { call, env } = setup(); env.__googleCerts = g.certs;
+  const c = pair(cookieOf(await call('google', { method: 'POST', body: { credential: await g.token(good()) } })));
+  const out = await call('logout', { method: 'POST', body: {} });
+  const set = out.headers.getSetCookie(); assert.equal(set.length, 2); assert.ok(set.every((x) => /Max-Age=0/.test(x))); assert.ok(set.some((x) => /Domain=nrnszn\.com/.test(x)));
+  assert.equal((await call('delete', { method: 'POST', cookie: c, body: { confirm: 'wrong@x.co' } })).status, 400);
+  assert.equal((await call('delete', { method: 'POST', cookie: c, body: { confirm: 'FAN@example.com' } })).status, 200);
+  assert.equal((await env.ACCOUNTS_DB.prepare('SELECT COUNT(*) AS n FROM users').first()).n, 0);
+  assert.equal((await (await call('me', { cookie: c })).json()).user, null);
+});
+
+test('client projects: totals, payments and balance; bad input is refused in plain words', async () => {
+  const db = await accountsDb({ ACCOUNTS_DB: fakeD1() });
+  assert.equal((await saveProject(db, { email: 'nope', title: 'x', total: 1 })).ok, false);
+  assert.equal((await saveProject(db, { email: 'c@d.co', title: '', total: 1 })).ok, false);
+  assert.equal((await saveProject(db, { email: 'c@d.co', title: 'x', total: 'lots' })).ok, false);
+  assert.equal((await saveProject(db, { email: 'c@d.co', title: 'x', total: 1, link: 'javascript:alert(1)' })).ok, false);
+  assert.equal((await saveProject(db, { email: 'c@d.co', title: 'x', total: 1, due: '2026-02-31x' })).ok, false);
+  const a = await saveProject(db, { email: 'C@D.co', clientName: 'Client', title: 'EP mix', service: 'Mixing', status: 'in-progress', total: '$1,200.50', due: '2026-12-01' });
+  assert.equal(a.ok, true);
+  assert.equal((await addPayment(db, { projectId: a.id, amount: 200, method: 'cash-app', paidOn: '2026-11-01' })).ok, true);
+  assert.equal((await addPayment(db, { projectId: a.id, amount: '100.25', method: 'made-up' })).ok, true);
+  assert.equal((await addPayment(db, { projectId: 'missing', amount: 5 })).ok, false);
+  assert.equal((await addPayment(db, { projectId: a.id, amount: 0 })).ok, false);
+  const [p] = await projectsFor(db, 'c@d.co');
+  assert.equal(p.total, 120050); assert.equal(p.paid, 30025); assert.equal(p.balance, 90025); assert.equal(p.statusLabel, 'In progress');
+  assert.equal(p.payments.length, 2); assert.ok(p.payments.some((x) => x.method === 'other'));
+  assert.equal(p.email, undefined, 'the client view does not repeat admin-only fields');
+  await saveProject(db, { email: 'e@f.co', title: 'Done one', total: 50, status: 'done' });
+  const all = await allProjects(db);
+  assert.equal(all.totals.projects, 2); assert.equal(all.totals.open, 1); assert.equal(all.totals.owed, 90025 + 5000);
+  assert.deepEqual(await projectsFor(db, 'someone@else.co'), []);
+});
+
+test('/admin: the Clients folder needs the owner sign-in, and the checklist lists the account settings', async () => {
+  const env = { ADMIN_PASSWORD: 'correct horse battery staple', ACCOUNTS_DB: fakeD1(), NRN_ACCOUNT_SECRET: SECRET };
+  const token = await makeToken(env);
+  const req = (method, body, auth = token, q = '') => ({ request: new Request(`https://www.nrnszn.com/api/admin${q}`, { method, body: body ? JSON.stringify(body) : undefined, headers: auth ? { authorization: `Bearer ${auth}` } : {} }), env });
+  assert.equal((await adminGet(req('GET', null, 'bad', '?section=clients'))).status, 401);
+  const saved = await (await adminPost(req('POST', { action: 'client-save', project: { email: 'k@l.co', title: 'Shoot', total: 300 } }))).json();
+  assert.equal(saved.ok, true);
+  assert.equal((await (await adminPost(req('POST', { action: 'client-pay', payment: { projectId: saved.id, amount: 100, method: 'zelle' } }))).json()).ok, true);
+  const list = await (await adminGet(req('GET', null, token, '?section=clients'))).json();
+  assert.equal(list.projects[0].balance, 20000); assert.equal(list.projects[0].hasAccount, false);
+  assert.equal((await (await adminPost(req('POST', { action: 'client-delete', id: saved.id }))).json()).ok, true);
+  assert.equal((await (await adminGet(req('GET', null, token, '?section=clients'))).json()).projects.length, 0);
+  const names = setupChecklist(env).flatMap((g) => g.items).filter((i) => ['ACCOUNTS_DB', 'NRN_ACCOUNT_SECRET', 'GOOGLE_CLIENT_ID'].includes(i.name)).map((i) => i.present);
+  assert.deepEqual(names, [true, true, false]);
+  assert.equal((await adminGet({ request: new Request('https://x/api/admin?section=clients', { headers: { authorization: `Bearer ${token}` } }), env: { ADMIN_PASSWORD: env.ADMIN_PASSWORD } })).status, 503);
+});

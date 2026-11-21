@@ -38,6 +38,7 @@ export const apps = [
 
 export const footer = [
   { label: 'About', href: '/about' },
+  { label: 'Your account', href: '/account' },
   { label: 'Add to Home Screen', href: '/install' },
   { label: 'Privacy policy', href: '/privacy-policy' },
 ];

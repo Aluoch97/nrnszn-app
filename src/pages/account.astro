@@ -1,0 +1,228 @@
+---
+// One NuRenaissance account for every app: sign in with Google or an e-mail link, see your client projects (status, total, paid,
+// balance) and jump into the apps already signed in. Backend: src/edge/accounts.js (/api/account/*). Everything drawn from the
+// server is put in with textContent, never as HTML.
+import Site from '../layouts/Site.astro';
+---
+<Site
+  title="Your account | NuRenaissance"
+  description="One NuRenaissance account for every app: sign in once for Certified, NuDirectory, luoh and Soul Vault, and follow your projects with us."
+  noindex={true}
+>
+  <article class="acct">
+    <h1 id="acct-title">Your account</h1>
+    <p id="acct-loading" class="lead" role="status">Loading…</p>
+
+    <section id="acct-off" hidden class="card">
+      <h2>Accounts are coming soon</h2>
+      <p>Sign-in is not switched on yet. Check back shortly.</p>
+    </section>
+
+    <section id="acct-in" hidden aria-labelledby="acct-title">
+      <p class="lead">One account for every NuRenaissance app. Sign in once and you are signed in to Certified, NuDirectory, luoh and Soul Vault too.</p>
+      <p id="acct-msg" class="msg" role="alert"></p>
+      <div class="card">
+        <div id="g-wrap" hidden>
+          <div id="g-btn" class="g-btn"></div>
+          <p class="or"><span>or</span></p>
+        </div>
+        <form id="mail-form" class="mail" hidden>
+          <label for="mail">Your e-mail</label>
+          <input id="mail" type="email" autocomplete="email" inputmode="email" required maxlength="200" />
+          <button type="submit" class="btn primary" id="mail-go">E-mail me a sign-in link</button>
+          <p class="hint">The link works once, for 30 minutes. No password to remember.</p>
+        </form>
+        <p id="mail-sent" class="ok" role="status" hidden></p>
+      </div>
+      <p class="small">By signing in you agree to our <a href="/privacy-policy">privacy policy</a>. We keep your e-mail, your name (from Google) and when you last signed in.</p>
+    </section>
+
+    <section id="acct-me" hidden>
+      <div class="card who">
+        <div class="avatar" aria-hidden="true" id="me-initial"></div>
+        <div class="who-t"><b id="me-name"></b><span id="me-email"></span></div>
+      </div>
+      <p id="me-continue-wrap" hidden><a class="btn primary wide" id="me-continue">Continue</a></p>
+
+      <h2>Your projects</h2>
+      <div id="proj-list" class="projects" aria-live="polite"></div>
+
+      <h2>Your apps</h2>
+      <p class="small">You are signed in to these too.</p>
+      <ul class="apps">
+        <li><a href="https://play.nrnszn.com/"><img src="/img/apps/certified-icon.webp" alt="" width="48" height="48" loading="lazy" /><span><b>Certified</b><small>Play along at the show</small></span></a></li>
+        <li><a href="https://directory.nrnszn.com/"><img src="/img/apps/nudirectory-icon.webp" alt="" width="48" height="48" loading="lazy" /><span><b>NuDirectory</b><small>Nashville's creative directory</small></span></a></li>
+        <li><a href="https://luoh.nrnszn.com/"><img src="/img/apps/luoh-icon.webp" alt="" width="48" height="48" loading="lazy" /><span><b>luoh</b><small>Edit multi-camera video</small></span></a></li>
+        <li><a href={'/api/account/connect?return=' + encodeURIComponent('https://soulnicolas.com/')}><img src="/img/apps/soul-vault-icon.webp" alt="" width="48" height="48" loading="lazy" /><span><b>Soul Vault</b><small>Nicólas Soul's music</small></span></a></li>
+      </ul>
+
+      <details class="card more">
+        <summary>Account settings</summary>
+        <form id="name-form" class="mail">
+          <label for="me-name-in">Your name</label>
+          <input id="me-name-in" type="text" maxlength="80" autocomplete="name" />
+          <button type="submit" class="btn">Save name</button>
+          <p id="name-st" class="hint" role="status"></p>
+        </form>
+        <form id="del-form" class="mail danger">
+          <label for="del-in">Delete my account</label>
+          <p class="hint">This erases your account and any luoh projects saved on it, on every app. Your project history with NuRenaissance stays with us as a business record. Type your e-mail to confirm.</p>
+          <input id="del-in" type="email" autocomplete="off" />
+          <button type="submit" class="btn danger">Delete my account</button>
+          <p id="del-st" class="hint" role="alert"></p>
+        </form>
+      </details>
+      <button type="button" class="btn quiet wide" id="sign-out">Sign out of every app</button>
+    </section>
+  </article>
+</Site>
+
+<script>
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+  const q = new URLSearchParams(location.search);
+  const back = q.get('return') || '';
+  const usd = (c: number) => (c / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: c % 100 ? 2 : 0 });
+  const METHOD: Record<string, string> = { stripe: 'Card (Stripe)', 'apple-pay': 'Apple Pay', paypal: 'PayPal', 'cash-app': 'Cash App', venmo: 'Venmo', zelle: 'Zelle', cash: 'Cash', check: 'Check', other: 'Other' };
+  const niceDay = (d: string) => (d ? new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '');
+  const el = (tag: string, cls?: string, txt?: string) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const show = (id: string) => { for (const s of ['acct-loading', 'acct-off', 'acct-in', 'acct-me']) $(s).hidden = s !== id; };
+  // Where to go after signing in: through /api/account/connect, which adds a one-time ticket for soulnicolas.com and sends nrnszn sites straight on.
+  const onward = () => (back ? `/api/account/connect?return=${encodeURIComponent(back)}` : '');
+  const host = (u: string) => { try { return new URL(u, location.href).host.replace(/^www\./, ''); } catch { return ''; } };
+
+  async function api(path: string, body?: unknown) {
+    const r = await fetch(`/api/account/${path}`, body === undefined ? { credentials: 'same-origin' } : { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({ ok: false, message: 'The site did not answer properly. Try again.' }));
+    return { status: r.status, ...j };
+  }
+
+  function drawProjects(list: any[]) {
+    const box = $('proj-list'); box.textContent = '';
+    if (!list.length) { box.appendChild(el('p', 'small', 'No projects with us yet. When you book a service, it shows up here with its status and balance.')); const a = el('a', 'btn wide', 'See our services') as HTMLAnchorElement; a.href = '/services'; box.appendChild(a); return; }
+    for (const p of list) {
+      const card = el('article', 'card proj'); card.dataset.status = p.status;
+      const top = el('div', 'proj-top'); top.append(el('h3', '', p.title), el('span', 'chip', p.statusLabel)); card.appendChild(top);
+      if (p.service || p.due) card.appendChild(el('p', 'small', [p.service, p.due ? `Due ${niceDay(p.due)}` : ''].filter(Boolean).join(' · ')));
+      const nums = el('dl', 'nums');
+      for (const [k, v, c] of [['Total', p.total, ''], ['Paid', p.paid, ''], ['Balance', p.balance, p.balance ? 'owe' : 'clear']] as [string, number, string][]) { const d = el('div', c); d.append(el('dt', '', k), el('dd', '', usd(v))); nums.appendChild(d); }
+      card.appendChild(nums);
+      if (p.total) { const bar = el('div', 'bar'); bar.setAttribute('role', 'img'); bar.setAttribute('aria-label', `${Math.round((p.paid / p.total) * 100)}% paid`); const i = el('i'); i.style.width = `${Math.min(100, (p.paid / p.total) * 100)}%`; bar.appendChild(i); card.appendChild(bar); }
+      if (p.note) card.appendChild(el('p', 'note', p.note));
+      if (p.link) { const a = el('a', 'btn small', 'Open the files') as HTMLAnchorElement; a.href = p.link; a.target = '_blank'; a.rel = 'noopener noreferrer'; card.appendChild(a); }
+      if (p.balance && p.status !== 'cancelled') { const a = el('a', 'btn small primary', 'Pay a balance') as HTMLAnchorElement; a.href = '/support'; card.appendChild(a); }
+      if (p.payments.length) {
+        const d = el('details', 'pays'); d.appendChild(el('summary', '', `${p.payments.length} ${p.payments.length === 1 ? 'payment' : 'payments'}`));
+        const ul = el('ul'); for (const x of p.payments) ul.appendChild(el('li', '', `${niceDay(x.paidOn)} · ${usd(x.amount)} · ${METHOD[x.method] || x.method}${x.note ? ' · ' + x.note : ''}`)); d.appendChild(ul); card.appendChild(d);
+      }
+      box.appendChild(card);
+    }
+  }
+
+  function signedIn(j: any) {
+    show('acct-me');
+    const u = j.user, name = u.name || u.email.split('@')[0];
+    $('me-name').textContent = name; $('me-email').textContent = u.email; $('me-initial').textContent = name.trim().charAt(0).toUpperCase();
+    (document.getElementById('me-name-in') as HTMLInputElement).value = u.name || '';
+    drawProjects(j.projects || []);
+    if (back) { $('me-continue-wrap').hidden = false; const a = $('me-continue') as HTMLAnchorElement; a.href = onward(); a.textContent = `Continue to ${host(back) || 'the app'}`; }
+  }
+
+  function loadGoogle(clientId: string) {
+    const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+    s.onload = () => {
+      const g = (window as any).google; if (!g || !g.accounts) return;
+      g.accounts.id.initialize({ client_id: clientId, ux_mode: 'popup', callback: async (resp: { credential: string }) => {
+        const j = await api('google', { credential: resp.credential, return: back });
+        if (j.ok) { if (back && j.next) { location.href = j.next; return; } start(); } else $('acct-msg').textContent = j.message || 'Google sign-in did not work. Try again.';
+      } });
+      const box = $('g-btn');
+      g.accounts.id.renderButton(box, { theme: 'filled_black', size: 'large', text: 'continue_with', shape: 'pill', width: Math.min(360, Math.max(200, box.clientWidth || 300)) });
+    };
+    s.onerror = () => { $('g-wrap').hidden = true; };
+    document.head.appendChild(s);
+  }
+
+  async function start() {
+    show('acct-loading');
+    let j: any;
+    try { j = await api('me?projects=1'); } catch { $('acct-loading').textContent = 'Could not reach the site. Check your connection and reload.'; return; }
+    if (!j.on) { show('acct-off'); return; }
+    if (j.user) {
+      if (back && q.get('auto') !== '0' && sessionStorage.getItem('nrn_acct_hop') !== back) { try { sessionStorage.setItem('nrn_acct_hop', back); } catch { /* ignore */ } location.replace(onward()); return; }   // already signed in: straight on (once, so Back does not loop)
+      signedIn(j); return;
+    }
+    show('acct-in');
+    if (q.get('expired')) $('acct-msg').textContent = 'That sign-in link has expired or was already used. Ask for a new one below.';
+    if (j.google && j.clientId) { $('g-wrap').hidden = false; loadGoogle(j.clientId); }
+    $('mail-form').hidden = !j.email; if (!j.email) $('g-wrap').querySelector('.or')?.setAttribute('hidden', '');
+  }
+
+  $('mail-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); const btn = $('mail-go') as HTMLButtonElement, input = $('mail') as HTMLInputElement; btn.disabled = true; $('acct-msg').textContent = '';
+    const j = await api('email', { email: input.value, return: back }).catch(() => ({ ok: false, message: 'Could not reach the site. Try again.' }));
+    btn.disabled = false;
+    if (j.ok) { $('mail-form').hidden = true; const s = $('mail-sent'); s.hidden = false; s.textContent = `Check your inbox: we sent a sign-in link to ${input.value.trim()}. Open it on this device.`; }
+    else $('acct-msg').textContent = j.message || 'Could not send the link.';
+  });
+  $('name-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); const j = await api('name', { name: ($('me-name-in') as HTMLInputElement).value });
+    $('name-st').textContent = j.ok ? 'Saved.' : j.message || 'Could not save.'; if (j.ok) start();
+  });
+  $('del-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); if (!confirm('Delete your NuRenaissance account on every app? This cannot be undone.')) return;
+    const j = await api('delete', { confirm: ($('del-in') as HTMLInputElement).value });
+    if (j.ok) start(); else $('del-st').textContent = j.message || 'Could not delete.';
+  });
+  $('sign-out').addEventListener('click', async () => { await api('logout', {}).catch(() => {}); try { sessionStorage.removeItem('nrn_acct_hop'); } catch { /* ignore */ } start(); });
+  start();
+</script>
+
+<style is:global>
+  .acct [hidden] { display: none !important; }
+  .acct { max-width: 620px; margin: 0 auto; padding: var(--space-6) var(--space-4); color: #e6e0f2; font-size: 16px; line-height: 1.55; }
+  .acct h1 { font-family: var(--font-display); font-size: clamp(30px, 7vw, 40px); line-height: 1.15; margin: 0 0 var(--space-3); color: #fff; }
+  .acct h2 { font-family: var(--font-display); font-size: 22px; margin: var(--space-5) 0 var(--space-2); color: var(--gold-300); }
+  .acct h3 { margin: 0; font-size: 18px; color: #fff; min-width: 0; overflow-wrap: anywhere; }
+  .acct .lead { color: #cfc7e0; margin: 0 0 var(--space-4); }
+  .acct .small, .acct .hint { font-size: 14px; color: #b9b0cf; margin: var(--space-2) 0; }
+  .acct .small a { color: var(--gold-300); }
+  .acct .card { padding: var(--space-4); border: 1px solid #2e2640; border-radius: 18px; background: #1a1526; margin: 0 0 var(--space-3); min-width: 0; }
+  .acct .msg { color: #ffc9d4; margin: 0 0 var(--space-3); } .acct .msg:empty { display: none; }
+  .acct .ok { color: #c9f5d9; margin: 0; }
+  .acct .g-btn { min-height: 44px; display: flex; justify-content: center; }
+  .acct .or { display: flex; align-items: center; gap: var(--space-3); color: #b9b0cf; font-size: 14px; margin: var(--space-3) 0; }
+  .acct .or::before, .acct .or::after { content: ''; flex: 1; height: 1px; background: #2e2640; }
+  .acct .mail { display: grid; gap: var(--space-2); }
+  .acct label { font-weight: 700; color: #fff; }
+  .acct input { min-height: 48px; padding: 0 var(--space-3); font: inherit; font-size: 16px; color: #fff; background: #211b30; border: 1px solid #5a4c78; border-radius: var(--radius-sm); width: 100%; box-sizing: border-box; }
+  .acct .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 var(--space-4); font: inherit; font-weight: 700; color: #fff; background: #2c2440; border: 1px solid #5a4c78; border-radius: var(--radius-pill); cursor: pointer; text-decoration: none; box-sizing: border-box; }
+  .acct .btn.primary { background: #c8175f; border-color: #c8175f; }
+  .acct .btn.small { min-height: 44px; padding: 0 var(--space-3); margin: var(--space-2) var(--space-2) 0 0; }
+  .acct .btn.wide { width: 100%; }
+  .acct .btn.quiet { background: transparent; border-color: #a33a55; color: #ffd0da; margin-top: var(--space-4); }
+  .acct .btn.danger { color: #ffd0da; background: #3a1620; border-color: #a33a55; }
+  .acct .btn:disabled { opacity: 0.6; }
+  .acct .btn:focus-visible, .acct input:focus-visible, .acct summary:focus-visible, .acct .apps a:focus-visible { outline: 3px solid var(--gold-300); outline-offset: 2px; }
+  .acct .who { display: flex; align-items: center; gap: var(--space-3); }
+  .acct .avatar { flex: none; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-family: var(--font-display); font-size: 24px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #c8175f, #7a3cc4); }
+  .acct .who-t { display: grid; min-width: 0; } .acct .who-t b { color: #fff; font-size: 18px; overflow-wrap: anywhere; } .acct .who-t span { color: #b9b0cf; font-size: 14px; overflow-wrap: anywhere; }
+  .acct .proj-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+  .acct .chip { flex: none; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; background: #2c2440; color: #e6e0f2; }
+  .acct .proj[data-status='in-progress'] .chip, .acct .proj[data-status='review'] .chip { background: #4a3a0e; color: #ffe29a; }
+  .acct .proj[data-status='done'] .chip { background: #16401f; color: #bff2cf; }
+  .acct .proj[data-status='cancelled'] .chip { background: #55202e; color: #ffc9d4; }
+  .acct .nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin: var(--space-3) 0 var(--space-2); }
+  .acct .nums div { padding: var(--space-2); border-radius: 12px; background: #211b30; min-width: 0; }
+  .acct .nums dt { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #b9b0cf; }
+  .acct .nums dd { margin: 0; font-size: 18px; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .acct .nums .owe dd { color: #ffd27a; } .acct .nums .clear dd { color: #bff2cf; }
+  .acct .bar { height: 8px; border-radius: 4px; background: #2c2440; overflow: hidden; } .acct .bar i { display: block; height: 100%; background: #3ddc84; }
+  .acct .note { margin: var(--space-3) 0 0; white-space: pre-line; overflow-wrap: anywhere; }
+  .acct .pays { margin-top: var(--space-3); } .acct .pays summary, .acct .more summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; color: #fff; }
+  .acct .pays ul { margin: 0; padding-left: 1.1em; font-size: 14px; color: #cfc7e0; }
+  .acct .apps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+  .acct .apps a { display: flex; align-items: center; gap: var(--space-3); min-height: 64px; padding: var(--space-2) var(--space-3); border-radius: 16px; background: #1a1526; border: 1px solid #2e2640; color: #fff; text-decoration: none; }
+  .acct .apps img { flex: none; width: 48px; height: 48px; border-radius: 12px; object-fit: cover; }
+  .acct .apps span { display: grid; min-width: 0; } .acct .apps small { color: #b9b0cf; font-size: 14px; }
+  .acct .more .mail { margin-top: var(--space-3); } .acct .more .danger { margin-top: var(--space-5); }
+</style>

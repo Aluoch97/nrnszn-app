@@ -10,6 +10,8 @@
 //   GET  /api/admin?section=push  + token                   how many phones have notifications on, how many were sent today.
 //   POST /api/admin {action:'push-auto', auto:{events,videos,services,gallery,cinema}}  + token   switch the automatic notifications on or off (src/edge/autopush.js).
 //   POST /api/admin {action:'push-send', push:{title, body, url}}  + token   send one phone notification to everyone (at most 3 a day).
+//   GET  /api/admin?section=clients  + token                client projects, their payments and totals (accounts database ACCOUNTS_DB, src/edge/accounts.js).
+//   POST /api/admin {action:'client-save', project} | {action:'client-delete', id} | {action:'client-pay', payment} | {action:'client-pay-delete', id}  + token
 //
 // Switches on only when the Cloudflare secret ADMIN_PASSWORD exists (at least 10 characters). The session token is signed with a key made
 // from that password, so changing the password signs every device out. The token lives in the browser's localStorage, like Soul Vault's owner key.
@@ -20,6 +22,7 @@ import { listAll, saveEvent, deleteEvent } from './events.js';
 import { summary } from './analytics.js';
 import { pushStatus, pushSend } from './push.js';
 import { getAutoSettings, setAutoSettings, maybeAuto } from './autopush.js';
+import { accountsDb, hasAccountsDb, accountsOn, allProjects, saveProject, deleteProject, addPayment, deletePayment } from './accounts.js';
 
 const reply = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json;charset=utf-8', 'cache-control': 'no-store' } });
 export const SESSION_MS = 30 * 24 * 3600 * 1000;
@@ -83,6 +86,11 @@ export function setupChecklist(env) {
       { name: 'VAPID_PUBLIC_KEY', label: 'Notifications public key', present: has('VAPID_PUBLIC_KEY') },
       { name: 'VAPID_PRIVATE_KEY', label: 'Notifications private key', present: has('VAPID_PRIVATE_KEY') },
     ] },
+    { group: 'NuRenaissance accounts', items: [
+      { name: 'ACCOUNTS_DB', label: 'Accounts database (D1 binding, the same one luoh uses)', present: hasAccountsDb(env) },
+      { name: 'NRN_ACCOUNT_SECRET', label: 'Account sign-in secret (same value in luoh)', present: accountsOn(env) },
+      { name: 'GOOGLE_CLIENT_ID', label: 'Google sign-in client id', present: has('GOOGLE_CLIENT_ID') },
+    ] },
     { group: 'Backups and sign-in', items: [
       { name: 'BACKUPS', label: 'Backup storage bucket (R2 binding)', present: !!(env.BACKUPS && typeof env.BACKUPS.put === 'function') },
       { name: 'BACKUP_CRON_TOKEN', label: 'Nightly backup job password', present: has('BACKUP_CRON_TOKEN') },
@@ -104,6 +112,10 @@ export async function adminGet({ request, env }) {
   if (section === 'push') {
     if (!hasDb(env)) return reply({ ok: false, result: 'no-db', message: 'The site database is not connected yet (see docs/admin-setup.md).' }, 503);
     try { return reply({ ok: true, ...(await pushStatus(env.DB, env)), auto: await getAutoSettings(env.DB) }); } catch (e) { console.error('admin push', e); return reply({ ok: false, message: 'The database did not answer. Try again in a minute.' }, 502); }
+  }
+  if (section === 'clients') {
+    if (!hasAccountsDb(env)) return reply({ ok: false, result: 'no-db', message: 'The accounts database is not connected yet (see docs/accounts-setup.md).' }, 503);
+    try { return reply({ ok: true, ...(await allProjects(await accountsDb(env))) }); } catch (e) { console.error('admin clients', e); return reply({ ok: false, message: 'The database did not answer. Try again in a minute.' }, 502); }
   }
   if (section === 'events' || section === 'analytics') {
     if (!hasDb(env)) return reply({ ok: false, result: 'no-db', message: 'The site database is not connected yet (see docs/admin-setup.md).' }, 503);
@@ -139,6 +151,14 @@ export async function adminPost({ request, env, waitUntil }) {
       if (out.ok && body.action === 'event-save' && waitUntil) waitUntil(maybeAuto(env, { force: true, origin: new URL(request.url).origin }));   // a new event goes out right away (if it is between 9 AM and 9 PM Central and the switch is on)
       return reply(out, out.ok ? 200 : 400);
     } catch (e) { console.error('admin event', e); return reply({ ok: false, message: 'The database did not answer. Try again in a minute.' }, 502); }
+  }
+  if (body && ['client-save', 'client-delete', 'client-pay', 'client-pay-delete'].includes(body.action)) {
+    if (!hasAccountsDb(env)) return reply({ ok: false, result: 'no-db', message: 'The accounts database is not connected yet (see docs/accounts-setup.md).' }, 503);
+    try {
+      const db = await accountsDb(env), a = body.action;
+      const out = a === 'client-save' ? await saveProject(db, body.project) : a === 'client-delete' ? await deleteProject(db, body.id) : a === 'client-pay' ? await addPayment(db, body.payment) : await deletePayment(db, body.id);
+      return reply(out, out.ok ? 200 : 400);
+    } catch (e) { console.error('admin client', e); return reply({ ok: false, message: 'The database did not answer. Try again in a minute.' }, 502); }
   }
   if (body && body.action === 'push-auto') {
     if (!hasDb(env)) return reply({ ok: false, result: 'no-db', message: 'The site database is not connected yet (see docs/admin-setup.md).' }, 503);

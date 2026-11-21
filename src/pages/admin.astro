@@ -96,6 +96,39 @@ import Site from '../layouts/Site.astro';
       </section>
       <section class="grp g-people">
         <h2>Visitors &amp; activity</h2>
+      <details class="folder" data-folder="clients">
+        <summary><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="ft"><b>Clients &amp; projects</b><span>Status, total, paid and balance; clients see theirs at /account</span></span><span class="badge" id="b-clients">…</span></summary>
+        <div id="cl-box">
+          <p id="cl-msg" class="result" role="status" aria-live="polite"></p>
+          <ul class="rows" id="cl-list"></ul>
+          <div class="actions"><button type="button" class="btn primary" id="cl-add">Add a project</button></div>
+          <form id="cl-form" class="evform" hidden>
+            <h3 id="cl-form-title">New project</h3>
+            <label for="cl-email">Client's e-mail <span class="hint">(their account finds the project by this address)</span></label><input id="cl-email" type="text" inputmode="email" maxlength="200" autocomplete="off" required />
+            <label for="cl-name">Client's name <span class="hint">(optional, only you see it)</span></label><input id="cl-name" type="text" maxlength="120" autocomplete="off" />
+            <label for="cl-title">Project</label><input id="cl-title" type="text" maxlength="120" autocomplete="off" required />
+            <label for="cl-service">Service <span class="hint">(optional, for example Music video)</span></label><input id="cl-service" type="text" maxlength="120" autocomplete="off" />
+            <label for="cl-status">Status</label>
+            <select id="cl-status"><option value="quote">Quote sent</option><option value="booked" selected>Booked</option><option value="in-progress">In progress</option><option value="review">Ready for review</option><option value="done">Done</option><option value="paused">Paused</option><option value="cancelled">Cancelled</option></select>
+            <label for="cl-total">Total in dollars</label><input id="cl-total" type="text" inputmode="decimal" maxlength="14" autocomplete="off" required />
+            <label for="cl-due">Due date <span class="hint">(optional)</span></label><input id="cl-due" type="date" />
+            <label for="cl-note">Note for the client <span class="hint">(optional, they see it)</span></label><textarea id="cl-note" rows="3" maxlength="2000"></textarea>
+            <label for="cl-link">Files link <span class="hint">(optional, starts with https://, they see it)</span></label><input id="cl-link" type="url" maxlength="500" autocomplete="off" />
+            <p id="cl-error" class="error" role="alert"></p>
+            <div class="actions"><button type="submit" class="btn primary" id="cl-save">Save project</button><button type="button" class="btn" id="cl-cancel">Cancel</button><button type="button" class="btn danger" id="cl-delete" hidden>Delete project</button></div>
+          </form>
+          <form id="cp-form" class="evform" hidden>
+            <h3 id="cp-title">Add a payment</h3>
+            <label for="cp-amount">Amount in dollars</label><input id="cp-amount" type="text" inputmode="decimal" maxlength="14" autocomplete="off" required />
+            <label for="cp-method">How they paid</label>
+            <select id="cp-method"><option value="stripe">Card (Stripe)</option><option value="apple-pay">Apple Pay</option><option value="paypal">PayPal</option><option value="cash-app">Cash App</option><option value="venmo">Venmo</option><option value="zelle">Zelle</option><option value="cash">Cash</option><option value="check">Check</option><option value="other">Other</option></select>
+            <label for="cp-day">Date paid</label><input id="cp-day" type="date" required />
+            <label for="cp-note">Note <span class="hint">(optional, the client sees it)</span></label><input id="cp-note" type="text" maxlength="200" autocomplete="off" />
+            <p id="cp-error" class="error" role="alert"></p>
+            <div class="actions"><button type="submit" class="btn primary">Save payment</button><button type="button" class="btn" id="cp-cancel">Cancel</button></div>
+          </form>
+        </div>
+      </details>
       <details class="folder" data-folder="analytics">
         <summary><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></span><span class="ft"><b>Website analytics</b><span>Visitors, pages, where people come from</span></span><span class="badge" id="b-analytics">…</span></summary>
         <div id="an-box">
@@ -170,6 +203,7 @@ import Site from '../layouts/Site.astro';
     { group: 'feeds', name: 'Cinema', url: '/api/feed/cinema', read: (j) => (j && j.source === 'sheet' ? { tone: 'ok', text: 'New: read straight from the NuCinema sheet', note: plural(count(j.films), 'film', 'films') } : j && count(j.films) ? { tone: 'old', text: 'Old fallback: the previous Google script answered' } : { tone: 'bad', text: 'No films came back' }) },
     { group: 'feeds', name: 'Services', url: '/api/feed/services', read: (j) => (j && j.source === 'sheet' ? { tone: 'ok', text: 'New: read straight from the NuServices sheet', note: plural(count(j.services), 'service', 'services') } : j && count(j.services) ? { tone: 'old', text: 'Old fallback: the previous Google script answered' } : { tone: 'bad', text: 'No services came back' }) },
     { group: 'feeds', name: 'Latest videos', url: '/api/feed/latest', read: (j) => (j && j.ok ? { tone: 'ok', text: 'Answering', note: j.music && j.music.publishedAt ? `Newest music video: ${when(j.music.publishedAt)}` : undefined } : { tone: 'bad', text: 'No videos came back' }) },
+    { group: 'send', name: 'Accounts', url: '/api/account/me', read: (j) => (j && j.on ? { tone: 'ok', text: 'On: people can sign in at /account', note: [j.google ? 'Google' : '', j.email ? 'e-mail link' : ''].filter(Boolean).join(' and ') || 'No sign-in way is set up yet' } : { tone: 'todo', text: 'Not switched on yet', note: 'See docs/accounts-setup.md' }) },
     { group: 'send', name: 'Survey answers', url: '/api/survey', read: mode('Saves each response to the sheet and sends the e-mails') },
     { group: 'send', name: 'Daily recap e-mail', url: '/api/survey-recap', read: mode('The daily check for a new livestream recap') },
     { group: 'send', name: 'Payment taps', url: '/api/payment', read: mode('Logs each tap on PayPal, Cash App, Venmo, Zelle, Apple Pay') },
@@ -253,7 +287,7 @@ import Site from '../layouts/Site.astro';
   async function openDash(data: any) {
     show('dash');
     drawSetup(data.setup || []);
-    runChecks(); loadEvents(); loadAnalytics(); loadPush();
+    runChecks(); loadEvents(); loadAnalytics(); loadPush(); loadClients();
     fetch('/version.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { $('ver-line').textContent = j && j.version ? `Version: ${j.release || String(j.version).replace(/^nrn-/, '')} (build ${String(j.version).replace(/^nrn-/, '')})` : 'Version: unknown'; }).catch(() => { $('ver-line').textContent = 'Version: unknown'; });
   }
 
@@ -480,6 +514,86 @@ import Site from '../layouts/Site.astro';
       else err.textContent = j.message || 'Could not send.';
     } catch { err.textContent = 'Could not reach the site. Try again.'; }
     btn.disabled = false; if (btn.textContent === 'Sending…') btn.textContent = label;
+  });
+
+
+  // ---- clients & projects (accounts database; src/edge/accounts.js) ----------------------------------------------------------------
+  type Pay = { id: string; amount: number; method: string; paidOn: string; note: string };
+  type Proj = { id: string; email: string; clientName: string; title: string; service: string; status: string; statusLabel: string; total: number; paid: number; balance: number; due: string; note: string; link: string; hasAccount: boolean; payments: Pay[] };
+  let projects: Proj[] = [], editingP: Proj | null = null, payFor: Proj | null = null;
+  const usd = (c: number) => (c / 100).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+  const PMETHOD: Record<string, string> = { stripe: 'Card (Stripe)', 'apple-pay': 'Apple Pay', paypal: 'PayPal', 'cash-app': 'Cash App', venmo: 'Venmo', zelle: 'Zelle', cash: 'Cash', check: 'Check', other: 'Other' };
+  function drawClients(totals: any) {
+    const ul = $('cl-list'); ul.textContent = '';
+    $('cl-msg').textContent = projects.length ? `${totals.open} open ${totals.open === 1 ? 'project' : 'projects'}, ${usd(totals.owed)} still owed. ${totals.accounts} ${totals.accounts === 1 ? 'person has' : 'people have'} a NuRenaissance account.` : 'No client projects yet. Add one, and the client sees it at nrnszn.com/account when they sign in with that e-mail.';
+    for (const p of projects) {
+      const li = document.createElement('li'); li.className = 'row'; li.dataset.tone = p.status === 'done' ? 'ok' : p.status === 'cancelled' ? 'bad' : p.balance ? 'todo' : 'ok';
+      li.innerHTML = '<span class="name"></span><span class="tag"></span><span class="note"></span><span class="note"></span><span class="rowact"></span>';
+      const [nm, tag, n1, n2, act] = [...li.children] as HTMLElement[];
+      nm.textContent = p.title; tag.textContent = p.statusLabel;
+      n1.textContent = `${p.clientName ? p.clientName + ' · ' : ''}${p.email}${p.hasAccount ? ' (has an account)' : ' (no account yet)'}${p.service ? ' · ' + p.service : ''}`;
+      n2.textContent = `Total ${usd(p.total)} · Paid ${usd(p.paid)} · Balance ${usd(p.balance)}${p.payments.length ? ' · last paid ' + p.payments[0].paidOn + ' by ' + (PMETHOD[p.payments[0].method] || p.payments[0].method) : ''}`;
+      const b1 = document.createElement('button'); b1.type = 'button'; b1.className = 'btn small'; b1.textContent = 'Edit'; b1.setAttribute('aria-label', `Edit ${p.title}`); b1.addEventListener('click', () => openProj(p));
+      const b2 = document.createElement('button'); b2.type = 'button'; b2.className = 'btn small'; b2.textContent = 'Add payment'; b2.setAttribute('aria-label', `Add a payment to ${p.title}`); b2.addEventListener('click', () => openPay(p));
+      act.append(b1, b2);
+      for (const x of p.payments) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn small danger'; b.textContent = `Remove ${usd(x.amount)} (${x.paidOn})`;
+        b.addEventListener('click', async () => { if (!confirm(`Remove the ${usd(x.amount)} payment from ${x.paidOn}?`)) return; await clientPost({ action: 'client-pay-delete', id: x.id }); });
+        act.appendChild(b);
+      }
+      ul.appendChild(li);
+    }
+    const badge = $('b-clients'); badge.textContent = String(totals.open || 0); badge.dataset.tone = totals.owed ? 'warn' : 'ok';
+  }
+  async function loadClients() {
+    try {
+      const res = await api(undefined, '?section=clients');
+      if (res.status === 401) { signedOut('Please sign in again.'); return; }
+      const j = await res.json().catch(() => ({}));
+      if (j.ok) { projects = j.projects || []; drawClients(j.totals || {}); $('cl-add').hidden = false; }
+      else { $('cl-msg').textContent = j.result === 'no-db' ? 'The accounts database is not connected yet. See docs/accounts-setup.md and the Setup checklist below.' : (j.message || 'Could not load the projects.'); $('cl-add').hidden = true; $('b-clients').textContent = '!'; $('b-clients').dataset.tone = 'warn'; }
+    } catch { $('cl-msg').textContent = 'Could not reach the site. Reload this page to try again.'; }
+  }
+  async function clientPost(body: unknown, errId = 'cl-msg') {
+    try {
+      const res = await api({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      if (res.status === 401) { signedOut('Please sign in again.'); return false; }
+      const j = await res.json().catch(() => ({}));
+      if (!j.ok) { $(errId).textContent = j.message || 'Could not save.'; return false; }
+      await loadClients(); return true;
+    } catch { $(errId).textContent = 'Could not reach the site. Try again.'; return false; }
+  }
+  function openProj(p: Proj | null) {
+    editingP = p; $('cp-form').hidden = true; $('cl-form').hidden = false; $('cl-add').hidden = true; $('cl-error').textContent = '';
+    $('cl-form-title').textContent = p ? 'Edit project' : 'New project'; $('cl-delete').hidden = !p;
+    fld('cl-email').value = p ? p.email : ''; fld('cl-name').value = p ? p.clientName : ''; fld('cl-title').value = p ? p.title : ''; fld('cl-service').value = p ? p.service : '';
+    fld<HTMLSelectElement>('cl-status').value = p ? p.status : 'booked'; fld('cl-total').value = p ? String(p.total / 100) : ''; fld('cl-due').value = p ? p.due : '';
+    fld<HTMLTextAreaElement>('cl-note').value = p ? p.note : ''; fld('cl-link').value = p ? p.link : '';
+    fld('cl-email').focus();
+  }
+  const closeProj = () => { $('cl-form').hidden = true; $('cl-add').hidden = false; editingP = null; };
+  function openPay(p: Proj) {
+    payFor = p; $('cl-form').hidden = true; $('cp-form').hidden = false; $('cp-error').textContent = '';
+    $('cp-title').textContent = `Add a payment: ${p.title}`; fld('cp-amount').value = p.balance ? String(p.balance / 100) : ''; fld('cp-day').value = todayIso(); fld('cp-note').value = '';
+    fld('cp-amount').focus();
+  }
+  $('cl-add').addEventListener('click', () => openProj(null));
+  $('cl-cancel').addEventListener('click', closeProj);
+  $('cp-cancel').addEventListener('click', () => { $('cp-form').hidden = true; payFor = null; });
+  $('cl-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const project = { id: editingP ? editingP.id : undefined, email: fld('cl-email').value, clientName: fld('cl-name').value, title: fld('cl-title').value, service: fld('cl-service').value,
+      status: fld<HTMLSelectElement>('cl-status').value, total: fld('cl-total').value, due: fld('cl-due').value, note: fld<HTMLTextAreaElement>('cl-note').value, link: fld('cl-link').value };
+    if (await clientPost({ action: 'client-save', project }, 'cl-error')) { closeProj(); $('cl-msg').textContent = 'Saved. The client sees it at nrnszn.com/account.'; }
+  });
+  $('cl-delete').addEventListener('click', async () => {
+    if (!editingP || !confirm(`Delete "${editingP.title}" and its payments? This cannot be undone.`)) return;
+    if (await clientPost({ action: 'client-delete', id: editingP.id }, 'cl-error')) closeProj();
+  });
+  $('cp-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); if (!payFor) return;
+    const payment = { projectId: payFor.id, amount: fld('cp-amount').value, method: fld<HTMLSelectElement>('cp-method').value, paidOn: fld('cp-day').value, note: fld('cp-note').value };
+    if (await clientPost({ action: 'client-pay', payment }, 'cp-error')) { $('cp-form').hidden = true; payFor = null; }
   });
 
   async function start() {
