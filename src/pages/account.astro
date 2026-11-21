@@ -160,7 +160,7 @@ const SHOW_NAMES = Object.fromEntries(pastEvents.map((e) => [e.day, e.title]));
           <div data-panel="luoh" hidden>
             <dl class="nums stats" id="luoh-stats"></dl>
             <h3 class="sec">Saved projects</h3>
-            <p class="small">Edits you saved to your account in luoh. Your videos themselves stay on your device.</p>
+            <p class="small">Edits you saved to your account in luoh. Your videos themselves stay on your device. Remove takes the saved edit off your account.</p>
             <div id="luoh-list"></div>
           </div>
 
@@ -328,9 +328,16 @@ const SHOW_NAMES = Object.fromEntries(pastEvents.map((e) => [e.day, e.title]));
     const box = $('luoh-list');
     if (!l.recent.length) { empty(box, 'No projects saved to your account yet. In luoh, use Save to account and they show up here.'); return; }
     box.textContent = ''; const ul = el('ul', 'rows');
-    for (const x of l.recent) ul.appendChild(row(x.name, 'edited ' + day(x.at), ''));
+    for (const x of l.recent) ul.appendChild(row(x.name, 'edited ' + day(x.at), '', '', () => removeLuoh(x)));
     box.appendChild(ul);
     if (l.count > l.recent.length) box.appendChild(el('p', 'small', `and ${l.count - l.recent.length} more in luoh.`));
+  }
+  // A saved luoh edit is real work, so ask first. The videos stay on the person's device either way.
+  async function removeLuoh(x: any) {
+    if (!confirm(`Remove "${x.name}" from your account? luoh will no longer have this saved edit. Your videos stay on your device.`)) { show_(shown()); return; }
+    const j = await api('luoh-delete', { id: x.id }).catch(() => ({ ok: false }));
+    if (j.ok && j.luoh) me.luoh = j.luoh;
+    summaries(); show_(shown());
   }
   async function unsave(app: string, kind: string, id: string) {
     const j = await api('saved', { app, kind, id, on: false }).catch(() => ({ ok: false }));

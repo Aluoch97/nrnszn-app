@@ -4,6 +4,9 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.15 · Nov 21, 2026
+- **Your account > luoh**: each saved project has a **Remove** button (it asks first). It takes the saved edit off your account, like Delete in luoh; your videos stay on your device.
+
 ## 3.14 · Nov 21, 2026
 A new layout for Your account.
 - **On a computer** it works like a control panel: your name and the list of apps on the left, and the app you pick opens on the right (NuRenaissance opens first).

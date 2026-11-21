@@ -23,6 +23,7 @@ async function fake(page: Page, opts: { on?: boolean; user?: boolean; email?: bo
     if (path === 'me') return route.fulfill(json({ on: opts.on !== false, google: false, email: opts.email !== false, clientId: '', user: state.signedIn ? { email: 'client@example.com', name: 'Jo Client', since: Date.UTC(2026, 10, 1) } : null, ...(state.signedIn ? { projects: PROJECTS, payments: [{ amount: 40000, currency: 'usd', what: 'Music video', at: Date.UTC(2026, 10, 2) }], payLink: 'https://buy.stripe.com/test_link', saved: JSON.parse(JSON.stringify(SAVED)), luoh: LUOH, avatar: state.avatar } : {}) }));
     if (path === 'avatar' && req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from(PNG, 'base64') });
     if (path === 'avatar') { const b = JSON.parse(req.postData() || '{}'); state.pics.push(b); state.avatar = b.image ? 1700000000000 : null; return route.fulfill(json({ ok: true, avatar: state.avatar })); }
+    if (path === 'luoh-delete') { state.unsaved.push({ luoh: JSON.parse(req.postData() || '{}').id }); return route.fulfill(json({ ok: true, luoh: { count: 1, recent: [LUOH.recent[1]] } })); }
     if (path === 'passport') return route.fulfill(json({ ok: true, linked: true, stamps: [{ day: '2025-04-26', method: 'game' }, { day: '2025-11-08', method: 'door' }], today: null }));
     if (path === 'listings') return route.fulfill(json({ ok: true, listings: [{ title: 'Jo: <b>Live</b> set', kind: 'Show', status: 'Live', sent: '2026-11-05T12:00:00Z' }, { title: 'New studio', kind: 'Feature', status: 'Waiting for review', sent: '2026-11-20T12:00:00Z' }] }));
     if (path === 'saved') { state.unsaved.push(JSON.parse(req.postData() || '{}')); return route.fulfill(json({ ok: true, on: false })); }
@@ -129,6 +130,11 @@ test('the dashboard: each app tile shows a summary and opens that app\'s page wi
 
   await page.click('[data-app="luoh"]');
   await expect(page.locator('#luoh-list .row')).toHaveCount(2); await expect(page.locator('#luoh-list .row').first()).toContainText('Lounge recap');
+  page.once('dialog', (d) => d.dismiss()); await page.click('#luoh-list .rm >> nth=0');
+  await expect(page.locator('#luoh-list .row')).toHaveCount(2); await expect(page.locator('#luoh-list .rm').first()).toBeEnabled();   // "Cancel" keeps it
+  page.once('dialog', (d) => d.accept()); await page.click('#luoh-list .rm >> nth=0');
+  await expect(page.locator('#luoh-list .row')).toHaveCount(1); await expect(page.locator('[data-sum="luoh"]')).toHaveText('1 saved project');
+  expect(st.unsaved.at(-1)).toEqual({ luoh: 'p1' });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
   // a link straight to one app's page works too
