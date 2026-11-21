@@ -142,7 +142,14 @@ export function safeReturn(v) {
   try { const u = new URL(s); if ([...ORIGINS, ...TICKET_ORIGINS].includes(u.origin) && s.length <= 500 && !u.username && !u.password) return u.href; } catch { /* not a URL */ }
   return '/account';
 }
-const corsFor = (request) => { const o = request.headers.get('origin'); return o && ORIGINS.includes(o) ? { 'access-control-allow-origin': o, 'access-control-allow-credentials': 'true', vary: 'Origin' } : { vary: 'Origin' }; };
+// NuRenaissance sites may read who is signed in (credentials). soulnicolas.com may read the public on/off only: no credentials allowed, and its
+// requests never carry the nrnszn.com cookie anyway (SameSite=Lax), so it always sees user: null.
+const corsFor = (request) => {
+  const o = request.headers.get('origin');
+  if (o && ORIGINS.includes(o)) return { 'access-control-allow-origin': o, 'access-control-allow-credentials': 'true', vary: 'Origin' };
+  if (o && TICKET_ORIGINS.includes(o)) return { 'access-control-allow-origin': o, vary: 'Origin' };
+  return { vary: 'Origin' };
+};
 
 // ---- Google ------------------------------------------------------------------------------------------------------------------------
 const CERTS = 'https://www.googleapis.com/oauth2/v3/certs';

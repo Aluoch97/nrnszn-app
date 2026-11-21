@@ -131,6 +131,8 @@ test('who is signed in can be read by the NuRenaissance sites only, and never th
   const play = await call('me?projects=1', { cookie: c, origin: 'https://play.nrnszn.com' });
   assert.equal(play.headers.get('access-control-allow-origin'), 'https://play.nrnszn.com'); assert.equal(play.headers.get('access-control-allow-credentials'), 'true');
   const pj = await play.json(); assert.equal(pj.user.email, 'fan@example.com'); assert.equal(pj.projects, undefined, 'another site never gets the projects');
+  const sv = await call('me', { origin: 'https://soulnicolas.com' });
+  assert.equal(sv.headers.get('access-control-allow-origin'), 'https://soulnicolas.com'); assert.equal(sv.headers.get('access-control-allow-credentials'), null, 'soulnicolas.com reads on/off only');
   const evil = await call('me', { cookie: c, origin: 'https://evil.example' });
   assert.equal(evil.headers.get('access-control-allow-origin'), null);
   const own = await (await call('me?projects=1', { cookie: c })).json();
