@@ -382,3 +382,15 @@ test('profile picture: real JPEG/PNG/WebP bytes only, a size cap, served back on
   await call('delete', { method: 'POST', body: { confirm: 'fan@example.com' }, cookie: c });
   assert.equal((await (await accountsDb(env)).prepare('SELECT COUNT(*) AS n FROM account_avatars').first()).n, 0, 'deleting the account deletes the picture');
 });
+
+test('a saved luoh project can be removed from the Account page: only your own, only from this site', async () => {
+  const g = await googleKit(), { call, env } = setup(); env.__googleCerts = g.certs;
+  const c = pair(cookieOf(await call('google', { method: 'POST', body: { credential: await g.token(good()) } })));
+  const db = await accountsDb(env), uid = (await db.prepare('SELECT id FROM users').first()).id;
+  for (const [u, id] of [[uid, 'p1'], [uid, 'p2'], ['someone-else', 'p1']]) await db.prepare('INSERT INTO projects (user_id, id, name, updated_at, data) VALUES (?, ?, ?, ?, ?)').bind(u, id, id, 1, '{}').run();
+  assert.equal((await call('luoh-delete', { method: 'POST', body: { id: 'p1' } })).status, 401, 'signed out');
+  assert.equal((await call('luoh-delete', { method: 'POST', body: { id: 'p1' }, cookie: c, origin: 'https://evil.example' })).status, 403, 'not from another site');
+  const r = await (await call('luoh-delete', { method: 'POST', body: { id: 'p1' }, cookie: c })).json();
+  assert.equal(r.ok, true); assert.deepEqual(r.luoh.recent.map((x) => x.id), ['p2']);
+  assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM projects WHERE user_id = 'someone-else'").first()).n, 1, "someone else's project with the same id is untouched");
+});

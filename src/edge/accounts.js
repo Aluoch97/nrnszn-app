@@ -619,6 +619,15 @@ export async function accountRequest({ request, env, params }) {
       if (!u) return reply({ ok: false, message: 'Please sign in first.' }, 401);
       return reply({ ok: true, next: await continueTo(db, u.id, body.return) });
     }
+    // Remove a luoh project saved on the account (the same as Delete in luoh's My projects).
+    if (what === 'luoh-delete') {
+      const uid = await sessionUserId(request, env);
+      if (!uid) return reply({ ok: false, message: 'Please sign in first.' }, 401);
+      const id = text(body.id, 200);
+      if (!id) return reply({ ok: false, message: 'Unknown project.' }, 400);
+      await db.prepare('DELETE FROM projects WHERE user_id = ? AND id = ?').bind(uid, id).run();
+      return reply({ ok: true, luoh: await luohFor(db, uid) });
+    }
     if (what === 'avatar') {
       const u = await currentAccount(request, env);
       if (!u) return reply({ ok: false, message: 'Please sign in first.' }, 401);
