@@ -15,8 +15,9 @@ export const SITES = [
   { name: 'CERTIFIED version file', url: 'https://play.nrnszn.com/version.json', ok: hasVersion },
   { name: 'NuDirectory (directory.nrnszn.com)', url: 'https://directory.nrnszn.com/', ok: html() },
   { name: 'NuDirectory version file', url: 'https://directory.nrnszn.com/version.json', ok: hasVersion },
-  { name: 'PODI (podi.nrnszn.com)', url: 'https://podi.nrnszn.com/', ok: html() },
-  { name: 'PODI version file', url: 'https://podi.nrnszn.com/version.json', ok: hasVersion },
+  { name: 'luoh (luoh.nrnszn.com)', url: 'https://luoh.nrnszn.com/', ok: html() },
+  { name: 'luoh version file', url: 'https://luoh.nrnszn.com/version.json', ok: hasVersion },
+  { name: 'luoh old address (podi.nrnszn.com)', url: 'https://podi.nrnszn.com/', ok: html() },
 ];
 
 /** Try a site up to `tries` times (a blip should not wake anyone up). { ...site, pass, why? } */

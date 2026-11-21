@@ -1,6 +1,6 @@
 name: Site down alert
 
-# Every 30 minutes, loads Soul Vault, the NuRenaissance site, CERTIFIED, NuDirectory and PODI. Read-only: it submits nothing.
+# Every 30 minutes, loads Soul Vault, the NuRenaissance site, CERTIFIED, NuDirectory and luoh (plus its old address, podi.nrnszn.com). Read-only: it submits nothing.
 # If a site is down (three tries, 10 seconds apart) the run fails and GitHub emails the repo owner.
 # Run it by hand any time from the Actions tab ("Run workflow"). GitHub may start scheduled runs a few minutes late.
 on:
