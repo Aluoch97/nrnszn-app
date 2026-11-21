@@ -24,7 +24,7 @@ async function fakePush(page: Page, on: boolean) {
   });
   return posts;
 }
-const link = (page: Page) => page.locator('footer [data-push-open], .sheet-tools [data-push-open]').first();
+const link = (page: Page) => page.locator('footer [data-push-open]').first();
 
 test('the footer link stays hidden while notifications are switched off', async ({ page }, info) => {
   only(info); await fakePhone(page); await fakePush(page, false);

@@ -1,7 +1,7 @@
 // Main-site navigation.
 // Computers: every `nav` link shows in the top bar.
-// Phones: the `tabs` show as an app-style bar along the bottom (six with More; Home is the
-// bigger, raised button), and the `more` links sit under the last tab, "More".
+// Phones: the `tabs` show as an app-style bar along the bottom (five; Home is the bigger,
+// raised button). Everything else (About, account, privacy, socials) is in the footer of every page.
 // `also`: other pages that count as this section (highlights its tab there).
 
 export const nav = [
@@ -13,7 +13,6 @@ export const nav = [
 ];
 
 export const tabs = ['/', '/media', '/events', '/apps', '/services'];
-export const more = [];   // (Nov 21, 2026, Nick: About left the menu; it is in the footer, which shows at the bottom of every page, phones too)
 
 // The apps on the Apps page. `inApp`: opens inside this site (full screen with a back bar).
 // `accent`: the glow color of its card, taken from the app's art.

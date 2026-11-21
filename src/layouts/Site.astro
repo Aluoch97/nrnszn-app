@@ -2,12 +2,12 @@
 // Shell for main-website pages.
 // Computers: top bar with every link, footer at the bottom.
 // Phones: works like an app: slim top bar, tab bar along the bottom, and a
-// "More" sheet for the links that don't fit in the tabs.
+// footer at the bottom of every page (the More tab was removed Nov 21, 2026, Nick).
 // `back`: a page inside a section (Gallery, Cinema) shows "‹ Media" at the left of the phone top bar.
 // The Portal keeps its own standalone link-in-bio look and doesn't use this.
 import Base from './Base.astro';
 import Icon from '../components/Icon.astro';
-import { nav, tabs, more, footer } from '../data/site.js';
+import { nav, tabs, footer } from '../data/site.js';
 import { socials } from '../data/portal.js';
 
 interface Props { title: string; description: string; back?: { href: string; label: string }; canonicalPath?: string; noindex?: boolean; image?: string; }
@@ -16,8 +16,6 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 const inSection = (href: string) => href === path || (href !== '/' && path.startsWith(href + '-'));
 const isCurrent = (href: string) => inSection(href) || (nav.find((n) => n.href === href)?.also ?? []).some(inSection);
 const tabLinks = tabs.map((t) => nav.find((n) => n.href === t)!).filter(Boolean);
-const moreLinks = more.map((m) => nav.find((n) => n.href === m)!).filter(Boolean);
-const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) => isCurrent(f.href));
 ---
 <Base title={title} description={description} canonicalPath={canonicalPath} noindex={noindex} image={image}>
   <div class="site">
@@ -62,29 +60,8 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
           <Icon name={n.icon} size={n.href === '/' ? 28 : 24} /><span>{n.label}</span>
         </a>
       ))}
-      <button class="tab" type="button" data-more-open aria-haspopup="dialog" aria-current={moreCurrent ? 'page' : undefined}>
-        <Icon name="more" size={24} /><span>More</span>
-      </button>
     </nav>
 
-    <dialog class="sheet" aria-label="More pages">
-      <div class="sheet-head">
-        <span>More</span>
-        <button type="button" class="sheet-close" data-more-close aria-label="Close"><Icon name="close" size={22} /></button>
-      </div>
-      <ul class="sheet-links">
-        {moreLinks.map((n) => (
-          <li><a href={n.href} aria-current={isCurrent(n.href) ? 'page' : undefined}><Icon name={n.icon} size={22} /><span>{n.label}</span></a></li>
-        ))}
-      </ul>
-      <ul class="socials" aria-label="Social links">
-        {socials.filter((s) => s.icon !== 'web').map((s) => (
-          <li><a href={s.href} target="_blank" rel="noopener" aria-label={s.label}><Icon name={s.icon} size={26} /></a></li>
-        ))}
-      </ul>
-      <p class="sheet-foot"><a href="/privacy-policy">Privacy policy</a> · © {new Date().getFullYear()} NuRenaissance Media</p>
-      <p class="sheet-foot sheet-tools"><a class="ver" href="/admin">Admin</a><button type="button" class="refresh" data-push-open hidden>Notifications</button><button type="button" class="refresh" data-refresh>Refresh</button></p>
-    </dialog>
   </div>
 </Base>
 
@@ -141,7 +118,6 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
 
   /* Phones: tab bar along the bottom. */
   .tabbar { display: none; }
-  .sheet { display: none; }
 
   .bar-back { display: none; }
   @media (max-width: 1023px) {
@@ -159,7 +135,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
 
     .tabbar {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-      display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+      display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
       height: var(--tab-h); padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
       background: rgba(14, 11, 22, 0.94);
       border-top: 1px solid var(--shell-line);
@@ -176,7 +152,7 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
     .tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     /* Icon sits in a pill; the current tab's pill fills in, so it reads by shape as well as color. */
     .tab :global(svg) {
-      box-sizing: content-box; padding: 3px 11px; border-radius: var(--radius-pill);   /* six tabs now: the pill must fit a 320 px phone (53 px per tab) */
+      box-sizing: content-box; padding: 3px 11px; border-radius: var(--radius-pill);   /* five tabs: the pill must fit a 320 px phone (64 px per tab) */
       transition: background var(--dur-fast), transform var(--dur-fast) var(--ease-out);
     }
     .tab[aria-current='page'] { color: var(--gold-300); }
@@ -194,44 +170,20 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
     /* Phones: the footer shows at the bottom of every page too (Nov 21, 2026, Nick), above the tab bar. */
     .site .foot { padding-bottom: var(--space-5); }
 
-    .sheet[open] {
-      display: block;
-      position: fixed; inset: auto 0 0 0; margin: 0; width: 100%; max-width: none;
-      max-height: 85svh; overflow-y: auto;
-      padding: var(--space-3) var(--space-4) max(var(--space-5), env(safe-area-inset-bottom));
-      background: #1a1526; color: var(--shell-text);
-      border: 0; border-top: 1px solid var(--shell-line);
-      border-radius: 22px 22px 0 0;
-      animation: sheet-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
-    }
-    .sheet::backdrop { background: rgba(0, 0, 0, 0.55); }
-    .sheet[open]::before {
       content: ''; display: block; width: 40px; height: 5px; margin: 0 auto var(--space-2);
       border-radius: var(--radius-pill); background: #3a3150;
     }
-    .sheet-head {
       display: flex; align-items: center; justify-content: space-between;
       font-family: var(--font-display); font-weight: 700; font-size: 20px; color: var(--gold-300);
     }
-    .sheet-close {
       width: 44px; height: 44px; display: grid; place-items: center;
       background: #241d34; color: var(--shell-text); border: 0; border-radius: var(--radius-pill); cursor: pointer;
     }
-    .sheet-links { list-style: none; margin: var(--space-3) 0; padding: 0; display: grid; gap: var(--space-1); }
-    .sheet-links a {
       display: flex; align-items: center; gap: var(--space-3);
       min-height: 52px; padding: 0 var(--space-3); border-radius: var(--radius-sm);
       text-decoration: none; font-size: 17px; font-weight: 500; color: var(--shell-text); background: #211b30;
     }
-    .sheet-links a[aria-current='page'] { color: var(--gold-300); }
-    .sheet-links a:active { background: #2c2440; }
-    .sheet .socials { margin: var(--space-4) 0 var(--space-3); gap: var(--space-3); }
-    .sheet .socials a { width: 56px; height: 56px; background: #211b30; }
-    @media (max-width: 359px) { .sheet .socials { gap: var(--space-2); } .sheet .socials a { width: 48px; height: 48px; } }
-    .sheet-foot { margin: 0; text-align: center; font-size: 13px; color: var(--shell-muted); }
-    .sheet-foot a { color: var(--shell-text); }
   }
-  @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
 
   .content { flex: 1; width: 100%; }
 
@@ -251,24 +203,10 @@ const moreCurrent = moreLinks.some((n) => isCurrent(n.href)) || footer.some((f) 
   .copy { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--space-3); }
   .refresh[hidden] { display: none; }
   .ver, .refresh { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--space-2); color: var(--shell-text); font: inherit; text-decoration: underline; background: none; border: 0; cursor: pointer; }
-  .sheet-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 var(--space-3); margin-top: var(--space-2); }
-  .sheet-tools .ver, .sheet-tools .refresh { color: var(--shell-muted); font-size: 14px; }
   .links { text-align: center; line-height: 1.4; }
   .links a { color: var(--shell-text); display: inline-flex; align-items: center; min-height: 44px; }
 </style>
 
-<script>
-  // "More" sheet on phones.
-  const sheet = document.querySelector<HTMLDialogElement>('.sheet');
-  document.querySelector('[data-more-open]')?.addEventListener('click', () => sheet?.showModal());
-  document.querySelector('[data-more-close]')?.addEventListener('click', () => sheet?.close());
-  // Tap the dimmed area above the sheet to close it.
-  sheet?.addEventListener('click', (e) => { if (e.target === sheet) {
-    const r = sheet.getBoundingClientRect();
-    if ((e as MouseEvent).clientY < r.top) sheet.close();
-  } });
-  matchMedia("(min-width: 1024px)").addEventListener('change', (m) => { if (m.matches) sheet?.close(); });
-</script>
 
 <style is:global>
   /* Main-site pages are dark; keep the page behind them dark too (shows on overscroll). */

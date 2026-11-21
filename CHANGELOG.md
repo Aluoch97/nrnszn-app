@@ -6,7 +6,7 @@ To release: add a new `## x.y · date` block at the top of this file in the same
 
 ## 3.9 · Nov 21, 2026
 A shorter menu, and the old Portal page is gone.
-- **About** is no longer in the menu. The footer (social icons, About, Your account, Add to Home Screen, Privacy policy, Admin, Refresh) now shows at the bottom of every page on phones too, not only on computers.
+- **About** is no longer in the menu, and the phone **More** tab is gone: the bottom bar is Home, Media, Events, Apps and Services. The footer (social icons, About, Your account, Add to Home Screen, Privacy policy, Admin, Refresh) now shows at the bottom of every page on phones too.
 - nrnszn.com/portal (the old link-in-bio page with the two latest videos) now opens the home page, which already has the same videos and links. Old links to it keep working.
 - The "page not found" screen now leads back to the home page.
 
