@@ -10,13 +10,19 @@ const PROJECTS = [
 ];
 
 const SAVED = { vault: [{ kind: 'song', id: 'trk_1', title: 'SIN <i>CITY</i>', url: '/vault/2024-sin-city', at: Date.UTC(2026, 10, 3) }], directory: [{ kind: 'listing', id: 'abc-1', title: 'Open mic at Jo\'s', url: '', at: Date.UTC(2026, 10, 4) }] };
+const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 const LUOH = { count: 2, recent: [{ id: 'p1', name: 'Lounge recap', at: Date.UTC(2026, 10, 10) }, { id: 'p2', name: 'Music video cut', at: Date.UTC(2026, 10, 1) }] };
 
+// "‹ Your account" only exists on a phone (a computer shows the list beside the page).
+const toList = async (page: Page) => { if (await page.locator('#app-back').isVisible()) await page.click('#app-back'); };
+
 async function fake(page: Page, opts: { on?: boolean; user?: boolean; email?: boolean } = {}) {
-  const state = { mails: [] as any[], signedIn: !!opts.user, logouts: 0, unsaved: [] as any[] };
+  const state = { mails: [] as any[], signedIn: !!opts.user, logouts: 0, unsaved: [] as any[], pics: [] as any[], avatar: null as number | null };
   await page.route('**/api/account/**', async (route) => {
     const req = route.request(), path = new URL(req.url()).pathname.replace('/api/account/', '');
-    if (path === 'me') return route.fulfill(json({ on: opts.on !== false, google: false, email: opts.email !== false, clientId: '', user: state.signedIn ? { email: 'client@example.com', name: 'Jo Client', since: Date.UTC(2026, 10, 1) } : null, ...(state.signedIn ? { projects: PROJECTS, payments: [{ amount: 40000, currency: 'usd', what: 'Music video', at: Date.UTC(2026, 10, 2) }], payLink: 'https://buy.stripe.com/test_link', saved: JSON.parse(JSON.stringify(SAVED)), luoh: LUOH } : {}) }));
+    if (path === 'me') return route.fulfill(json({ on: opts.on !== false, google: false, email: opts.email !== false, clientId: '', user: state.signedIn ? { email: 'client@example.com', name: 'Jo Client', since: Date.UTC(2026, 10, 1) } : null, ...(state.signedIn ? { projects: PROJECTS, payments: [{ amount: 40000, currency: 'usd', what: 'Music video', at: Date.UTC(2026, 10, 2) }], payLink: 'https://buy.stripe.com/test_link', saved: JSON.parse(JSON.stringify(SAVED)), luoh: LUOH, avatar: state.avatar } : {}) }));
+    if (path === 'avatar' && req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from(PNG, 'base64') });
+    if (path === 'avatar') { const b = JSON.parse(req.postData() || '{}'); state.pics.push(b); state.avatar = b.image ? 1700000000000 : null; return route.fulfill(json({ ok: true, avatar: state.avatar })); }
     if (path === 'passport') return route.fulfill(json({ ok: true, linked: true, stamps: [{ day: '2025-04-26', method: 'game' }, { day: '2025-11-08', method: 'door' }], today: null }));
     if (path === 'listings') return route.fulfill(json({ ok: true, listings: [{ title: 'Jo: <b>Live</b> set', kind: 'Show', status: 'Live', sent: '2026-11-05T12:00:00Z' }, { title: 'New studio', kind: 'Feature', status: 'Waiting for review', sent: '2026-11-20T12:00:00Z' }] }));
     if (path === 'saved') { state.unsaved.push(JSON.parse(req.postData() || '{}')); return route.fulfill(json({ ok: true, on: false })); }
@@ -78,7 +84,7 @@ test('signed in: name, projects with total / paid / balance (drawn as text), the
   };
   await check();
   await page.goBack(); await expect(page.locator('#dash-home')).toBeVisible(); await expect(page.locator('.tile')).toHaveCount(5);
-  await expect(page.locator('[data-app="nrn"]')).toBeFocused();
+  if (info.project.name !== 'desktop-1280') await expect(page.locator('[data-app="nrn"]')).toBeFocused();
   await check();
   await page.click('#sign-out');
   await expect(page.locator('#mail-form')).toBeVisible(); expect(st.logouts).toBe(1);
@@ -105,7 +111,7 @@ test('the dashboard: each app tile shows a summary and opens that app\'s page wi
   await expect(page.locator('#cert-stats')).toContainText('2'); const stamps = page.locator('.stamp'); await expect(stamps).toHaveCount(2);
   await expect(stamps.first()).toContainText('Renaissance Certified · Fall 2025'); await expect(stamps.first()).toContainText('checked in at the door');
   await expect(page.locator('#app-open')).toHaveAttribute('href', 'https://play.nrnszn.com/?tab=about');
-  await page.click('#app-back'); await expect(page.locator('#dash-home')).toBeVisible();
+  await toList(page); await expect(page.locator('#dash-home')).toBeVisible();
 
   await page.click('[data-app="directory"]');
   await expect(page.locator('#dir-mine .row')).toHaveCount(2); await expect(page.locator('#dir-mine .row').first().locator('b')).toHaveText('Jo: <b>Live</b> set');
@@ -113,13 +119,13 @@ test('the dashboard: each app tile shows a summary and opens that app\'s page wi
   await expect(page.locator('#dir-saved a.row-main')).toHaveAttribute('href', 'https://directory.nrnszn.com/?l=abc-1');
   await page.click('#dir-saved .rm');
   await expect(page.locator('#dir-saved .empty')).toBeVisible(); expect(st.unsaved).toEqual([{ app: 'directory', kind: 'listing', id: 'abc-1', on: false }]);
-  await page.click('#app-back');
+  await toList(page);
 
   await page.click('[data-app="vault"]');
   await expect(page.locator('#vault-saved a.row-main b')).toHaveText('SIN <i>CITY</i>');
   await expect(page.locator('#vault-saved a.row-main')).toHaveAttribute('href', 'https://soulnicolas.com/vault/2024-sin-city');
   await expect(page.locator('#app-open')).toHaveAttribute('href', '/api/account/connect?return=' + encodeURIComponent('https://soulnicolas.com/'));
-  await page.click('#app-back');
+  await toList(page);
 
   await page.click('[data-app="luoh"]');
   await expect(page.locator('#luoh-list .row')).toHaveCount(2); await expect(page.locator('#luoh-list .row').first()).toContainText('Lounge recap');
@@ -127,4 +133,44 @@ test('the dashboard: each app tile shows a summary and opens that app\'s page wi
 
   // a link straight to one app's page works too
   await page.goto('/account/#luoh'); await expect(page.locator('#app-name')).toHaveText('luoh');
+});
+
+test('Account settings: upload a profile picture (shrunk to a square JPEG on the device), see it, remove it', async ({ page }, info) => {
+  only(info); const st = await fake(page, { user: true });
+  await page.goto('/account/');
+  await expect(page.locator('#me-initial')).toHaveText('J'); await expect(page.locator('#me-pic')).toBeHidden();
+  await page.click('[data-app="settings"]');
+  await expect(page.locator('#app-name')).toHaveText('Account settings'); await expect(page.locator('#app-open')).toBeHidden();
+  await page.setInputFiles('#pic-in', { name: 'me.png', mimeType: 'image/png', buffer: Buffer.from(PNG, 'base64') });
+  await expect(page.locator('#pic-st')).toContainText('Saved');
+  expect(st.pics[0].image).toMatch(/^data:image\/jpeg;base64,/);
+  await expect(page.locator('#pic-prev')).toBeVisible(); await expect(page.locator('#pic-prev')).toHaveAttribute('src', '/api/account/avatar?v=1700000000000');
+  await expect(page.locator('#me-pic')).toHaveAttribute('src', '/api/account/avatar?v=1700000000000'); await expect(page.locator('#me-initial')).toBeHidden();
+  await page.click('#pic-rm');
+  await expect(page.locator('#pic-prev')).toBeHidden(); await expect(page.locator('#me-pic')).toHaveAttribute('hidden', ''); expect(st.pics[1]).toEqual({ image: null });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const serious = (await new AxeBuilder({ page }).include('.acct').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id);
+  expect(serious).toEqual([]);
+});
+
+test('on a computer the list and the page sit side by side; picking an app swaps the right side', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop-1280', 'computer only'); await fake(page, { user: true });
+  await page.goto('/account/');
+  await expect(page.locator('#dash-home')).toBeVisible(); await expect(page.locator('#dash-app')).toBeVisible();
+  await expect(page.locator('#app-name')).toHaveText('NuRenaissance'); await expect(page.locator('[data-app="nrn"]')).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('#app-back')).toBeHidden();
+  await page.click('[data-app="certified"]');
+  await expect(page.locator('#app-name')).toHaveText('Certified'); await expect(page.locator('#dash-home')).toBeVisible();
+  await expect(page.locator('[data-app="certified"]')).toHaveAttribute('aria-current', 'page'); await expect(page.locator('[data-app="nrn"]')).not.toHaveAttribute('aria-current', 'page');
+  const side = await page.locator('#dash-home').boundingBox(), main = await page.locator('#dash-app').boundingBox();
+  expect(side!.x + side!.width).toBeLessThanOrEqual(main!.x);
+});
+
+test('on a phone the list comes first and one page shows at a time', async ({ page }, info) => {
+  test.skip(info.project.name !== 'phone-390', 'phone only'); await fake(page, { user: true });
+  await page.goto('/account/');
+  await expect(page.locator('#dash-home')).toBeVisible(); await expect(page.locator('#dash-app')).toBeHidden();
+  await page.click('[data-app="vault"]');
+  await expect(page.locator('#dash-home')).toBeHidden(); await expect(page.locator('#app-name')).toHaveText('Soul Vault');
+  await page.click('#app-back'); await expect(page.locator('#dash-app')).toBeHidden();
 });

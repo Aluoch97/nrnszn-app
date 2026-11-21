@@ -56,6 +56,8 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS client_payments (id TEXT PRIMARY KEY, project_id TEXT NOT NULL, amount_cents INTEGER NOT NULL, method TEXT NOT NULL DEFAULT 'other', paid_on TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL)`,
   `CREATE INDEX IF NOT EXISTS client_payments_project ON client_payments (project_id)`,
   // Things a person saves in an app (Soul Vault liked songs, NuDirectory favorites), so they follow the account to any device.
+  // Profile pictures (Nov 21, 2026): one small square picture per account, resized on the phone, kept as base64 here.
+  `CREATE TABLE IF NOT EXISTS account_avatars (user_id TEXT PRIMARY KEY, mime TEXT NOT NULL, data TEXT NOT NULL, updated_at INTEGER NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS account_saved (user_id TEXT NOT NULL, app TEXT NOT NULL, kind TEXT NOT NULL, item_id TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', url TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL, PRIMARY KEY (user_id, app, kind, item_id))`,
   // Card / Apple Pay payments that Stripe reported (src/edge/stripe.js), matched to the account by e-mail.
@@ -353,6 +355,25 @@ export async function luohFor(db, uid) {
   const n = await db.prepare('SELECT COUNT(*) AS n FROM projects WHERE user_id = ?').bind(uid).first();
   return { count: Number((n && n.n) || 0), recent: rows.map((r) => ({ id: r.id, name: r.name || 'Untitled project', at: r.at })) };
 }
+// ---- profile picture ------------------------------------------------------------------------------------------------------------
+// The page shrinks the picture to a 256 px square JPEG before sending it, so it is small. The server only accepts real JPEG / PNG /
+// WebP bytes (checked by their first bytes, not by what the browser says) up to AVATAR_MAX, and only serves it back to its owner.
+export const AVATAR_MAX = 150_000;
+const MAGIC = { 'image/jpeg': [0xff, 0xd8, 0xff], 'image/png': [0x89, 0x50, 0x4e, 0x47], 'image/webp': [0x52, 0x49, 0x46, 0x46] };
+export async function setAvatar(db, userId, image, now = Date.now()) {
+  if (image === null || image === '') { await db.prepare('DELETE FROM account_avatars WHERE user_id = ?').bind(userId).run(); return { ok: true, avatar: null }; }
+  const m = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(image || ''));
+  if (!m) return { ok: false, message: 'Pick a JPEG, PNG or WebP picture.' };
+  let bytes; try { bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0)); } catch { return { ok: false, message: 'That picture could not be read.' }; }
+  if (bytes.length > AVATAR_MAX) return { ok: false, message: 'That picture is too big. Try another one.' };
+  if (!MAGIC[m[1]].every((b, i) => bytes[i] === b) || (m[1] === 'image/webp' && String.fromCharCode(...bytes.slice(8, 12)) !== 'WEBP')) return { ok: false, message: 'That file is not a picture.' };
+  await db.prepare('INSERT INTO account_avatars (user_id, mime, data, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT (user_id) DO UPDATE SET mime = excluded.mime, data = excluded.data, updated_at = excluded.updated_at').bind(userId, m[1], m[2], now).run();
+  return { ok: true, avatar: now };
+}
+export async function avatarAt(db, userId) {
+  const r = await db.prepare('SELECT updated_at FROM account_avatars WHERE user_id = ?').bind(userId).first();
+  return r ? r.updated_at : null;
+}
 export const SAVED_MAX = 500;
 export async function listSaved(db, userId, app) {
   return ((await db.prepare('SELECT kind, item_id AS id, title, url, created_at AS at FROM account_saved WHERE user_id = ? AND app = ? ORDER BY created_at DESC LIMIT ?').bind(userId, app, SAVED_MAX).all()).results || []);
@@ -476,6 +497,7 @@ export async function deleteAccount(db, user) {
     db.prepare('DELETE FROM login_links WHERE email = ?').bind(user.email),
     db.prepare('DELETE FROM account_tickets WHERE user_id = ?').bind(user.id),
     db.prepare('DELETE FROM account_saved WHERE user_id = ?').bind(user.id),
+    db.prepare('DELETE FROM account_avatars WHERE user_id = ?').bind(user.id),
     db.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
   ]);
 }
@@ -499,7 +521,7 @@ export async function accountRequest({ request, env, params }) {
       // Client projects (money) only for this site's own Account page, never for another site's script.
       const o = request.headers.get('origin');
       if (url.searchParams.get('projects') === '1' && (!o || o === url.origin)) { const db = await accountsDb(env); return reply({ ...info, user: publicAccount(u), projects: await projectsFor(db, u.email), payments: await paymentsFor(db, u.email), payLink: PAY_LINK,
-        saved: { vault: await listSaved(db, u.id, 'vault'), directory: await listSaved(db, u.id, 'directory') }, luoh: await luohFor(db, u.id) }, 200, cors); }
+        saved: { vault: await listSaved(db, u.id, 'vault'), directory: await listSaved(db, u.id, 'directory') }, luoh: await luohFor(db, u.id), avatar: await avatarAt(db, u.id) }, 200, cors); }
       return reply({ ...info, user: publicAccount(u) }, 200, cors);
     }
     if (!accountsOn(env)) return reply({ ok: false, message: offMsg }, 503, cors);
@@ -531,6 +553,14 @@ export async function accountRequest({ request, env, params }) {
       let b; try { b = await request.json(); } catch { return reply({ ok: false, message: 'Bad request.' }, 400, cors); }
       const out = await setSaved(db, uid, b);
       return reply(out, out.ok ? 200 : 400, cors);
+    }
+    // Your own profile picture (the cookie; this site only, never another site's script).
+    if (what === 'avatar' && method === 'GET') {
+      const o = request.headers.get('origin');
+      const uid = !o || o === url.origin ? await sessionUserId(request, env) : null;
+      const r = uid ? await db.prepare('SELECT mime, data FROM account_avatars WHERE user_id = ?').bind(uid).first() : null;
+      if (!r) return new Response('Not found', { status: 404, headers: { 'cache-control': 'no-store' } });
+      return new Response(Uint8Array.from(atob(r.data), (c) => c.charCodeAt(0)), { headers: { 'content-type': r.mime, 'cache-control': 'private, max-age=31536000', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'" } });
     }
     if (method !== 'POST') return reply({ ok: false, message: 'Unknown request.' }, 404, cors);
     let body; try { body = await request.json(); } catch { return reply({ ok: false, message: 'Bad request.' }, 400, cors); }
@@ -588,6 +618,12 @@ export async function accountRequest({ request, env, params }) {
       const u = await currentAccount(request, env);
       if (!u) return reply({ ok: false, message: 'Please sign in first.' }, 401);
       return reply({ ok: true, next: await continueTo(db, u.id, body.return) });
+    }
+    if (what === 'avatar') {
+      const u = await currentAccount(request, env);
+      if (!u) return reply({ ok: false, message: 'Please sign in first.' }, 401);
+      const out = await setAvatar(db, u.id, body.image);
+      return reply(out, out.ok ? 200 : 400);
     }
     if (what === 'name') {
       const u = await currentAccount(request, env);

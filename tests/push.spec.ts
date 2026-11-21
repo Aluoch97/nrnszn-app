@@ -32,7 +32,7 @@ async function fakeAccount(page: Page, signedIn = true) {
 
 test('no Notifications anywhere while they are switched off, in the footer, or for someone signed out', async ({ page }, info) => {
   only(info); await fakePhone(page); await fakePush(page, false); await fakeAccount(page, true);
-  await page.goto('/account/'); await expect(page.locator('#me-name')).toHaveText('Fan'); await page.waitForTimeout(500);
+  await page.goto('/account/#settings'); await expect(page.locator('#me-name')).toHaveText('Fan'); await page.waitForTimeout(500);
   await expect(page.locator('[data-push-open]:visible')).toHaveCount(0);
   await expect(page.locator('.acct [data-push-off]')).toBeVisible();
   await expect(page.locator('footer [data-push-open]')).toHaveCount(0);
@@ -44,7 +44,7 @@ test('signed out, the account page offers sign-in, not notifications', async ({ 
 });
 test('a signed-in person turns notifications on and off from their account page; nothing sideways; accessible', async ({ page }, info) => {
   only(info); await fakePhone(page); const posts = await fakePush(page, true);
-  await fakeAccount(page, true); await page.goto('/account/');
+  await fakeAccount(page, true); await page.goto('/account/#settings');
   const open = link(page);
   await expect(open).toBeVisible(); const h = (await open.boundingBox())!.height; expect(h).toBeGreaterThanOrEqual(43.5);   // 44px with sub-pixel rounding
   await open.click();
@@ -62,7 +62,7 @@ test('a signed-in person turns notifications on and off from their account page;
 });
 test('a "no" from the phone saves nothing', async ({ page }, info) => {
   only(info); await fakePhone(page, 'denied'); const posts = await fakePush(page, true);
-  await fakeAccount(page, true); await page.goto('/account/');
+  await fakeAccount(page, true); await page.goto('/account/#settings');
   const open = link(page);
   await open.click(); await page.locator('dialog[open] #push-go').click(); await expect(page.locator('dialog[open] #push-msg')).toContainText(/blocked|not allowed/i);
   expect(posts).toEqual([]);
