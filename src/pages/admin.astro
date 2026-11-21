@@ -93,6 +93,21 @@ import Site from '../layouts/Site.astro';
               <select id="hv-len"><option value="8">8 seconds</option><option value="12">12 seconds</option><option value="15" selected>15 seconds</option><option value="20">20 seconds</option></select>
               <p class="result">It plays with no sound, over and over. This phone makes it small first (a phone size and a computer size), so it loads fast for visitors.</p>
             </div>
+            <div id="hv-framing" hidden>
+              <h4>Position in the header</h4>
+              <p class="result">Choose what stays in view. The boxes show the header on a phone and on a computer. You can change this later without uploading again.</p>
+              <div class="hv-boxes">
+                <figure><div class="hv-box" id="hv-box-phone"><video muted playsinline loop preload="auto" aria-hidden="true"></video></div><figcaption>Phone</figcaption></figure>
+                <figure><div class="hv-box" id="hv-box-desk"><video muted playsinline loop preload="auto" aria-hidden="true"></video></div><figcaption>Computer</figcaption></figure>
+              </div>
+              <label for="hv-y">Up / down <span class="hint" id="hv-y-t">middle</span></label>
+              <input id="hv-y" type="range" min="0" max="100" step="1" value="50" />
+              <label for="hv-x">Left / right <span class="hint" id="hv-x-t">middle</span></label>
+              <input id="hv-x" type="range" min="0" max="100" step="1" value="50" />
+              <label for="hv-z">Zoom <span class="hint" id="hv-z-t">fills the header</span></label>
+              <input id="hv-z" type="range" min="1" max="2.5" step="0.05" value="1" />
+              <div class="actions"><button type="button" class="btn small" id="hv-center">Back to the middle</button></div>
+            </div>
             <p id="hv-progress" class="result" role="status" aria-live="polite"></p>
             <p id="hv-error" class="error" role="alert"></p>
             <div class="actions"><button type="submit" class="btn primary" id="hv-save" disabled>Make and upload</button><button type="button" class="btn" id="hv-cancel">Cancel</button></div>
@@ -212,6 +227,7 @@ import Site from '../layouts/Site.astro';
 </Site>
 
 <script>
+  import { applyFrame } from '../lib/heroVideo';
   type Tone = 'ok' | 'old' | 'todo' | 'bad';
   type Result = { tone: Tone; text: string; note?: string };
   const KEY = 'nrn_admin', OPEN = 'nrn_admin_open';
@@ -666,7 +682,7 @@ import Site from '../layouts/Site.astro';
   // ---- Page videos (src/edge/hero.js): pick a video, choose where the loop starts, and this device makes a silent phone size,
   // a computer size and a still picture (mediabunny, the engine luoh uses), then sends them. Pages show it within a minute. ----
   const HV_PAGES: [string, string, string][] = [['home', 'Home', '/'], ['services', 'Services', '/services'], ['events', 'Events', '/events'], ['media', 'Media', '/media'], ['apps', 'Apps', '/apps'], ['about', 'About', '/about'], ['support', 'Support', '/support']];
-  let hvVideos: Record<string, { v: string; at: number }> = {}, hvPage = '', hvFile: File | null = null, hvUrl = '';
+  let hvVideos: Record<string, { v: string; at: number; frame?: { x: number; y: number; z: number } }> = {}, hvPage = '', hvFile: File | null = null, hvUrl = '', hvMode: 'upload' | 'adjust' = 'upload';
   const mmss = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
   function hvApi(init: RequestInit, query = '') {
     const token = store.get();
@@ -695,6 +711,7 @@ import Site from '../layouts/Site.astro';
       (li.querySelector('.note') as HTMLElement).textContent = has ? `Your video, since ${new Date(has.at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}` : (id === 'home' ? 'The archway video (built in)' : 'The built-in pictures');
       const acts = li.querySelector('.hv-acts') as HTMLElement;
       const up = document.createElement('button'); up.type = 'button'; up.className = 'btn small primary'; up.textContent = has ? 'Change video' : 'Add a video'; up.setAttribute('aria-label', `${up.textContent} for ${name}`); up.addEventListener('click', () => hvOpen(id, name)); acts.appendChild(up);
+      if (has) { const adj = document.createElement('button'); adj.type = 'button'; adj.className = 'btn small'; adj.textContent = 'Adjust position'; adj.setAttribute('aria-label', `Adjust the position of the video on ${name}`); adj.addEventListener('click', () => hvAdjust(id, name)); acts.appendChild(adj); }
       if (has) { const rm = document.createElement('button'); rm.type = 'button'; rm.className = 'btn small'; rm.textContent = 'Remove'; rm.setAttribute('aria-label', `Remove the video on ${name}`); rm.addEventListener('click', () => hvRemove(id, name)); acts.appendChild(rm); }
       const view = document.createElement('a'); view.className = 'btn small'; view.href = path; view.target = '_blank'; view.rel = 'noopener'; view.textContent = 'View page'; view.setAttribute('aria-label', `View the ${name} page`); acts.appendChild(view);
       ul.appendChild(li);
@@ -705,9 +722,48 @@ import Site from '../layouts/Site.astro';
     const prev = $('hv-prev') as HTMLVideoElement; prev.removeAttribute('src'); prev.load(); prev.hidden = true;
     ($('hv-file') as HTMLInputElement).value = ''; $('hv-trim').hidden = true; ($('hv-save') as HTMLButtonElement).disabled = true;
     $('hv-progress').textContent = ''; $('hv-error').textContent = '';
+    $('hv-framing').hidden = true; hvSetFrame({ x: 50, y: 50, z: 1 });
+    document.querySelectorAll<HTMLVideoElement>('.hv-box video').forEach((v) => { v.pause(); v.removeAttribute('src'); v.load(); });
+  }
+  // ---- position: what stays in view (object-position) and zoom, shown live in a phone-shaped and a computer-shaped box ----
+  const hvFrame = () => ({ x: Number(($('hv-x') as HTMLInputElement).value), y: Number(($('hv-y') as HTMLInputElement).value), z: Number(($('hv-z') as HTMLInputElement).value) });
+  const where = (n: number, lo: string, hi: string) => (n === 50 ? 'middle' : n < 50 ? `${lo} (${n})` : `${hi} (${n})`);
+  function hvPaint() {
+    const f = hvFrame();
+    $('hv-y-t').textContent = where(f.y, 'more of the top', 'more of the bottom');
+    $('hv-x-t').textContent = where(f.x, 'more of the left', 'more of the right');
+    $('hv-z-t').textContent = f.z === 1 ? 'fills the header' : `${Math.round(f.z * 100)}%`;
+    document.querySelectorAll<HTMLVideoElement>('.hv-box video').forEach((v) => applyFrame(v, f));
+  }
+  function hvSetFrame(f: { x: number; y: number; z: number }) {
+    ($('hv-x') as HTMLInputElement).value = String(f.x); ($('hv-y') as HTMLInputElement).value = String(f.y); ($('hv-z') as HTMLInputElement).value = String(f.z); hvPaint();
+  }
+  function hvShowFraming(src: string, from = 0) {
+    // The boxes take the header's shape on that page: Home is taller than the other pages.
+    const home = hvPage === 'home';
+    $('hv-box-phone').style.aspectRatio = home ? '390 / 658' : '1 / 1';
+    $('hv-box-desk').style.aspectRatio = home ? '16 / 9' : '1280 / 440';
+    document.querySelectorAll<HTMLVideoElement>('.hv-box video').forEach((v) => {
+      v.src = src; v.muted = true;
+      v.onloadedmetadata = () => { try { v.currentTime = from; } catch { /* ignore */ } v.play().catch(() => {}); };
+    });
+    $('hv-framing').hidden = false; hvPaint();
+  }
+  ['hv-x', 'hv-y', 'hv-z'].forEach((id) => $(id).addEventListener('input', hvPaint));
+  $('hv-center').addEventListener('click', () => hvSetFrame({ x: 50, y: 50, z: 1 }));
+  function hvUploadParts(on: boolean) { for (const id of ['hv-file']) { $(id).hidden = !on; (document.querySelector(`label[for="${id}"]`) as HTMLElement).hidden = !on; } }
+  function hvAdjust(id: string, name: string) {
+    hvPage = id; hvMode = 'adjust'; hvReset(); hvUploadParts(false);
+    $('hv-form-title').textContent = `Position of the video on ${name}`; $('hv-save').textContent = 'Save position'; ($('hv-save') as HTMLButtonElement).disabled = false;
+    $('hv-form').hidden = false; $('hv-list').hidden = true;
+    const cur = hvVideos[id];
+    hvShowFraming(`/api/hero?file=${encodeURIComponent(`${id}/${cur.v}/large.mp4`)}`);
+    hvSetFrame(cur.frame || { x: 50, y: 50, z: 1 });
+    ($('hv-y') as HTMLInputElement).focus();
   }
   function hvOpen(id: string, name: string) {
-    hvPage = id; hvReset(); $('hv-form-title').textContent = `Video for ${name}`; $('hv-form').hidden = false; $('hv-list').hidden = true;
+    hvPage = id; hvMode = 'upload'; hvReset(); hvUploadParts(true); $('hv-save').textContent = 'Make and upload';
+    $('hv-form-title').textContent = `Video for ${name}`; $('hv-form').hidden = false; $('hv-list').hidden = true;
     ($('hv-file') as HTMLInputElement).focus();
   }
   function hvClose() { hvReset(); $('hv-form').hidden = true; $('hv-list').hidden = false; }
@@ -728,12 +784,14 @@ import Site from '../layouts/Site.astro';
     prev.onloadedmetadata = () => {
       const r = $('hv-start') as HTMLInputElement; r.max = String(Math.max(0, Math.floor((prev.duration - 2) * 10) / 10)); r.value = '0'; $('hv-start-t').textContent = '0:00';
       $('hv-trim').hidden = false; ($('hv-save') as HTMLButtonElement).disabled = false;
+      hvShowFraming(hvUrl, 0);
     };
     prev.onerror = () => { $('hv-error').textContent = 'This browser cannot open that video. Try another one, or a newer phone or computer.'; };
   });
   $('hv-start').addEventListener('input', () => {
     const t = Number(($('hv-start') as HTMLInputElement).value); $('hv-start-t').textContent = mmss(t);
     const prev = $('hv-prev') as HTMLVideoElement; prev.currentTime = t;
+    document.querySelectorAll<HTMLVideoElement>('.hv-box video').forEach((v) => { try { v.currentTime = t; } catch { /* ignore */ } });
   });
   const fitSize = (w: number, h: number, max: number) => { const k = Math.min(1, max / Math.max(w, h)); return { width: Math.max(2, Math.round((w * k) / 2) * 2), height: Math.max(2, Math.round((h * k) / 2) * 2) }; };
   async function hvPoster(prev: HTMLVideoElement, t: number): Promise<Blob> {
@@ -743,8 +801,20 @@ import Site from '../layouts/Site.astro';
     return new Promise((ok, no) => c.toBlob((b) => (b ? ok(b) : no(new Error('poster'))), 'image/jpeg', 0.82));
   }
   $('hv-form').addEventListener('submit', async (e) => {
-    e.preventDefault(); if (!hvFile) return;
-    const btn = $('hv-save') as HTMLButtonElement, prog = $('hv-progress'), err = $('hv-error'); btn.disabled = true; err.textContent = '';
+    e.preventDefault();
+    const btn = $('hv-save') as HTMLButtonElement, prog = $('hv-progress'), err = $('hv-error');
+    if (hvMode === 'adjust') {
+      btn.disabled = true; err.textContent = '';
+      const res = await hvApi({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'frame', page: hvPage, frame: hvFrame() }) }).catch(() => null);
+      const j = res ? await res.json().catch(() => ({})) : {};
+      if (res && res.status === 401) { signedOut('Please sign in again.'); return; }
+      if (!j.ok) { err.textContent = j.message || 'Could not save the position. Try again.'; btn.disabled = false; return; }
+      const name = (HV_PAGES.find((x) => x[0] === hvPage) || [])[1] || 'the page';
+      hvVideos[hvPage].frame = j.frame; hvClose(); drawVideos(); $('hv-msg').textContent = `Position saved. ${name} shows it within a minute.`;
+      return;
+    }
+    if (!hvFile) return;
+    btn.disabled = true; err.textContent = '';
     const prev = $('hv-prev') as HTMLVideoElement, start = Number(($('hv-start') as HTMLInputElement).value), len = Number(($('hv-len') as HTMLSelectElement).value);
     const end = Math.min(prev.duration || start + len, start + len);
     try {
@@ -772,11 +842,11 @@ import Site from '../layouts/Site.astro';
         if (res.status === 401) { signedOut('Please sign in again.'); return; }
         if (!j.ok) throw new Error(j.message || 'The upload did not work. Try again.');
       }
-      const res = await hvApi({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'set', page: hvPage, v }) });
+      const res = await hvApi({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'set', page: hvPage, v, frame: hvFrame() }) });
       const j = await res.json().catch(() => ({}));
       if (!j.ok) throw new Error(j.message || 'The upload did not work. Try again.');
       const name = (HV_PAGES.find((x) => x[0] === hvPage) || [])[1] || 'the page';
-      hvVideos[hvPage] = { v, at: Date.now() }; hvClose(); drawVideos();
+      hvVideos[hvPage] = { v, at: Date.now(), frame: hvFrame() }; hvClose(); drawVideos();
       $('hv-msg').textContent = `Saved (${(large.size / 1e6).toFixed(1)} MB for computers, ${(small.size / 1e6).toFixed(1)} MB for phones). ${name} shows it within a minute.`;
     } catch (x) {
       err.textContent = x instanceof Error && x.message ? x.message : 'Something went wrong. Try again.'; prog.textContent = ''; btn.disabled = false;
@@ -858,7 +928,13 @@ import Site from '../layouts/Site.astro';
   .admin .hv-acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
   .admin .hv-acts .btn { margin: 0; }
   .admin #hv-prev { width: 100%; max-height: 260px; border-radius: var(--radius-sm); background: #000; margin: var(--space-2) 0; }
-  .admin #hv-start { width: 100%; min-height: 44px; }
+  .admin #hv-start, .admin #hv-framing input[type='range'] { width: 100%; min-height: 44px; }
+  .admin #hv-framing h4 { margin: var(--space-4) 0 0; color: #fff; font-size: 16px; }
+  .admin .hv-boxes { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 5fr); gap: var(--space-3); align-items: end; margin: var(--space-2) 0; }
+  .admin .hv-boxes figure { margin: 0; min-width: 0; }
+  .admin .hv-boxes figcaption { font-size: 13px; color: #b9b0cf; text-align: center; margin-top: 4px; }
+  .admin .hv-box { position: relative; overflow: hidden; border-radius: 10px; background: #000; border: 1px solid #5a4c78; }
+  .admin .hv-box video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .admin .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
   .admin .result { margin: 0; flex: 1 1 100%; font-size: 14px; color: #cfc7e0; } .result:empty { display: none; }
   .admin .foot-note { margin: var(--space-4) 0 0; font-size: 14px; color: #b9b0cf; }

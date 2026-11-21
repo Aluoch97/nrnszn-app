@@ -9,7 +9,7 @@ const TOKEN = 'fake-session-token';
 const json = (body: unknown, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
 async function fakeAdmin(page: Page) {
-  const st = { puts: [] as { q: string; size: number; head: number[] }[], sets: [] as any[], removes: [] as any[], videos: { media: { v: 'oldone12', at: Date.UTC(2026, 10, 1) } } as Record<string, any> };
+  const st = { puts: [] as { q: string; size: number; head: number[] }[], sets: [] as any[], removes: [] as any[], frames: [] as any[], videos: { media: { v: 'oldone12', at: Date.UTC(2026, 10, 1) } } as Record<string, any> };
   await page.addInitScript((t) => { try { localStorage.setItem('nrn_admin', t); } catch { /* ignore */ } }, TOKEN);
   await page.route('**/api/**', async (route) => {
     const req = route.request(), url = new URL(req.url());
@@ -19,6 +19,7 @@ async function fakeAdmin(page: Page) {
       const b = JSON.parse(req.postData() || '{}');
       if (b.action === 'list') return route.fulfill(json({ ok: true, videos: st.videos }));
       if (b.action === 'set') { st.sets.push(b); st.videos[b.page] = { v: b.v, at: Date.now() }; return route.fulfill(json({ ok: true })); }
+      if (b.action === 'frame') { st.frames.push(b); st.videos[b.page].frame = b.frame; return route.fulfill(json({ ok: true, frame: b.frame })); }
       if (b.action === 'remove') { st.removes.push(b); delete st.videos[b.page]; return route.fulfill(json({ ok: true })); }
     }
     if (url.pathname === '/api/admin') return route.fulfill(json(req.headers()['authorization'] ? { status: 'ok', mode: 'ready', signedIn: true, setup: [] } : { status: 'ok', mode: 'ready' }));
@@ -41,6 +42,10 @@ test('/admin > Page videos: pick a video, choose the start, and it is made small
   await page.setInputFiles('#hv-file', { name: 'clip.mp4', mimeType: 'video/mp4', buffer: CLIP });
   await expect(page.locator('#hv-trim')).toBeVisible();
   await page.locator('#hv-start').fill('1');
+  await expect(page.locator('#hv-framing')).toBeVisible();
+  await page.locator('#hv-y').fill('20'); await page.locator('#hv-z').fill('1.5');
+  await expect(page.locator('#hv-y-t')).toContainText('top');
+  expect(await page.locator('#hv-box-desk video').evaluate((v) => [v.style.objectPosition, v.style.transform])).toEqual(['50% 20%', 'scale(1.5)']);
   await page.selectOption('#hv-len', '8');
   const serious = (await new AxeBuilder({ page }).include('details[data-folder="videos"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id);
   expect(serious).toEqual([]);
@@ -50,18 +55,24 @@ test('/admin > Page videos: pick a video, choose the start, and it is made small
   for (const p of st.puts.slice(0, 2)) expect(String.fromCharCode(...p.head.slice(4, 8))).toBe('ftyp');
   expect(st.puts[2].head.slice(0, 3)).toEqual([0xff, 0xd8, 0xff]);
   expect(st.puts[0].size).toBeGreaterThan(st.puts[1].size);
-  expect(st.sets).toHaveLength(1); expect(st.sets[0].page).toBe('services');
+  expect(st.sets).toHaveLength(1); expect(st.sets[0].page).toBe('services'); expect(st.sets[0].frame).toEqual({ x: 50, y: 20, z: 1.5 });
   await expect(rows.filter({ hasText: 'Services' }).locator('.tag')).toHaveText('Video');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  // move the video already on Media down, without uploading again
+  await page.getByRole('button', { name: 'Adjust the position of the video on Media' }).click();
+  await expect(page.locator('#hv-file')).toBeHidden(); await expect(page.locator('#hv-save')).toHaveText('Save position');
+  await page.locator('#hv-y').fill('85'); await page.click('#hv-save');
+  await expect(page.locator('#hv-msg')).toContainText('Position saved'); expect(st.frames).toEqual([{ action: 'frame', page: 'media', frame: { x: 50, y: 85, z: 1 } }]);
+  expect(st.puts).toHaveLength(3);
   page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: 'Remove the video on Media' }).click();
   await expect(rows.filter({ hasText: 'Media' }).locator('.tag')).toHaveText('Pictures'); expect(st.removes).toEqual([{ action: 'remove', page: 'media' }]);
 });
 
-async function fakePage(page: Page, videos: Record<string, string>) {
+async function fakePage(page: Page, videos: Record<string, string>, frames: Record<string, any> = {}) {
   await page.route('**/api/hero**', (route) => {
     const url = new URL(route.request().url()), file = url.searchParams.get('file');
-    if (!file) return route.fulfill(json({ on: true, videos }));
+    if (!file) return route.fulfill(json({ on: true, videos, frames }));
     if (file.endsWith('.mp4')) return route.fulfill({ status: 200, contentType: 'video/mp4', body: CLIP });
     return route.fulfill({ status: 404, body: '' });
   });
@@ -69,9 +80,10 @@ async function fakePage(page: Page, videos: Record<string, string>) {
 
 test('a page with a video fades it in over its pictures; a page without one is unchanged', async ({ page }, info) => {
   test.skip(info.project.name !== 'phone-390' && info.project.name !== 'desktop-1280', 'one phone and the computer');
-  await fakePage(page, { services: 'abcdef12' });
+  await fakePage(page, { services: 'abcdef12' }, { services: { x: 30, y: 10, z: 1.2 } });
   await page.goto('/services/');
   const v = page.locator('.ph .ph-bg video.hv');
+  await expect(v).toHaveCSS('object-position', '30% 10%');
   await expect(v).toHaveCount(1);
   await expect(v).toHaveAttribute('aria-hidden', 'true');
   await expect.poll(() => v.evaluate((el: HTMLVideoElement) => el.muted && el.loop && getComputedStyle(el).opacity)).toBe('1');

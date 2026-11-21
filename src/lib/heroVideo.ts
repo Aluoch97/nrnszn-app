@@ -3,11 +3,13 @@
 // less motion or to save data gets the still picture instead of the moving one.
 export async function heroVideo(bg: HTMLElement | null, page: string, opts: { className: string; replace?: HTMLVideoElement | null } ) {
   if (!bg || !page) return;
-  let v = '';
+  let v = '', frame = { x: 50, y: 50, z: 1 };
   try {
     const r = await fetch('/api/hero', { headers: { accept: 'application/json' } });
     const j = r.ok ? await r.json() : null;
     v = j && j.videos && typeof j.videos[page] === 'string' && /^[a-z0-9]{6,24}$/.test(j.videos[page]) ? j.videos[page] : '';
+    const f = j && j.frames && j.frames[page];
+    if (f && [f.x, f.y, f.z].every((n) => typeof n === 'number' && isFinite(n))) frame = { x: Math.min(100, Math.max(0, f.x)), y: Math.min(100, Math.max(0, f.y)), z: Math.min(2.5, Math.max(1, f.z)) };
   } catch { return; }
   if (!v) return;
   const file = (part: string) => `/api/hero?file=${encodeURIComponent(`${page}/${v}/${part}`)}`;
@@ -17,6 +19,7 @@ export async function heroVideo(bg: HTMLElement | null, page: string, opts: { cl
   vid.setAttribute('aria-hidden', 'true'); vid.preload = 'auto'; vid.poster = file('poster.jpg');
   // Astro's page styles reach only elements that carry the page's style marker, so copy it from the header.
   for (const a of [...bg.attributes]) if (a.name.startsWith('data-astro-cid')) vid.setAttribute(a.name, a.value);
+  applyFrame(vid, frame);
   vid.style.opacity = '0'; vid.style.transition = 'opacity 1.2s ease';
   for (const [part, media] of [['small.mp4', '(max-width: 760px)'], ['large.mp4', '']]) {
     const s = document.createElement('source'); s.src = file(part); s.type = 'video/mp4'; if (media) s.media = media; vid.appendChild(s);
@@ -31,4 +34,11 @@ export async function heroVideo(bg: HTMLElement | null, page: string, opts: { cl
   }
   bg.appendChild(vid);
   if (!still) vid.play().catch(() => { /* the browser said no: the poster still fades in when it can */ });
+}
+
+/** Where the video sits in its header: the point kept in view (object-position) and the zoom, grown from that same point. */
+export function applyFrame(el: HTMLElement, f: { x: number; y: number; z: number }) {
+  el.style.objectPosition = `${f.x}% ${f.y}%`;
+  el.style.transformOrigin = `${f.x}% ${f.y}%`;
+  el.style.transform = f.z > 1 ? `scale(${f.z})` : '';
 }
