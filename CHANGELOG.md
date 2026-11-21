@@ -4,6 +4,13 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.14 · Nov 21, 2026
+A new layout for Your account.
+- **On a computer** it works like a control panel: your name and the list of apps on the left, and the app you pick opens on the right (NuRenaissance opens first).
+- **On a phone** the list comes first, and tapping an app opens its page; "‹ Your account" goes back.
+- **Account settings** sits at the top, under your name and when you joined: your picture, your name, phone notifications and deleting the account.
+- **Profile picture**: upload your own. It is cropped to a square and made small on your phone before it is saved, and you can remove it any time.
+
 ## 3.13 · Nov 21, 2026
 Your account is now a dashboard for every NuRenaissance app.
 - **One tile per app** (NuRenaissance, Certified, NuDirectory, Soul Vault, luoh), each with a quick summary: open projects and what's due, Passport stamps, listings sent and saved, saved songs, saved edits.

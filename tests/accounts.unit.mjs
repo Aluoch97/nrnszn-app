@@ -359,3 +359,26 @@ test('the dashboard: me?projects=1 adds saved items and luoh projects (names onl
   assert.equal(l.status, 200); assert.equal((await l.json()).listings[0].status, 'Live');
   assert.equal((await call('listings', { method: 'POST', body: { action: 'claim', table: 'shows', id: '00000000-0000-4000-8000-000000000001' }, cookie: c, origin: 'https://www.nrnszn.com' })).status, 403, 'the Account page may only read');
 });
+
+test('profile picture: real JPEG/PNG/WebP bytes only, a size cap, served back only to its owner, gone with the account', async () => {
+  const g = await googleKit(), { call, env } = setup(); env.__googleCerts = g.certs;
+  const c = pair(cookieOf(await call('google', { method: 'POST', body: { credential: await g.token(good()) } })));
+  const jpeg = 'data:image/jpeg;base64,' + Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]).toString('base64');
+  assert.equal((await call('avatar', { method: 'POST', body: { image: jpeg } })).status, 401, 'signed out');
+  assert.equal((await call('avatar', { method: 'POST', body: { image: jpeg }, cookie: c, origin: 'https://play.nrnszn.com' })).status, 403, 'not from another site');
+  for (const bad of ['data:image/svg+xml;base64,PHN2Zz4=', 'data:image/jpeg;base64,' + Buffer.from('<html>').toString('base64'), 'javascript:alert(1)', 'data:image/png;base64,' + Buffer.alloc(200_000, 1).toString('base64')])
+    assert.equal((await call('avatar', { method: 'POST', body: { image: bad }, cookie: c })).status, 400, bad.slice(0, 30));
+  const ok = await (await call('avatar', { method: 'POST', body: { image: jpeg }, cookie: c })).json();
+  assert.equal(ok.ok, true); assert.equal(typeof ok.avatar, 'number');
+  assert.equal((await (await call('me?projects=1', { cookie: c })).json()).avatar, ok.avatar);
+  const pic = await call('avatar', { cookie: c });
+  assert.equal(pic.headers.get('content-type'), 'image/jpeg'); assert.equal(pic.headers.get('x-content-type-options'), 'nosniff'); assert.match(pic.headers.get('cache-control'), /private/);
+  assert.deepEqual([...new Uint8Array(await pic.arrayBuffer())], [0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+  assert.equal((await call('avatar')).status, 404, 'nobody else gets it');
+  assert.equal((await call('avatar', { cookie: c, origin: 'https://evil.example' })).status, 404);
+  await call('avatar', { method: 'POST', body: { image: null }, cookie: c });
+  assert.equal((await call('avatar', { cookie: c })).status, 404, 'removed');
+  await call('avatar', { method: 'POST', body: { image: jpeg }, cookie: c });
+  await call('delete', { method: 'POST', body: { confirm: 'fan@example.com' }, cookie: c });
+  assert.equal((await (await accountsDb(env)).prepare('SELECT COUNT(*) AS n FROM account_avatars').first()).n, 0, 'deleting the account deletes the picture');
+});

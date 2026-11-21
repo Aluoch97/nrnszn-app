@@ -48,103 +48,124 @@ const SHOW_NAMES = Object.fromEntries(pastEvents.map((e) => [e.day, e.title]));
       <p class="small">By signing in you agree to our <a href="/privacy-policy">privacy policy</a>. We keep your e-mail, your name (from Google) and when you last signed in.</p>
     </section>
 
-    <section id="acct-me" hidden>
-      <div class="card who">
-        <div class="avatar" aria-hidden="true" id="me-initial"></div>
-        <div class="who-t"><b id="me-name"></b><span id="me-email"></span><span id="me-since" class="since"></span></div>
-      </div>
+    <section id="acct-me" hidden data-view="list">
       <p id="me-continue-wrap" hidden><a class="btn primary wide" id="me-continue">Continue</a></p>
-
-      <!-- The dashboard: one tile per app with a quick summary; a tile opens that app's page (#nrn, #certified, ... so Back works). -->
-      <div id="dash-home">
-        <h2 id="apps-h">Your apps</h2>
-        <p class="small">One account, five apps. Tap one to see what it keeps for you.</p>
-        <ul class="tiles" aria-labelledby="apps-h">
-          {APPS.map((x) => (
-            <li class={x.id === 'nrn' ? 'wide' : ''}><a class="tile" href={'#' + x.id} data-app={x.id}>
-              <img src={x.icon} alt="" width="44" height="44" loading="lazy" />
-              <span class="t-txt"><b>{x.name}</b><span class="t-sum" data-sum={x.id}>{x.tag}</span></span>
+      <div class="dash">
+        <!-- Left: who you are, Account settings, then the apps. On a phone this is the first screen; a row opens its page. -->
+        <aside class="side" id="dash-home">
+          <div class="me">
+            <div class="avatar" id="me-avatar" aria-hidden="true"><img id="me-pic" alt="" width="56" height="56" hidden /><span id="me-initial"></span></div>
+            <div class="who-t"><b id="me-name"></b><span id="me-email"></span><span id="me-since" class="since"></span></div>
+          </div>
+          <nav aria-label="Your account">
+            <a class="nav-i set" href="#settings" data-app="settings">
+              <span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></span>
+              <span class="t-txt"><b>Account settings</b><span class="t-sum">Picture, name, notifications</span></span>
               <span class="t-go" aria-hidden="true">›</span>
-            </a></li>
-          ))}
-        </ul>
+            </a>
+            <h2 class="nav-h" id="apps-h">Your apps</h2>
+            <ul class="tiles" aria-labelledby="apps-h">
+              {APPS.map((x) => (
+                <li><a class="tile nav-i" href={'#' + x.id} data-app={x.id}>
+                  <img src={x.icon} alt="" width="40" height="40" loading="lazy" />
+                  <span class="t-txt"><b>{x.name}</b><span class="t-sum" data-sum={x.id}>{x.tag}</span></span>
+                  <span class="t-go" aria-hidden="true">›</span>
+                </a></li>
+              ))}
+            </ul>
+          </nav>
+          <button type="button" class="btn quiet wide" id="sign-out">Sign out of every app</button>
+        </aside>
 
-        <section class="card notify" aria-labelledby="notify-h">
-          <h2 class="card-h" id="notify-h">Phone notifications</h2>
-          <p class="small">News, new videos and events from NuRenaissance on this phone, a few a month at most. Turn them on or off here any time.</p>
-          <button type="button" class="btn wide" data-push-open hidden>Phone notifications on this device</button>
-          <p class="small" data-push-off>Not switched on for this site yet.</p>
-        </section>
+        <!-- Right: the page for what is picked on the left. -->
+        <div class="main" id="dash-app">
+          <a class="back" href="#" id="app-back">‹ Your account</a>
+          <div class="app-head">
+            <img id="app-icon" alt="" width="56" height="56" />
+            <div class="app-head-t"><h2 id="app-name" tabindex="-1"></h2><p id="app-tag" class="small"></p></div>
+          </div>
 
-        <details class="card more">
-          <summary>Account settings</summary>
-          <form id="name-form" class="mail">
-            <label for="me-name-in">Your name</label>
-            <input id="me-name-in" type="text" maxlength="80" autocomplete="name" />
-            <button type="submit" class="btn">Save name</button>
-            <p id="name-st" class="hint" role="status"></p>
-          </form>
-          <form id="del-form" class="mail danger">
-            <label for="del-in">Delete my account</label>
-            <p class="hint">This erases your account, your saved songs and listings, and any luoh projects saved on it, on every app. Your project history with NuRenaissance stays with us as a business record. Type your e-mail to confirm.</p>
-            <input id="del-in" type="email" autocomplete="off" />
-            <button type="submit" class="btn danger">Delete my account</button>
-            <p id="del-st" class="hint" role="alert"></p>
-          </form>
-        </details>
-        <button type="button" class="btn quiet wide" id="sign-out">Sign out of every app</button>
-      </div>
+          <div data-panel="settings" hidden>
+            <section class="card set-pic" aria-labelledby="pic-h">
+              <h3 class="card-h" id="pic-h">Profile picture</h3>
+              <div class="pic-row">
+                <div class="avatar big" aria-hidden="true"><img id="pic-prev" alt="" width="88" height="88" hidden /><span id="pic-initial"></span></div>
+                <div class="pic-btns">
+                  <label class="btn small primary" for="pic-in">Upload a picture</label>
+                  <input id="pic-in" type="file" accept="image/*" class="sr-only" />
+                  <button type="button" class="btn small" id="pic-rm" hidden>Remove</button>
+                </div>
+              </div>
+              <p id="pic-st" class="hint" role="status"></p>
+            </section>
+            <section class="card">
+              <form id="name-form" class="mail">
+                <label for="me-name-in">Your name</label>
+                <input id="me-name-in" type="text" maxlength="80" autocomplete="name" />
+                <button type="submit" class="btn">Save name</button>
+                <p id="name-st" class="hint" role="status"></p>
+              </form>
+            </section>
+            <section class="card notify" aria-labelledby="notify-h">
+              <h3 class="card-h" id="notify-h">Phone notifications</h3>
+              <p class="small">News, new videos and events from NuRenaissance on this phone, a few a month at most. Turn them on or off here any time.</p>
+              <button type="button" class="btn wide" data-push-open hidden>Phone notifications on this device</button>
+              <p class="small" data-push-off>Not switched on for this site yet.</p>
+            </section>
+            <section class="card">
+              <form id="del-form" class="mail danger">
+                <label for="del-in">Delete my account</label>
+                <p class="hint">This erases your account, your picture, your saved songs and listings, and any luoh projects saved on it, on every app. Your project history with NuRenaissance stays with us as a business record. Type your e-mail to confirm.</p>
+                <input id="del-in" type="email" autocomplete="off" />
+                <button type="submit" class="btn danger">Delete my account</button>
+                <p id="del-st" class="hint" role="alert"></p>
+              </form>
+            </section>
+          </div>
 
-      <!-- One app's page. -->
-      <div id="dash-app" hidden>
-        <a class="back" href="#" id="app-back">‹ All apps</a>
-        <div class="app-head">
-          <img id="app-icon" alt="" width="56" height="56" />
-          <div class="app-head-t"><h2 id="app-name" tabindex="-1"></h2><p id="app-tag" class="small"></p></div>
+          <div data-panel="nrn" hidden>
+            <dl class="nums stats" id="nrn-stats"></dl>
+            <h3 class="sec">Your projects</h3>
+            <div id="proj-list" class="projects" aria-live="polite"></div>
+            <section id="pay-wrap" hidden>
+              <h3 class="sec">Your payments</h3>
+              <p class="small">Card and Apple Pay payments made with this e-mail. PayPal, Cash App, Venmo and Zelle payments show on the project once we mark them.</p>
+              <ul class="pays-list" id="pay-list"></ul>
+            </section>
+          </div>
+
+          <div data-panel="certified" hidden>
+            <dl class="nums stats" id="cert-stats"></dl>
+            <h3 class="sec">Your Certified Passport</h3>
+            <p class="small">One stamp for every Certified show you check in at, saved to your account so every phone shows them.</p>
+            <div id="cert-body" aria-live="polite"></div>
+          </div>
+
+          <div data-panel="directory" hidden>
+            <dl class="nums stats" id="dir-stats"></dl>
+            <h3 class="sec">Your listings</h3>
+            <p class="small">What you sent to NuDirectory while signed in, and whether it is live.</p>
+            <div id="dir-mine" aria-live="polite"></div>
+            <h3 class="sec">Saved listings</h3>
+            <div id="dir-saved"></div>
+          </div>
+
+          <div data-panel="vault" hidden>
+            <dl class="nums stats" id="vault-stats"></dl>
+            <h3 class="sec">Saved songs</h3>
+            <p class="small">Songs you saved with ♡ in Soul Vault's Now Playing.</p>
+            <div id="vault-saved"></div>
+          </div>
+
+          <div data-panel="luoh" hidden>
+            <dl class="nums stats" id="luoh-stats"></dl>
+            <h3 class="sec">Saved projects</h3>
+            <p class="small">Edits you saved to your account in luoh. Your videos themselves stay on your device.</p>
+            <div id="luoh-list"></div>
+          </div>
+
+          <a class="btn primary wide" id="app-open" target="_blank" rel="noopener">Open</a>
         </div>
-
-        <div data-panel="nrn" hidden>
-          <dl class="nums stats" id="nrn-stats"></dl>
-          <h3 class="sec">Your projects</h3>
-          <div id="proj-list" class="projects" aria-live="polite"></div>
-          <section id="pay-wrap" hidden>
-            <h3 class="sec">Your payments</h3>
-            <p class="small">Card and Apple Pay payments made with this e-mail. PayPal, Cash App, Venmo and Zelle payments show on the project once we mark them.</p>
-            <ul class="pays-list" id="pay-list"></ul>
-          </section>
-        </div>
-
-        <div data-panel="certified" hidden>
-          <dl class="nums stats" id="cert-stats"></dl>
-          <h3 class="sec">Your Certified Passport</h3>
-          <p class="small">One stamp for every Certified show you check in at, saved to your account so every phone shows them.</p>
-          <div id="cert-body" aria-live="polite"></div>
-        </div>
-
-        <div data-panel="directory" hidden>
-          <dl class="nums stats" id="dir-stats"></dl>
-          <h3 class="sec">Your listings</h3>
-          <p class="small">What you sent to NuDirectory while signed in, and whether it is live.</p>
-          <div id="dir-mine" aria-live="polite"></div>
-          <h3 class="sec">Saved listings</h3>
-          <div id="dir-saved"></div>
-        </div>
-
-        <div data-panel="vault" hidden>
-          <dl class="nums stats" id="vault-stats"></dl>
-          <h3 class="sec">Saved songs</h3>
-          <p class="small">Songs you saved with ♡ in Soul Vault's Now Playing.</p>
-          <div id="vault-saved"></div>
-        </div>
-
-        <div data-panel="luoh" hidden>
-          <dl class="nums stats" id="luoh-stats"></dl>
-          <h3 class="sec">Saved projects</h3>
-          <p class="small">Edits you saved to your account in luoh. Your videos themselves stay on your device.</p>
-          <div id="luoh-list"></div>
-        </div>
-
-        <a class="btn primary wide" id="app-open" target="_blank" rel="noopener">Open</a>
       </div>
     </section>
   </article>
@@ -159,7 +180,7 @@ const SHOW_NAMES = Object.fromEntries(pastEvents.map((e) => [e.day, e.title]));
   const METHOD: Record<string, string> = { stripe: 'Card (Stripe)', 'apple-pay': 'Apple Pay', paypal: 'PayPal', 'cash-app': 'Cash App', venmo: 'Venmo', zelle: 'Zelle', cash: 'Cash', check: 'Check', other: 'Other' };
   const niceDay = (d: string) => (d ? new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : '');
   const el = (tag: string, cls?: string, txt?: string) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
-  const show = (id: string) => { for (const s of ['acct-loading', 'acct-off', 'acct-in', 'acct-me']) $(s).hidden = s !== id; if (id !== 'acct-me') me = null; };
+  const show = (id: string) => { for (const s of ['acct-loading', 'acct-off', 'acct-in', 'acct-me']) $(s).hidden = s !== id; if (id !== 'acct-me') me = null; document.querySelector('.acct')?.classList.toggle('wide', id === 'acct-me'); };
   // Where to go after signing in: through /api/account/connect, which adds a one-time ticket for soulnicolas.com and sends nrnszn sites straight on.
   const onward = () => (back ? `/api/account/connect?return=${encodeURIComponent(back)}` : '');
   const host = (u: string) => { try { return new URL(u, location.href).host.replace(/^www\./, ''); } catch { return ''; } };
@@ -314,43 +335,88 @@ const SHOW_NAMES = Object.fromEntries(pastEvents.map((e) => [e.day, e.title]));
   async function unsave(app: string, kind: string, id: string) {
     const j = await api('saved', { app, kind, id, on: false }).catch(() => ({ ok: false }));
     if (j.ok && me.saved?.[app]) me.saved[app] = me.saved[app].filter((x: any) => x.id !== id);
-    summaries(); show_(current());
+    summaries(); show_(shown());
   }
 
-  const DRAW: Record<string, () => void> = { nrn: drawNrn, certified: drawCertified, directory: drawDirectory, vault: drawVault, luoh: drawLuoh };
+  // ---- profile picture: shrunk on this device to a 256 px square JPEG, then saved on the account ----
+  const picUrl = () => (me && me.avatar ? `/api/account/avatar?v=${me.avatar}` : '');
+  function drawPic() {
+    const u = picUrl(), name = me ? me.user.name || me.user.email.split('@')[0] : '';
+    for (const [img, ini] of [['me-pic', 'me-initial'], ['pic-prev', 'pic-initial']]) {
+      const i = $(img) as HTMLImageElement; i.hidden = !u; if (u) i.src = u; else i.removeAttribute('src');
+      $(ini).hidden = !!u; $(ini).textContent = name.trim().charAt(0).toUpperCase();
+    }
+    $('pic-rm').hidden = !u;
+  }
+  async function shrink(file: File): Promise<string> {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image(); img.decoding = 'async'; img.src = url; await img.decode();
+      const side = Math.min(img.naturalWidth, img.naturalHeight); if (!side) throw new Error('empty');
+      const c = document.createElement('canvas'); c.width = c.height = 256;
+      const g = c.getContext('2d')!; g.imageSmoothingQuality = 'high';
+      g.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);   // the centre square
+      return c.toDataURL('image/jpeg', 0.86);
+    } finally { URL.revokeObjectURL(url); }
+  }
+  $('pic-in').addEventListener('change', async () => {
+    const input = $('pic-in') as HTMLInputElement, f = input.files && input.files[0]; input.value = '';
+    if (!f) return;
+    const st = $('pic-st');
+    if (!/^image\//.test(f.type) || f.size > 25_000_000) { st.textContent = 'Pick a photo (JPEG, PNG or HEIC from your phone).'; return; }
+    st.textContent = 'Saving your picture…';
+    let data = ''; try { data = await shrink(f); } catch { st.textContent = 'That picture could not be opened. Try another one.'; return; }
+    const j = await api('avatar', { image: data }).catch(() => ({ ok: false, message: 'Could not reach the site. Try again.' }));
+    if (j.ok) { me.avatar = j.avatar; drawPic(); st.textContent = 'Saved. It shows on your account on every device.'; } else st.textContent = j.message || 'Could not save the picture.';
+  });
+  $('pic-rm').addEventListener('click', async () => {
+    const j = await api('avatar', { image: null }).catch(() => ({ ok: false }));
+    if (j.ok) { me.avatar = null; drawPic(); $('pic-st').textContent = 'Picture removed.'; }
+  });
+  function drawSettings() { drawPic(); }
+
+  // ---- which page is open: #settings, #nrn, #certified ... A computer shows the list and the page side by side
+  // (NuRenaissance open when nothing is picked); a phone shows one at a time, list first. ----
+  const SETTINGS = { id: 'settings', name: 'Account settings', tag: 'Your picture, name, notifications and account', icon: '', open: '' };
+  const DRAW: Record<string, () => void> = { settings: drawSettings, nrn: drawNrn, certified: drawCertified, directory: drawDirectory, vault: drawVault, luoh: drawLuoh };
+  const wideScreen = matchMedia('(min-width: 900px)');
   const current = () => { const h = location.hash.slice(1); return DRAW[h] ? h : ''; };
+  const shown = () => current() || (wideScreen.matches ? 'nrn' : '');
   function show_(id: string) {
     if (!me) return;
-    $('dash-home').hidden = !!id; $('dash-app').hidden = !id;
+    $('acct-me').dataset.view = current() ? 'app' : 'list';
+    document.querySelectorAll<HTMLElement>('.nav-i').forEach((n) => { if (n.dataset.app === id) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current'); });
     if (!id) return;
-    const a = APPS.find((x) => x.id === id)!;
-    ($('app-icon') as HTMLImageElement).src = a.icon; $('app-name').textContent = a.name; $('app-tag').textContent = a.tag;
-    const open = $('app-open') as HTMLAnchorElement; open.href = a.open; open.textContent = id === 'nrn' ? 'Book a service' : `Open ${a.name}`;
+    const a = id === 'settings' ? SETTINGS : APPS.find((x) => x.id === id)!;
+    const ic = $('app-icon') as HTMLImageElement; ic.hidden = !a.icon; if (a.icon) ic.src = a.icon;
+    $('app-name').textContent = a.name; $('app-tag').textContent = a.tag;
+    const open = $('app-open') as HTMLAnchorElement; open.hidden = !a.open; open.href = a.open || '#'; open.textContent = id === 'nrn' ? 'Book a service' : `Open ${a.name}`;
     if (id === 'nrn') { open.removeAttribute('target'); } else open.target = '_blank';
     document.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== id; });
     DRAW[id]();
   }
   let lastView = '';
   function route() {
-    const id = current(); show_(id);
-    if (id && id !== lastView) { scrollTo(0, 0); $('app-name').focus({ preventScroll: true }); }
-    else if (!id && lastView) { const t = document.querySelector<HTMLElement>(`[data-app="${lastView}"]`); t?.focus({ preventScroll: true }); t?.scrollIntoView({ block: 'center' }); }
-    lastView = id;
+    const id = shown(), picked = current(); show_(id);
+    if (picked && picked !== lastView) { if (!wideScreen.matches) scrollTo(0, 0); $('app-name').focus({ preventScroll: wideScreen.matches }); }
+    else if (!picked && lastView && !wideScreen.matches) { const t = document.querySelector<HTMLElement>(`[data-app="${lastView}"]`); t?.focus({ preventScroll: true }); t?.scrollIntoView({ block: 'center' }); }
+    lastView = picked;
   }
+  wideScreen.addEventListener('change', route);
   addEventListener('hashchange', route);
   $('app-back').addEventListener('click', (e) => { e.preventDefault(); if (history.state?.dash) history.back(); else location.hash = ''; });
-  document.querySelectorAll<HTMLAnchorElement>('.tile').forEach((t) => t.addEventListener('click', (e) => { e.preventDefault(); history.pushState({ dash: 1 }, '', '#' + t.dataset.app); route(); }));
+  document.querySelectorAll<HTMLAnchorElement>('.nav-i').forEach((t) => t.addEventListener('click', (e) => { e.preventDefault(); history.pushState({ dash: 1 }, '', '#' + t.dataset.app); route(); }));
 
   function signedIn(j: any) {
     payLink = j.payLink || ''; meEmail = j.user.email; me = j;
     show('acct-me');
     const u = j.user, name = u.name || u.email.split('@')[0];
-    $('me-name').textContent = name; $('me-email').textContent = u.email; $('me-initial').textContent = name.trim().charAt(0).toUpperCase();
+    $('me-name').textContent = name; $('me-email').textContent = u.email;
     $('me-since').textContent = u.since ? `Member since ${new Date(u.since).toLocaleDateString([], { month: 'long', year: 'numeric' })}` : '';
     (document.getElementById('me-name-in') as HTMLInputElement).value = u.name || '';
     if (back) { $('me-continue-wrap').hidden = false; const a = $('me-continue') as HTMLAnchorElement; a.href = onward(); a.textContent = `Continue to ${host(back) || 'the app'}`; }
     passport = null; passportP = null; listings = null; listingsP = null; listingsErr = '';
-    summaries(); route();
+    drawPic(); summaries(); route();
     loadPassport(); loadListings();   // fill the Certified and NuDirectory tiles in the background
   }
 
@@ -459,23 +525,47 @@ const SHOW_NAMES = Object.fromEntries(pastEvents.map((e) => [e.day, e.title]));
   .acct .card-h { margin: 0 0 var(--space-1); font-size: 18px; }
   .acct .notify [data-push-open]:not([hidden]) ~ [data-push-off] { display: none; }
   .acct .more .mail { margin-top: var(--space-3); } .acct .more .danger { margin-top: var(--space-5); }
-  /* dashboard */
+  /* dashboard: a list on the left (Account settings + the apps), the picked page on the right */
+  .acct.wide { max-width: 1120px; }
   .acct .since { font-size: 13px; color: #9f95b8; }
-  .acct .tiles { list-style: none; margin: 0 0 var(--space-4); padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
-  .acct .tiles li { min-width: 0; } .acct .tiles li.wide { grid-column: 1 / -1; }
-  .acct .tile { display: flex; align-items: center; gap: var(--space-3); min-height: 76px; height: 100%; box-sizing: border-box; padding: var(--space-3); border-radius: 18px; background: linear-gradient(160deg, #221a33, #1a1526); border: 1px solid #2e2640; color: #fff; text-decoration: none; }
-  .acct .tile:hover { border-color: #5a4c78; }
-  .acct .tile:focus-visible { outline: 3px solid var(--gold-300); outline-offset: 2px; }
-  .acct .tile img { flex: none; width: 44px; height: 44px; border-radius: 12px; object-fit: cover; }
+  .acct .dash { display: grid; gap: var(--space-5); min-width: 0; }
+  .acct .side, .acct .main { min-width: 0; }
+  .acct .me { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: 18px; background: #1a1526; border: 1px solid #2e2640; margin-bottom: var(--space-3); }
+  .acct .avatar { position: relative; overflow: hidden; }
+  .acct .avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .acct .avatar.big { width: 88px; height: 88px; font-size: 36px; }
+  .acct .nav-h { font-family: var(--font-body, inherit); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9f95b8; margin: var(--space-4) 0 var(--space-2); }
+  .acct .tiles { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+  .acct .tiles li { min-width: 0; }
+  .acct .nav-i { display: flex; align-items: center; gap: var(--space-3); min-height: 64px; box-sizing: border-box; padding: var(--space-2) var(--space-3); border-radius: 14px; background: #1a1526; border: 1px solid #2e2640; color: #fff; text-decoration: none; }
+  .acct .nav-i:hover { border-color: #5a4c78; }
+  .acct .nav-i:focus-visible { outline: 3px solid var(--gold-300); outline-offset: 2px; }
+  .acct .nav-i[aria-current='page'] { background: #2c2040; border-color: #c8175f; box-shadow: inset 3px 0 0 #c8175f; }
+  .acct .nav-i img { flex: none; width: 40px; height: 40px; border-radius: 10px; object-fit: cover; }
+  .acct .nav-ic { flex: none; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: #2c2440; color: var(--gold-300); }
   .acct .t-txt { display: grid; min-width: 0; flex: 1; } .acct .t-txt b { font-size: 16px; overflow-wrap: anywhere; }
   .acct .t-sum { font-size: 14px; color: #cfc7e0; overflow-wrap: anywhere; }
-  .acct .tiles li.wide .tile { background: linear-gradient(135deg, #3a1630, #221a33 60%); border-color: #5a2a4a; }
   .acct .t-go { flex: none; font-size: 24px; color: #9f95b8; }
-  /* the four small tiles: icon on top, text under it, so names never break mid-word on a phone */
-  .acct .tiles li:not(.wide) .tile { flex-direction: column; align-items: flex-start; gap: var(--space-2); }
-  .acct .tiles li:not(.wide) .t-go { display: none; }
-  .acct .tiles li:not(.wide) .t-txt b { overflow-wrap: normal; }
-  @media (max-width: 359px) { .acct .tiles { grid-template-columns: minmax(0, 1fr); } .acct .tiles li:not(.wide) .tile { flex-direction: row; align-items: center; } }
+  .acct .side #sign-out { margin-top: var(--space-4); }
+  .acct .main .back { display: inline-flex; }
+  .acct .pic-row { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+  .acct .pic-btns { display: flex; flex-wrap: wrap; gap: var(--space-2); } .acct .pic-btns .btn.small { margin: 0; }
+  .acct .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .acct .pic-btns label:has(+ input:focus-visible) { outline: 3px solid var(--gold-300); outline-offset: 2px; }
+  .acct .main .card { margin-bottom: var(--space-3); }
+  /* phone: one screen at a time */
+  @media (max-width: 899px) {
+    .acct #acct-me[data-view='list'] .main, .acct #acct-me[data-view='app'] .side { display: none; }
+    .acct .nav-i[aria-current='page'] { background: #1a1526; border-color: #2e2640; box-shadow: none; }
+  }
+  /* computer: side by side, the list stays put while the page scrolls */
+  @media (min-width: 900px) {
+    .acct .dash { grid-template-columns: 320px minmax(0, 1fr); align-items: start; gap: var(--space-6); }
+    .acct .side { position: sticky; top: var(--space-4); }
+    .acct .main { padding: var(--space-5); border-radius: 22px; background: #15111f; border: 1px solid #2a2238; }
+    .acct .main .back { display: none; }
+    .acct .nav-i .t-go { display: none; }
+  }
   .acct .back { display: inline-flex; align-items: center; min-height: 44px; color: var(--gold-300); font-weight: 700; text-decoration: none; margin-bottom: var(--space-2); }
   .acct .back:focus-visible { outline: 3px solid var(--gold-300); outline-offset: 2px; }
   .acct .app-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
