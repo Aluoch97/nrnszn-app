@@ -4,6 +4,10 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.10 · Nov 21, 2026
+A tidier footer.
+- The bottom of every page is now in clear rows: the social icons, then the page links (About, Your account, Add to Home Screen, Privacy policy; two by two on phones), then a quiet row with Admin, Notifications and Refresh, and the copyright on its own line.
+
 ## 3.9 · Nov 21, 2026
 A shorter menu, and the old Portal page is gone.
 - **About** is no longer in the menu, and the phone **More** tab is gone: the bottom bar is Home, Media, Events, Apps and Services. The footer (social icons, About, Your account, Add to Home Screen, Privacy policy, Admin, Refresh) now shows at the bottom of every page on phones too.
