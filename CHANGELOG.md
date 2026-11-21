@@ -4,6 +4,11 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.9 · Nov 21, 2026
+The old Portal page is gone.
+- nrnszn.com/portal (the old link-in-bio page with the two latest videos) now opens the home page, which already has the same videos and links. Old links to it keep working.
+- The "page not found" screen now leads back to the home page.
+
 ## 3.8 · Nov 21, 2026
 One NuRenaissance account for every app.
 - **Your account** (nrnszn.com/account, also in the footer and the More sheet): sign in with Google, or with a one-time link by e-mail (no password). One sign-in works on this site, Certified, NuDirectory, luoh and Soul Vault.
