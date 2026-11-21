@@ -24,18 +24,28 @@ async function fakePush(page: Page, on: boolean) {
   });
   return posts;
 }
-const link = (page: Page) => page.locator('footer [data-push-open]').first();
+const link = (page: Page) => page.locator('.acct [data-push-open]').first();
+// Phone notifications live on /account and only for a signed-in person (Nov 21, 2026, Nick): fake the account answer too.
+async function fakeAccount(page: Page, signedIn = true) {
+  await page.route('**/api/account/**', (route) => route.fulfill(json({ on: true, google: false, email: true, clientId: '', user: signedIn ? { email: 'fan@example.com', name: 'Fan', since: 1 } : null, projects: [] })));
+}
 
-test('the footer link stays hidden while notifications are switched off', async ({ page }, info) => {
-  only(info); await fakePhone(page); await fakePush(page, false);
-  await page.goto('/about/'); await page.waitForTimeout(700);
+test('no Notifications anywhere while they are switched off, in the footer, or for someone signed out', async ({ page }, info) => {
+  only(info); await fakePhone(page); await fakePush(page, false); await fakeAccount(page, true);
+  await page.goto('/account/'); await expect(page.locator('#me-name')).toHaveText('Fan'); await page.waitForTimeout(500);
+  await expect(page.locator('[data-push-open]:visible')).toHaveCount(0);
+  await expect(page.locator('.acct [data-push-off]')).toBeVisible();
+  await expect(page.locator('footer [data-push-open]')).toHaveCount(0);
+});
+test('signed out, the account page offers sign-in, not notifications', async ({ page }, info) => {
+  only(info); await fakePhone(page); await fakePush(page, true); await fakeAccount(page, false);
+  await page.goto('/account/'); await expect(page.locator('#mail-form')).toBeVisible();
   await expect(page.locator('[data-push-open]:visible')).toHaveCount(0);
 });
-test('a visitor turns notifications on and off from the footer; nothing sideways; accessible', async ({ page }, info) => {
+test('a signed-in person turns notifications on and off from their account page; nothing sideways; accessible', async ({ page }, info) => {
   only(info); await fakePhone(page); const posts = await fakePush(page, true);
-  await page.goto('/about/');
-  const open = info.project.name === 'desktop-1280' ? page.locator('footer [data-push-open]') : page.locator('[data-push-open]:visible').first();
-  if (info.project.name !== 'desktop-1280') { const more = page.getByRole('button', { name: /more/i }).first(); if (!(await open.isVisible().catch(() => false))) await more.click({ timeout: 3000 }).catch(() => {}); }
+  await fakeAccount(page, true); await page.goto('/account/');
+  const open = link(page);
   await expect(open).toBeVisible(); const h = (await open.boundingBox())!.height; expect(h).toBeGreaterThanOrEqual(43.5);   // 44px with sub-pixel rounding
   await open.click();
   const dlg = page.locator('dialog[open]:has(#push-go)'); await expect(dlg).toBeVisible();
@@ -52,9 +62,8 @@ test('a visitor turns notifications on and off from the footer; nothing sideways
 });
 test('a "no" from the phone saves nothing', async ({ page }, info) => {
   only(info); await fakePhone(page, 'denied'); const posts = await fakePush(page, true);
-  await page.goto('/about/');
-  const open = info.project.name === 'desktop-1280' ? page.locator('footer [data-push-open]') : page.locator('[data-push-open]:visible').first();
-  if (info.project.name !== 'desktop-1280') { const more = page.getByRole('button', { name: /more/i }).first(); if (!(await open.isVisible().catch(() => false))) await more.click({ timeout: 3000 }).catch(() => {}); }
+  await fakeAccount(page, true); await page.goto('/account/');
+  const open = link(page);
   await open.click(); await page.locator('dialog[open] #push-go').click(); await expect(page.locator('dialog[open] #push-msg')).toContainText(/blocked|not allowed/i);
   expect(posts).toEqual([]);
 });

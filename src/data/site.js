@@ -35,8 +35,8 @@ export const apps = [
 ];
 
 export const footer = [
-  { label: 'About', href: '/about' },
-  { label: 'Your account', href: '/account' },
+  { label: 'About', href: '/about', main: true },          // main: the bold first row of the footer
+  { label: 'Your account', href: '/account', main: true },
   { label: 'Add to Home Screen', href: '/install' },
   { label: 'Privacy policy', href: '/privacy-policy' },
 ];

@@ -47,6 +47,13 @@ import Site from '../layouts/Site.astro';
       <h2>Your projects</h2>
       <div id="proj-list" class="projects" aria-live="polite"></div>
 
+      <section class="card notify" aria-labelledby="notify-h">
+        <h2 class="card-h" id="notify-h">Phone notifications</h2>
+        <p class="small">News, new videos and events from NuRenaissance on this phone, a few a month at most. Turn them on or off here any time.</p>
+        <button type="button" class="btn wide" data-push-open hidden>Phone notifications on this device</button>
+        <p class="small" data-push-off>Not switched on for this site yet.</p>
+      </section>
+
       <h2>Your apps</h2>
       <p class="small">You are signed in to these too.</p>
       <ul class="apps">
@@ -224,5 +231,8 @@ import Site from '../layouts/Site.astro';
   .acct .apps a { display: flex; align-items: center; gap: var(--space-3); min-height: 64px; padding: var(--space-2) var(--space-3); border-radius: 16px; background: #1a1526; border: 1px solid #2e2640; color: #fff; text-decoration: none; }
   .acct .apps img { flex: none; width: 48px; height: 48px; border-radius: 12px; object-fit: cover; }
   .acct .apps span { display: grid; min-width: 0; } .acct .apps small { color: #b9b0cf; font-size: 14px; }
+  .acct .notify { margin-top: var(--space-4); }
+  .acct .card-h { margin: 0 0 var(--space-1); font-size: 18px; }
+  .acct .notify [data-push-open]:not([hidden]) ~ [data-push-off] { display: none; }
   .acct .more .mail { margin-top: var(--space-3); } .acct .more .danger { margin-top: var(--space-5); }
 </style>
