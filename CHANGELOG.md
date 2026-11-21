@@ -4,6 +4,10 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.7 · Nov 21, 2026
+PODI is now luoh.
+- **luoh** (said like the name Luo, with an h) has its new name and logo on the Apps page, and opens at its new address, luoh.nrnszn.com.
+
 ## 3.6 · Nov 21, 2026
 Playlist descriptions for the Certified app.
 - The video list the Renaissance Certified app reads from this site now includes each YouTube playlist's description, so the app shows it under the player and picks up any edit made on YouTube.

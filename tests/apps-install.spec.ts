@@ -17,7 +17,7 @@ test('each app card opens the app and has an Add to Home Screen button', async (
   await expect(page.locator('.app-add')).toHaveCount(5);
   await expect(page.locator('.app-open', { hasText: 'Open NuRenaissance' })).toHaveAttribute('href', '/');
   expect(await page.locator('.app-add').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.home))).toEqual([
-    'https://www.nrnszn.com/', 'https://play.nrnszn.com/?install=1', 'https://directory.nrnszn.com/', 'https://podi.nrnszn.com/', 'https://soulnicolas.com/',
+    'https://www.nrnszn.com/', 'https://play.nrnszn.com/?install=1', 'https://directory.nrnszn.com/', 'https://luoh.nrnszn.com/', 'https://soulnicolas.com/',
   ]);
 });
 
@@ -41,7 +41,7 @@ test.describe('on an iPhone', () => {
 
 test.describe('on Android', () => {
   test.use({ userAgent: ANDROID });
-  test('Certified gets the one-tap Install steps; the others the menu steps; PODI says it is for computers', async ({ page }, info) => {
+  test('Certified gets the one-tap Install steps; the others the menu steps', async ({ page }, info) => {
     only(info);
     await page.goto('/apps/');
     const dlg = page.locator('#a2hs');
@@ -50,7 +50,8 @@ test.describe('on Android', () => {
     await expect(dlg.locator('#a2hs-go')).toHaveAttribute('href', 'https://play.nrnszn.com/?install=1');
     await dlg.locator('[data-close]').click();
     await page.locator('.app-add').nth(3).click();
-    await expect(dlg.locator('[data-os="android"]')).toBeVisible(); await expect(dlg.locator('#a2hs-desktop')).toBeVisible();
+    await expect(dlg.locator('.a2hs-title')).toHaveText('Add luoh to your Home Screen');
+    await expect(dlg.locator('[data-os="android"]')).toBeVisible(); await expect(dlg.locator('#a2hs-desktop')).toBeHidden();   // luoh works on phones now
   });
 });
 
