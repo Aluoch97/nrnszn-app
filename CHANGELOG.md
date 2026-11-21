@@ -5,7 +5,8 @@ The newest version is on top, and it is the number shown in /admin (Account). Th
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
 ## 3.10 · Nov 21, 2026
-A tidier footer.
+A tidier footer, and a way back into /admin if you forget the password.
+- **Forgot your password?** under the admin sign-in: if your NuRenaissance account (Google) is on the admin list, you get in without the password, with one tap (or by itself when you are already signed in). It also says how to set a new password in Cloudflare.
 - The bottom of every page is now in clear rows: the social icons, then the page links (About, Your account, Add to Home Screen, Privacy policy; two by two on phones), then a quiet row with Admin, Notifications and Refresh, and the copyright on its own line.
 
 ## 3.9 · Nov 21, 2026
