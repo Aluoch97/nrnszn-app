@@ -9,7 +9,7 @@ import Site from '../layouts/Site.astro';
     <h1>Privacy Policy</h1>
     <p class="meta">
       Effective Date: August 19, 2026<br />
-      Last Updated: November 16, 2026<br />
+      Last Updated: November 22, 2026<br />
       Operator: NuRenaissance Media ("we," "us," "our")<br />
       Website: <a href="https://www.nrnszn.com/">https://www.nrnszn.com/</a>
     </p>
@@ -57,7 +57,7 @@ import Site from '../layouts/Site.astro';
         (Certified, NuDirectory, luoh and Soul Vault). We keep your email address, your name (from Google, or the
         one you type), how you signed in (Google or an email link) and when you last signed in. We never see your
         Google password. If you work with us, we also keep your project's name, status, price and the payments you
-        made, so you can follow them on your account page. If you pay by card or Apple Pay (through Stripe), Stripe tells us the amount, the date and the e-mail you used, so the payment shows on your account page; we never see your card details. Saved songs and saved listings in our apps are kept on your account so they follow you to any device. If you add a profile picture, we keep a small square copy of it (made on your device) and show it only to you on your account page; remove it any time from Account settings. Delete your account any time from that page (saved items and your picture go with it); project, payment and
+        made, so you can follow them on your account page. If you pay by card or Apple Pay (through Stripe), Stripe tells us the amount, the date and the e-mail you used, so the payment shows on your account page; we never see your card details. Saved songs and saved listings in our apps are kept on your account so they follow you to any device. If you add a profile picture, we keep a small square copy of it (made on your device) and show it only to you on your account page; remove it any time from Account settings. Delete your account any time from that page (saved items and your picture go with it); project and
         payment records stay with us as business records.
       </li>
     </ul>
@@ -81,7 +81,9 @@ import Site from '../layouts/Site.astro';
       Our site uses cookies and similar tools only where necessary for basic functionality. When you sign in, one
       cookie (<code>nrn_session</code>) keeps you signed in on nrnszn.com and its apps for up to 180 days; it holds
       only a signed account number and is removed when you sign out. Signing in with Google loads Google's sign-in
-      button from accounts.google.com. Third-party content
+      button from accounts.google.com. Saved copy on your device: so the Site opens without internet, your browser keeps a
+      copy of its pages, pictures and the last lists of events, gallery, films and services (in its own storage, made by our
+      service worker). It holds no personal information. Clearing your browser data, or the Refresh button in /admin, removes it. Third-party content
       embedded on the Site, such as YouTube videos and Google Fonts, may set cookies or collect technical
       information, which is governed by those providers' own privacy policies. You can adjust your browser
       settings to refuse cookies, though some parts of the Site may not function properly as a result.
@@ -90,8 +92,8 @@ import Site from '../layouts/Site.astro';
     <h2>5. Sharing Your Information</h2>
     <p>
       We do not sell your personal information. We use trusted service providers to run the Site and our
-      services (including Cloudflare for hosting, Google for form storage, scheduling and email, and Resend for
-      sending newsletters), and they process information only on our behalf. Otherwise, we share information
+      services (including Cloudflare for hosting, Google for form storage, scheduling and email, Resend for
+      sending newsletters, and Supabase, which holds the database behind the Certified app that some pages here connect to), and they process information only on our behalf. Otherwise, we share information
       only when required by law, legal process, or to protect our rights, property, or safety. We do not "sell"
       or "share" your personal information as those terms are defined under applicable privacy laws.
     </p>

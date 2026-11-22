@@ -4,6 +4,10 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.19 · Nov 22, 2026
+The privacy policy is brought up to date.
+- It now explains the saved copy of the site that lets pages open without internet, names Supabase (the database behind the Certified app), and a garbled sentence about account deletion is fixed.
+
 ## 3.18 · Nov 21, 2026
 - **Page videos can be framed**: you can move a page's video up, down, left or right, or zoom in, so the best part stays in view on phones and computers. This can be changed any time.
 
