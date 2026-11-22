@@ -4,6 +4,10 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.22 · Nov 22, 2026
+Terms of Use for the website and apps.
+- A new **Terms** page (services and quotes, payments, events, your account, fair use) is linked in the footer next to the Privacy policy.
+
 ## 3.21 · Nov 22, 2026
 - **Page videos start by themselves more often on iPhones**: the video stays visible while it loads, and it tries again to start when the page loads, when the header comes into view and when you come back to the page. One exception that no website can get around: iPhone Low Power Mode does not play any videos by themselves, so those phones see the video's still picture until you tap.
 - **Videos frame themselves**: when you pick a video in /admin, the site finds where the movement and detail are and centers the header there for both phones and computers. **Find the action** does the same for a video that is already up, and the sliders still let you move it by hand.
