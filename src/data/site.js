@@ -39,4 +39,5 @@ export const footer = [
   { label: 'Your account', href: '/account', main: true },
   { label: 'Add to Home Screen', href: '/install' },
   { label: 'Privacy policy', href: '/privacy-policy' },
+  { label: 'Terms', href: '/terms' },
 ];
