@@ -824,7 +824,9 @@ import Site from '../layouts/Site.astro';
       const make = async (max: number, bitrate: number, from: number, to: number) => {
         const input = new M.Input({ formats: M.ALL_FORMATS, source: new M.BlobSource(hvFile!) });
         const output = new M.Output({ format: new M.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new M.BufferTarget() });
-        const conv = await M.Conversion.init({ input, output, video: { ...fitSize(prev.videoWidth, prev.videoHeight, max), fit: 'fill', codec: 'avc', bitrate, frameRate: 30, keyFrameInterval: 2 }, audio: { discard: true }, trim: { start, end } });
+        // Only the main picture: no sound, no second video track (DJI and some phones add a thumbnail track) and no camera tags
+        // (their cover picture ends up as an extra track that iPhones may stumble on).
+        const conv = await M.Conversion.init({ input, output, video: (_t: unknown, n: number) => (n > 1 ? { discard: true } : { ...fitSize(prev.videoWidth, prev.videoHeight, max), fit: 'fill', codec: 'avc', bitrate, frameRate: 30, keyFrameInterval: 2 }), audio: { discard: true }, tags: {}, trim: { start, end }, showWarnings: false });
         if (!conv.isValid) throw new Error('That video could not be read. Try another one.');
         conv.onProgress = (p: number) => { prog.textContent = `Making the video… ${Math.round(from + (to - from) * p)}%`; };
         await conv.execute();
