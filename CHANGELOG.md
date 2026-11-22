@@ -8,6 +8,10 @@ To release: add a new `## x.y · date` block at the top of this file in the same
 Terms of Use for the website and apps.
 - A new **Terms** page (services and quotes, payments, events, your account, fair use) is linked in the footer next to the Privacy policy.
 
+## 3.22 · Nov 22, 2026
+Download everything we hold about your account.
+- **Account settings > Download my data** gives you one file with your details, saved songs and listings, saved luoh projects, and any projects and payments with us.
+
 ## 3.21 · Nov 22, 2026
 - **Page videos start by themselves more often on iPhones**: the video stays visible while it loads, and it tries again to start when the page loads, when the header comes into view and when you come back to the page. One exception that no website can get around: iPhone Low Power Mode does not play any videos by themselves, so those phones see the video's still picture until you tap.
 - **Videos frame themselves**: when you pick a video in /admin, the site finds where the movement and detail are and centers the header there for both phones and computers. **Find the action** does the same for a video that is already up, and the sliders still let you move it by hand.

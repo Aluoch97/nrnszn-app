@@ -17,10 +17,11 @@ const LUOH = { count: 2, recent: [{ id: 'p1', name: 'Lounge recap', at: Date.UTC
 const toList = async (page: Page) => { if (await page.locator('#app-back').isVisible()) await page.click('#app-back'); };
 
 async function fake(page: Page, opts: { on?: boolean; user?: boolean; email?: boolean } = {}) {
-  const state = { mails: [] as any[], signedIn: !!opts.user, logouts: 0, unsaved: [] as any[], pics: [] as any[], avatar: null as number | null };
+  const state = { exports: 0, mails: [] as any[], signedIn: !!opts.user, logouts: 0, unsaved: [] as any[], pics: [] as any[], avatar: null as number | null };
   await page.route('**/api/account/**', async (route) => {
     const req = route.request(), path = new URL(req.url()).pathname.replace('/api/account/', '');
     if (path === 'me') return route.fulfill(json({ on: opts.on !== false, google: false, email: opts.email !== false, clientId: '', user: state.signedIn ? { email: 'client@example.com', name: 'Jo Client', since: Date.UTC(2026, 10, 1) } : null, ...(state.signedIn ? { projects: PROJECTS, payments: [{ amount: 40000, currency: 'usd', what: 'Music video', at: Date.UTC(2026, 10, 2) }], payLink: 'https://buy.stripe.com/test_link', saved: JSON.parse(JSON.stringify(SAVED)), luoh: LUOH, avatar: state.avatar } : {}) }));
+    if (path === 'export') { state.exports = (state.exports || 0) + 1; return route.fulfill(json({ ok: true, data: { exportedAt: '2026-11-22T00:00:00.000Z', account: { email: 'client@example.com', name: 'Jo' }, savedItems: { vault: [], directory: [] }, luohProjects: [], clientProjects: [], payments: [], profilePicture: null, notes: [] } })); }
     if (path === 'avatar' && req.method() === 'GET') return route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from(PNG, 'base64') });
     if (path === 'avatar') { const b = JSON.parse(req.postData() || '{}'); state.pics.push(b); state.avatar = b.image ? 1700000000000 : null; return route.fulfill(json({ ok: true, avatar: state.avatar })); }
     if (path === 'luoh-delete') { state.unsaved.push({ luoh: JSON.parse(req.postData() || '{}').id }); return route.fulfill(json({ ok: true, luoh: { count: 1, recent: [LUOH.recent[1]] } })); }
@@ -179,4 +180,18 @@ test('on a phone the list comes first and one page shows at a time', async ({ pa
   await page.click('[data-app="vault"]');
   await expect(page.locator('#dash-home')).toBeHidden(); await expect(page.locator('#app-name')).toHaveText('Soul Vault');
   await page.click('#app-back'); await expect(page.locator('#dash-app')).toBeHidden();
+});
+
+test('Account settings: Download my data saves one JSON file with the account details', async ({ page }, info) => {
+  only(info); const st = await fake(page, { user: true });
+  await page.goto('/account/');
+  await page.click('[data-app="settings"]');
+  const [file] = await Promise.all([page.waitForEvent('download'), page.click('#dl-btn')]);
+  expect(file.suggestedFilename()).toMatch(/^nurenaissance-my-data-\d{4}-\d{2}-\d{2}\.json$/);
+  const text = await (await import('node:fs/promises')).readFile((await file.path())!, 'utf8');
+  expect(JSON.parse(text).account.email).toBe('client@example.com');
+  await expect(page.locator('#dl-st')).toContainText('Downloaded'); expect(st.exports).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  const serious = (await new AxeBuilder({ page }).include('.acct').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+  expect(serious.map((v) => v.id)).toEqual([]);
 });

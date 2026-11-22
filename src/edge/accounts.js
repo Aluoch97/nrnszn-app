@@ -355,6 +355,25 @@ export async function luohFor(db, uid) {
   const n = await db.prepare('SELECT COUNT(*) AS n FROM projects WHERE user_id = ?').bind(uid).first();
   return { count: Number((n && n.n) || 0), recent: rows.map((r) => ({ id: r.id, name: r.name || 'Untitled project', at: r.at })) };
 }
+// ---- "Download my data" ---------------------------------------------------------------------------------------------------------
+// Everything this site holds about one account, as one JSON file the person can keep: the profile, saved items, saved luoh projects (the edits,
+// not videos), their client projects and payments with us, and whether a profile picture is set (the picture itself is included). What other apps keep
+// on their own servers (Certified stamps, NuDirectory listings) is not in here; `notes` says so.
+export async function exportAccount(db, u, now = Date.now()) {
+  const projects = (await db.prepare('SELECT id, name, updated_at, data FROM projects WHERE user_id = ? ORDER BY updated_at DESC').bind(u.id).all()).results || [];
+  const av = await db.prepare('SELECT mime, data, updated_at FROM account_avatars WHERE user_id = ?').bind(u.id).first();
+  return {
+    exportedAt: new Date(now).toISOString(),
+    about: 'Everything the NuRenaissance website holds about your account. Keep it somewhere safe: it contains your saved projects.',
+    account: { email: u.email, name: u.name || null, signedUpWith: u.provider || null, createdAt: u.created_at ? new Date(u.created_at).toISOString() : null, lastSeen: u.last_seen ? new Date(u.last_seen).toISOString() : null, newsAndOffers: !!u.marketing },
+    savedItems: { vault: await listSaved(db, u.id, 'vault'), directory: await listSaved(db, u.id, 'directory') },
+    luohProjects: projects.map((r) => ({ id: r.id, name: r.name || 'Untitled project', updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : null, edits: r.data })),
+    clientProjects: await projectsFor(db, u.email),
+    payments: await paymentsFor(db, u.email),
+    profilePicture: av ? { updatedAt: new Date(av.updated_at).toISOString(), dataUrl: `data:${av.mime};base64,${av.data}` } : null,
+    notes: ['Your Certified Passport stamps are kept by the Certified app, and your NuDirectory listings by NuDirectory. E-mail nurrenaissance@gmail.com for a copy of those.'],
+  };
+}
 // ---- profile picture ------------------------------------------------------------------------------------------------------------
 // The page shrinks the picture to a 256 px square JPEG before sending it, so it is small. The server only accepts real JPEG / PNG /
 // WebP bytes (checked by their first bytes, not by what the browser says) up to AVATAR_MAX, and only serves it back to its owner.
@@ -620,6 +639,13 @@ export async function accountRequest({ request, env, params }) {
       return reply({ ok: true, next: await continueTo(db, u.id, body.return) });
     }
     // Remove a luoh project saved on the account (the same as Delete in luoh's My projects).
+    if (what === 'export') {   // "Download my data": this site's own account page only, never another site's script
+      const o = request.headers.get('origin');
+      if (o && o !== url.origin) return reply({ ok: false, message: 'Not allowed.' }, 403);
+      const u = await currentAccount(request, env);
+      if (!u) return reply({ ok: false, message: 'Please sign in first.' }, 401);
+      return reply({ ok: true, data: await exportAccount(db, u) }, 200, { 'cache-control': 'no-store' });
+    }
     if (what === 'luoh-delete') {
       const uid = await sessionUserId(request, env);
       if (!uid) return reply({ ok: false, message: 'Please sign in first.' }, 401);
