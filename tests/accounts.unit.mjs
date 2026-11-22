@@ -394,3 +394,26 @@ test('a saved luoh project can be removed from the Account page: only your own, 
   assert.equal(r.ok, true); assert.deepEqual(r.luoh.recent.map((x) => x.id), ['p2']);
   assert.equal((await db.prepare("SELECT COUNT(*) AS n FROM projects WHERE user_id = 'someone-else'").first()).n, 1, "someone else's project with the same id is untouched");
 });
+
+test('"Download my data": only the signed-in person, only from this site, only their own things, and no secrets', async () => {
+  const g = await googleKit(), { call, env } = setup(); env.__googleCerts = g.certs;
+  const a = pair(cookieOf(await call('google', { method: 'POST', body: { credential: await g.token(good()) } })));
+  await call('google', { method: 'POST', body: { credential: await g.token(good({ email: 'other@x.co' })) } });
+  const db = await accountsDb(env), me = await db.prepare("SELECT id, email FROM users WHERE email != 'other@x.co'").first();
+  for (const [u, id, data] of [[me.id, 'p1', '{"shots":[1,2]}'], ['someone-else', 'p9', '{"secret":"theirs"}']]) await db.prepare('INSERT INTO projects (user_id, id, name, updated_at, data) VALUES (?, ?, ?, ?, ?)').bind(u, id, id, 1, data).run();
+  await accountRequest({ request: new Request('https://www.nrnszn.com/api/account/saved', { method: 'POST', body: JSON.stringify({ app: 'vault', kind: 'song', id: 't1', title: 'A song', on: true }), headers: { cookie: a, origin: 'https://www.nrnszn.com', 'content-type': 'application/json' } }), env, params: { path: ['saved'] } });
+
+  assert.equal((await call('export', { method: 'POST', body: {} })).status, 401, 'signed out');
+  assert.equal((await call('export', { method: 'POST', body: {}, cookie: a, origin: 'https://evil.example' })).status, 403, 'not from another site');
+  assert.equal((await call('export', { method: 'POST', body: {}, cookie: a, origin: 'https://play.nrnszn.com' })).status, 403, 'not even from our other sites: the page itself only');
+  const res = await call('export', { method: 'POST', body: {}, cookie: a });
+  assert.equal(res.status, 200); assert.equal(res.headers.get('cache-control'), 'no-store');
+  const out = await res.json(), d = out.data;
+  assert.equal(out.ok, true); assert.equal(d.account.email, me.email);
+  assert.deepEqual(d.luohProjects.map((p) => p.id), ['p1']); assert.equal(d.luohProjects[0].edits, '{"shots":[1,2]}');
+  assert.deepEqual(d.savedItems.vault.map((s) => s.id), ['t1']); assert.deepEqual(d.savedItems.directory, []);
+  assert.ok(d.exportedAt && Array.isArray(d.payments) && Array.isArray(d.clientProjects) && Array.isArray(d.notes));
+  const text = JSON.stringify(out);
+  for (const secret of ['theirs', 'other@x.co', 'someone-else', 'NRN_ACCOUNT_SECRET']) assert.ok(!text.includes(secret), 'must not contain: ' + secret);
+  assert.ok(!/token|password|secret/i.test(Object.keys(d.account).join(',')), 'the account block has no credential fields');
+});

@@ -112,6 +112,12 @@ const SHOW_NAMES = Object.fromEntries(pastEvents.map((e) => [e.day, e.title]));
               <button type="button" class="btn wide" data-push-open hidden>Phone notifications on this device</button>
               <p class="small" data-push-off>Not switched on for this site yet.</p>
             </section>
+            <section class="card" aria-labelledby="dl-h">
+              <h3 class="card-h" id="dl-h">Download my data</h3>
+              <p class="small">Get one file with everything this site holds about your account: your details, saved songs and listings, saved luoh projects, and any projects and payments with us. Keep it somewhere safe.</p>
+              <button type="button" class="btn wide" id="dl-btn">Download my data</button>
+              <p id="dl-st" class="hint" role="status"></p>
+            </section>
             <section class="card">
               <form id="del-form" class="mail danger">
                 <label for="del-in">Delete my account</label>
@@ -467,6 +473,15 @@ const SHOW_NAMES = Object.fromEntries(pastEvents.map((e) => [e.day, e.title]));
   $('name-form').addEventListener('submit', async (e) => {
     e.preventDefault(); const j = await api('name', { name: ($('me-name-in') as HTMLInputElement).value });
     $('name-st').textContent = j.ok ? 'Saved.' : j.message || 'Could not save.'; if (j.ok) start();
+  });
+  $('dl-btn').addEventListener('click', async () => {
+    const st = $('dl-st'); st.textContent = 'Getting your data…';
+    const j = await api('export', {}).catch(() => ({ ok: false }));
+    if (!j.ok) { st.textContent = j.message || 'Could not get your data. Try again in a minute.'; return; }
+    const blob = new Blob([JSON.stringify(j.data, null, 2)], { type: 'application/json' }), a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'nurenaissance-my-data-' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    st.textContent = 'Downloaded. Check your Downloads folder.';
   });
   $('del-form').addEventListener('submit', async (e) => {
     e.preventDefault(); if (!confirm('Delete your NuRenaissance account on every app? This cannot be undone.')) return;
