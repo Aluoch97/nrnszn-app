@@ -16,7 +16,7 @@ export const SITES = [
   { name: 'NuDirectory (directory.nrnszn.com)', url: 'https://directory.nrnszn.com/', ok: html() },
   { name: 'NuDirectory version file', url: 'https://directory.nrnszn.com/version.json', ok: hasVersion },
   { name: 'luoh (luoh.nrnszn.com)', url: 'https://luoh.nrnszn.com/', ok: html() },
-  { name: 'luoh version file', url: 'https://luoh.nrnszn.com/version.json', ok: hasVersion },
+  // No luoh version-file check on purpose: luoh answers an outside visitor's /version.json with a web page (its own gate), not the file, so that check was always red (found Nov 22, 2026).
   { name: 'luoh old address (podi.nrnszn.com)', url: 'https://podi.nrnszn.com/', ok: html() },
 ];
 

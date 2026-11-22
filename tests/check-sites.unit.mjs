@@ -22,14 +22,14 @@ test('a network error and a wrong kind of page both fail', async () => {
   assert.equal((await checkSite(home, { ...fast, fetchImpl: reply('<html>tiny</html>') })).pass, false);
 });
 test('version files need a version, and the sitemap needs a urlset', async () => {
-  const v = SITES.find((s) => s.url.endsWith('luoh.nrnszn.com/version.json'));
-  assert.equal((await checkSite(v, { ...fast, fetchImpl: reply('{"version":"3.23.1"}', { type: 'application/json' }) })).pass, true);
+  const v = SITES.find((s) => s.url.endsWith('play.nrnszn.com/version.json'));
+  assert.equal((await checkSite(v, { ...fast, fetchImpl: reply('{"version":"2.22"}', { type: 'application/json' }) })).pass, true);
   assert.equal((await checkSite(v, { ...fast, fetchImpl: reply('{}', { type: 'application/json' }) })).pass, false);
   const s = SITES.find((x) => x.url.endsWith('sitemap.xml'));
   assert.equal((await checkSite(s, { ...fast, fetchImpl: reply('<urlset></urlset>', { type: 'application/xml' }) })).pass, true);
 });
 test('checkAll reports each site on its own', async () => {
   const out = await checkAll(SITES, { ...fast, fetchImpl: async (u) => { u = String(u); if (u.includes('luoh.nrnszn.com')) return new Response('', { status: 500 }); if (u.endsWith('version.json')) return reply('{"version":"1.0"}', { type: 'application/json' })(); if (u.endsWith('sitemap.xml')) return reply('<urlset/>', { type: 'application/xml' })(); return reply(page)(); } });
-  assert.ok(out.filter((r) => !r.pass).every((r) => /^luoh (\(luoh|version)/.test(r.name)));
+  assert.ok(out.filter((r) => !r.pass).every((r) => /^luoh \(luoh/.test(r.name)));
   assert.equal(out.length, SITES.length);
 });
