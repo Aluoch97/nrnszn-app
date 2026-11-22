@@ -47,9 +47,11 @@ test('/admin > Page videos: pick a video, choose the start, and it is made small
   await expect(page.locator('#hv-trim')).toBeVisible();
   await page.locator('#hv-start').fill('1');
   await expect(page.locator('#hv-framing')).toBeVisible();
+  await expect(page.locator('#hv-auto-t')).not.toHaveText(/Looking|^$/, { timeout: 20_000 });   // the automatic placement is done
+  const autoX = Number(await page.locator('#hv-x').inputValue());
   await page.locator('#hv-y').fill('20'); await page.locator('#hv-z').fill('1.5');
   await expect(page.locator('#hv-y-t')).toContainText('top');
-  expect(await page.locator('#hv-box-desk video').evaluate((v) => [v.style.objectPosition, v.style.transform])).toEqual(['50% 20%', 'scale(1.5)']);
+  expect(await page.locator('#hv-box-desk video').evaluate((v) => [v.style.objectPosition, v.style.transform])).toEqual([`${autoX}% 20%`, 'scale(1.5)']);
   await page.selectOption('#hv-len', '8');
   const serious = (await new AxeBuilder({ page }).include('details[data-folder="videos"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id);
   expect(serious).toEqual([]);
@@ -59,7 +61,7 @@ test('/admin > Page videos: pick a video, choose the start, and it is made small
   for (const p of st.puts.slice(0, 2)) { expect(String.fromCharCode(...p.head.slice(4, 8))).toBe('ftyp'); expect(p.tracks).toBe(1); }   // one picture track, no thumbnail, no sound
   expect(st.puts[2].head.slice(0, 3)).toEqual([0xff, 0xd8, 0xff]);
   expect(st.puts[0].size).toBeGreaterThan(st.puts[1].size);
-  expect(st.sets).toHaveLength(1); expect(st.sets[0].page).toBe('services'); expect(st.sets[0].frame).toEqual({ x: 50, y: 20, z: 1.5 });
+  expect(st.sets).toHaveLength(1); expect(st.sets[0].page).toBe('services'); expect(st.sets[0].frame).toEqual({ x: autoX, y: 20, z: 1.5 });
   await expect(rows.filter({ hasText: 'Services' }).locator('.tag')).toHaveText('Video');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   // move the video already on Media down, without uploading again
@@ -90,7 +92,8 @@ test('a page with a video fades it in over its pictures; a page without one is u
   await expect(v).toHaveCSS('object-position', '30% 10%');
   await expect(v).toHaveCount(1);
   await expect(v).toHaveAttribute('aria-hidden', 'true');
-  await expect.poll(() => v.evaluate((el: HTMLVideoElement) => el.muted && el.loop && getComputedStyle(el).opacity)).toBe('1');
+  await expect.poll(() => v.evaluate((el: HTMLVideoElement) => el.muted && el.loop && (el.closest('.ph-bg') as HTMLElement).dataset.video)).toBe('playing');
+  expect(await v.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');   // never hidden (iPhones may not autoplay a hidden video)
   expect(await v.evaluate((el) => getComputedStyle(el).position)).toBe('absolute');
   await page.goto('/events/');
   await page.waitForTimeout(500);
@@ -119,6 +122,19 @@ test('an iPhone that refuses to start the video (Low Power Mode) still gets the 
   });
   await page.goto('/events/');
   const v = page.locator('.ph video.hv');
-  await expect.poll(() => v.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  await expect.poll(() => v.evaluate((el) => (el.closest('.ph-bg') as HTMLElement).dataset.video)).toBe('on');   // the still shows
   expect(await v.evaluate((el: HTMLVideoElement) => [el.paused, el.hasAttribute('muted'), el.hasAttribute('playsinline'), el.hasAttribute('autoplay'), el.poster.includes('poster.jpg')])).toEqual([true, true, true, true, true]);
+});
+
+test('a new video is placed on the action by itself (here: a box moving in the top-left corner)', async ({ page }, info) => {
+  test.skip(info.project.name !== 'phone-390', 'one size');
+  await fakeAdmin(page);
+  await page.goto('/admin/');
+  await page.locator('details[data-folder="videos"] > summary').click();
+  await page.getByRole('button', { name: 'Add a video for Events' }).click();
+  await page.setInputFiles('#hv-file', { name: 'action.mp4', mimeType: 'video/mp4', buffer: fs.readFileSync(new URL('./fixtures/action.mp4', import.meta.url)) });
+  await expect(page.locator('#hv-auto-t')).toContainText('Placed on the action', { timeout: 20_000 });
+  const x = Number(await page.locator('#hv-x').inputValue()), y = Number(await page.locator('#hv-y').inputValue());
+  expect(x).toBeLessThan(35); expect(y).toBeLessThan(40);
+  expect(await page.locator('#hv-box-phone video').evaluate((v) => v.style.objectPosition)).toBe(`${x}% ${y}%`);
 });
