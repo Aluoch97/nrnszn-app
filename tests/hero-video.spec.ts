@@ -4,18 +4,22 @@ import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import fs from 'node:fs';
 
+// clip.mp4 has a second (thumbnail) video track, like DJI and some phone files, which the upload must leave out.
 const CLIP = fs.readFileSync(new URL('./fixtures/clip.mp4', import.meta.url));
+const tracks = (b: Buffer) => { let n = 0, i = -1; while ((i = b.indexOf('trak', i + 1)) !== -1) n++; return n; };
 const TOKEN = 'fake-session-token';
+// a tiny real JPEG (1x1) for the still picture
+const JPG = Buffer.from('/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==', 'base64');
 const json = (body: unknown, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
 async function fakeAdmin(page: Page) {
-  const st = { puts: [] as { q: string; size: number; head: number[] }[], sets: [] as any[], removes: [] as any[], frames: [] as any[], videos: { media: { v: 'oldone12', at: Date.UTC(2026, 10, 1) } } as Record<string, any> };
+  const st = { puts: [] as { q: string; size: number; head: number[]; tracks: number }[], sets: [] as any[], removes: [] as any[], frames: [] as any[], videos: { media: { v: 'oldone12', at: Date.UTC(2026, 10, 1) } } as Record<string, any> };
   await page.addInitScript((t) => { try { localStorage.setItem('nrn_admin', t); } catch { /* ignore */ } }, TOKEN);
   await page.route('**/api/**', async (route) => {
     const req = route.request(), url = new URL(req.url());
     if (url.pathname === '/api/hero') {
       if (req.headers()['authorization'] !== `Bearer ${TOKEN}`) return route.fulfill(json({ ok: false }, 401));
-      if (req.method() === 'PUT') { const b = req.postDataBuffer() || Buffer.alloc(0); st.puts.push({ q: url.search, size: b.length, head: [...b.subarray(0, 8)] }); return route.fulfill(json({ ok: true })); }
+      if (req.method() === 'PUT') { const b = req.postDataBuffer() || Buffer.alloc(0); st.puts.push({ q: url.search, size: b.length, head: [...b.subarray(0, 8)], tracks: tracks(b) }); return route.fulfill(json({ ok: true })); }
       const b = JSON.parse(req.postData() || '{}');
       if (b.action === 'list') return route.fulfill(json({ ok: true, videos: st.videos }));
       if (b.action === 'set') { st.sets.push(b); st.videos[b.page] = { v: b.v, at: Date.now() }; return route.fulfill(json({ ok: true })); }
@@ -52,7 +56,7 @@ test('/admin > Page videos: pick a video, choose the start, and it is made small
   await page.click('#hv-save');
   await expect(page.locator('#hv-msg')).toContainText('Saved', { timeout: 90_000 });
   expect(st.puts.map((p) => new URLSearchParams(p.q).get('part'))).toEqual(['large.mp4', 'small.mp4', 'poster.jpg']);
-  for (const p of st.puts.slice(0, 2)) expect(String.fromCharCode(...p.head.slice(4, 8))).toBe('ftyp');
+  for (const p of st.puts.slice(0, 2)) { expect(String.fromCharCode(...p.head.slice(4, 8))).toBe('ftyp'); expect(p.tracks).toBe(1); }   // one picture track, no thumbnail, no sound
   expect(st.puts[2].head.slice(0, 3)).toEqual([0xff, 0xd8, 0xff]);
   expect(st.puts[0].size).toBeGreaterThan(st.puts[1].size);
   expect(st.sets).toHaveLength(1); expect(st.sets[0].page).toBe('services'); expect(st.sets[0].frame).toEqual({ x: 50, y: 20, z: 1.5 });
@@ -102,4 +106,19 @@ test('with less motion asked for, only the still picture shows (nothing plays)',
   await page.waitForTimeout(600);
   expect(await v.evaluate((el: HTMLVideoElement) => el.paused)).toBe(true);
   await ctx.close();
+});
+
+test('an iPhone that refuses to start the video (Low Power Mode) still gets the still picture in the header', async ({ page }, info) => {
+  test.skip(info.project.name !== 'phone-390', 'one size');
+  await page.addInitScript(() => { HTMLMediaElement.prototype.play = function () { return Promise.reject(new DOMException('not allowed', 'NotAllowedError')); }; });
+  await page.route('**/api/hero**', (route) => {
+    const url = new URL(route.request().url()), file = url.searchParams.get('file');
+    if (!file) return route.fulfill(json({ on: true, videos: { events: 'abcdef12' }, frames: {} }));
+    if (file.endsWith('.jpg')) return route.fulfill({ status: 200, contentType: 'image/jpeg', body: JPG });
+    return route.abort();   // the video itself never arrives / never starts
+  });
+  await page.goto('/events/');
+  const v = page.locator('.ph video.hv');
+  await expect.poll(() => v.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  expect(await v.evaluate((el: HTMLVideoElement) => [el.paused, el.hasAttribute('muted'), el.hasAttribute('playsinline'), el.hasAttribute('autoplay'), el.poster.includes('poster.jpg')])).toEqual([true, true, true, true, true]);
 });
