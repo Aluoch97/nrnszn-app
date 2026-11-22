@@ -23,14 +23,16 @@ export async function heroVideo(bg: HTMLElement | null, page: string, opts: { cl
   // Astro's page styles reach only elements that carry the page's style marker, so copy it from the header.
   for (const a of [...bg.attributes]) if (a.name.startsWith('data-astro-cid')) vid.setAttribute(a.name, a.value);
   applyFrame(vid, frame);
-  vid.style.opacity = '0'; vid.style.transition = 'opacity 1.2s ease';
+  // Visible from the start (an iPhone may not autoplay a video it thinks is hidden); until its still loads it is see-through,
+  // so the page's own pictures show.
+  vid.disableRemotePlayback = true;
   for (const [part, media] of [['small.mp4', '(max-width: 760px)'], ['large.mp4', '']]) {
     const s = document.createElement('source'); s.src = file(part); s.type = 'video/mp4'; if (media) s.media = media; vid.appendChild(s);
   }
   // The still picture shows as soon as it has loaded, so the header is right even when the phone will not play videos on its own
   // (iPhone Low Power Mode, data saving, or a refused autoplay); the video then moves on top of it whenever it does start.
   let shown = false;
-  const show = () => { if (shown) return; shown = true; vid.style.opacity = '1'; bg.dataset.video = 'on'; if (opts.replace) setTimeout(() => opts.replace?.pause(), 1300); };
+  const show = () => { if (shown) return; shown = true; bg.dataset.video = 'on'; if (opts.replace) setTimeout(() => opts.replace?.pause(), 1300); };
   const img = new Image(); img.onload = show; img.src = vid.poster;
   vid.addEventListener('playing', () => { show(); bg.dataset.video = 'playing'; });
   bg.appendChild(vid);
@@ -39,6 +41,10 @@ export async function heroVideo(bg: HTMLElement | null, page: string, opts: { cl
   const tryPlay = () => { if (vid.paused) vid.play().catch(() => { /* refused for now: the still stays */ }); };
   tryPlay();
   vid.addEventListener('canplay', tryPlay, { once: true });
+  vid.addEventListener('loadeddata', tryPlay, { once: true });
+  // Start again whenever the header comes back into view (phones pause videos that scroll away).
+  if ('IntersectionObserver' in window) new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) tryPlay(); }).observe(vid);
+  addEventListener('pageshow', tryPlay);
   // A refused autoplay is often allowed after the first touch, or when the page comes back to the screen.
   addEventListener('touchstart', tryPlay, { once: true, passive: true });
   addEventListener('pointerdown', tryPlay, { once: true, passive: true });
