@@ -13,3 +13,11 @@ test('the unsubscribe confirmation page has the icon', () => assert.ok(has(fs.re
 test('the icon files exist', () => {
   for (const n of ['favicon-32.png', 'favicon-48.png', 'apple-touch-icon.png']) assert.ok(fs.existsSync('public/icons/' + n), n);
 });
+
+test('the widget pages that search engines may list have a short description', () => {
+  for (const f of fs.readdirSync('public/widgets').filter((n) => n.endsWith('.html'))) {
+    const h = fs.readFileSync('public/widgets/' + f, 'utf8');
+    if (/name="robots"[^>]*noindex/i.test(h)) continue;
+    assert.match(h, /<meta name="description"/, f);
+  }
+});
