@@ -20,6 +20,9 @@ const ROUTES = existsSync('dist') ? routes() : [];
 // where the check runs; those failures aren't the site's fault.
 // "Failed to fetch" = a widget couldn't reach its Google backend from the test machine.
 const EXTERNAL_NOISE = /Failed to load resource|Failed to fetch|ERR_|net::|youtube|google|gstatic|wixstatic/i;
+// Soul Vault only lets nrnszn.com put it in a frame (frame-ancestors). On the test address it correctly
+// refuses, and the browser logs that refusal. On the real nrnszn.com the frame is allowed. Only this one message is ignored.
+const SOUL_VAULT_FRAME_REFUSAL = /^Framing 'https:\/\/soulnicolas\.com\/' violates the following Content Security Policy directive: "frame-ancestors 'self' https:\/\/www\.nrnszn\.com/;
 
 async function open(page: Page, route: string) {
   const errors: string[] = [];
@@ -29,7 +32,7 @@ async function open(page: Page, route: string) {
     // are separate sites, and their own console errors aren't this site's to fix.
     const from = m.location()?.url || '';
     if (from && !from.startsWith('http://localhost') && !from.startsWith('http://127.0.0.1')) return;
-    if (m.type() === 'error' && !EXTERNAL_NOISE.test(m.text())) errors.push(`console: ${m.text()}`);
+    if (m.type() === 'error' && !EXTERNAL_NOISE.test(m.text()) && !SOUL_VAULT_FRAME_REFUSAL.test(m.text())) errors.push(`console: ${m.text()}`);
   });
   // Keep checks fast and offline-safe: don't wait on third-party media.
   await page.route(/youtube(-nocookie)?\.com|ytimg\.com|googleusercontent|drive\.google|static\.wixstatic/, (r) => r.abort());
