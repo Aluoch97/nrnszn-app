@@ -90,6 +90,7 @@ export function unsubscribePageHtml(message) {
   return '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
     '<meta name="robots" content="noindex"><title>Certified Lounge — Unsubscribed</title>' +
+    '<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png"><link rel="icon" href="/icons/favicon-48.png" sizes="48x48" type="image/png"><link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">' +
     '<style>' +
     'body{ margin:0; background:#14121B; color:#F5F1E8; font-family:Georgia,serif; ' +
     'display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px; box-sizing:border-box; }' +
