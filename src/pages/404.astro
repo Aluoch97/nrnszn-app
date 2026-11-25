@@ -1,10 +1,27 @@
 ---
-import Base from '../layouts/Base.astro';
+// Any address that is not a page. Same header and footer as the rest of the site, so a wrong link still feels like NuRenaissance.
+import Site from '../layouts/Site.astro';
 ---
-<Base title="Not found | NuRenaissance" description="This page doesn't exist.">
-  <main style="min-height:100svh;display:grid;place-content:center;gap:12px;text-align:center;padding:24px">
-    <h1 style="margin:0;font-family:var(--font-display);color:var(--purple-900)">Wrong door.</h1>
-    <p style="margin:0;color:var(--ink-soft)">That page isn't here.</p>
-    <a href="/" style="color:var(--purple-900);font-weight:600">Back to the home page</a>
-  </main>
-</Base>
+<Site title="Not found | NuRenaissance" description="This page doesn't exist." noindex>
+  <section class="nf">
+    <p class="kick">404</p>
+    <h1>Wrong door.</h1>
+    <p class="lead">That page isn't here. It may have moved, or the link has a typo.</p>
+    <div class="go">
+      <a class="btn main" href="/">Home</a>
+      <a class="btn" href="/services">Services</a>
+      <a class="btn" href="/events">Events</a>
+    </div>
+  </section>
+</Site>
+
+<style>
+  .nf { min-height: 60svh; display: grid; place-content: center; justify-items: center; gap: 14px; text-align: center; padding: 48px 16px; color: var(--shell-text, #f4eefc); }
+  .kick { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: 0.32em; color: var(--gold-300, #e8c46a); }
+  h1 { margin: 0; font-family: var(--font-display); font-size: clamp(44px, 12vw, 88px); line-height: 1; color: #fff7e6; }
+  .lead { margin: 0; max-width: 34ch; font-size: 16px; color: var(--shell-muted, #c9bddf); }
+  .go { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+  .btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.22); color: #fff; font-weight: 700; text-decoration: none; }
+  .btn.main { background: #c8175f; border-color: #c8175f; }
+  .btn:hover, .btn:focus-visible { text-decoration: underline; }
+</style>

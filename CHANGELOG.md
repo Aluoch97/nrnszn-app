@@ -4,6 +4,10 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.33 · Nov 25, 2026
+- **A wrong address now looks like the rest of the site**: the "Wrong door" page has the normal header and footer and buttons to Home, Services and Events.
+- Shorter page descriptions for search results (Home, About, Apps and the event pages), and an internal template page is no longer listed for search engines.
+
 ## 3.32 · Nov 25, 2026
 - **The Media page no longer shows an old copy**: browsers were allowed to keep it for a week (a setting meant for two video files also matched the page), so the old header and footer could still show there. It now checks for the newest version every time, like every other page.
 
