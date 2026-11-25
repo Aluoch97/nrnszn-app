@@ -32,6 +32,9 @@ export const apps = [
     text: 'Multi-camera videos in a few taps: drop in every camera angle, luoh lines them up by sound, picks the shots and saves your video, right in your browser.' },
   { name: 'Soul Vault', accent: '#ef3b55', href: '/vault', inApp: true, img: '/img/apps/soul-vault-icon.webp', home: 'https://soulnicolas.com/',
     text: 'A direct-to-fan streaming space and living archive for the music of Nicólas Soul: full projects, unreleased cuts, alternate mixes, time-synced lyrics, videos and behind-the-scenes stories. Ad-free.' },
+  // Nov 25, 2026 (Nick). Opens in a new tab like luoh: its site refuses to be shown inside another (frame-ancestors 'none').
+  { name: 'The Artist Bible', accent: '#d78f4e', href: 'https://bible.nrnszn.com', img: '/img/apps/artist-bible-icon.webp', home: 'https://bible.nrnszn.com/',
+    text: 'Free guides and studio tools for independent artists: plan your release, get paid what you are owed, settle splits and spot contract traps. No ads, no login, works offline.' },
 ];
 
 export const footer = [

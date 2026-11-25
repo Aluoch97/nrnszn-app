@@ -12,12 +12,13 @@ test('each app card opens the app and has an Add to Home Screen button', async (
   only(info);
   await page.goto('/apps/');
   const cards = page.locator('.app');
-  await expect(cards).toHaveCount(5);
+  await expect(cards).toHaveCount(6);
   await expect(page.locator('.app-open', { hasText: 'Open Certified' })).toHaveAttribute('href', '/play');
-  await expect(page.locator('.app-add')).toHaveCount(5);
+  await expect(page.locator('.app-add')).toHaveCount(6);
+  await expect(page.locator('.app-open', { hasText: 'Open The Artist Bible' })).toHaveAttribute('href', 'https://bible.nrnszn.com');
   await expect(page.locator('.app-open', { hasText: 'Open NuRenaissance' })).toHaveAttribute('href', '/');
   expect(await page.locator('.app-add').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.home))).toEqual([
-    'https://www.nrnszn.com/', 'https://play.nrnszn.com/?install=1', 'https://directory.nrnszn.com/', 'https://luoh.nrnszn.com/', 'https://soulnicolas.com/',
+    'https://www.nrnszn.com/', 'https://play.nrnszn.com/?install=1', 'https://directory.nrnszn.com/', 'https://luoh.nrnszn.com/', 'https://soulnicolas.com/', 'https://bible.nrnszn.com/',
   ]);
 });
 
@@ -68,9 +69,13 @@ test.describe('inside Instagram', () => {
 test('on a computer the sheet gives the phone and computer steps', async ({ page }, info) => {
   only(info);
   await page.goto('/apps/');
-  await page.locator('.app-add').last().click();
+  await page.locator('.app-add').nth(4).click();
   await expect(page.locator('#a2hs [data-os="other"]')).toBeVisible();
   await expect(page.locator('#a2hs-go')).toHaveAttribute('href', 'https://soulnicolas.com/');
+  await page.locator('#a2hs [data-close]').click();
+  await page.locator('.app-add').last().click();
+  await expect(page.locator('#a2hs .a2hs-title')).toHaveText('Add The Artist Bible to your Home Screen');
+  await expect(page.locator('#a2hs-go')).toHaveAttribute('href', 'https://bible.nrnszn.com/');
 });
 
 // ---------- NuRenaissance itself: installed right on this page ----------
