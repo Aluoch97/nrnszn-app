@@ -9,19 +9,27 @@ const FEED = { source: 'sheet', bundles: [], services: [
   svc({ id: 'video', name: 'Video production', icon: 'video', pricingModel: 'hourly_plus_edit', hourlyRate: 60, minHours: 2, startingPrice: 270 }),
 ] };
 
-test('web design: a landing page is $350, each extra page $150; livestream starts at 2 hours ($350)', async ({ page }, info) => {
+test('web design: custom + editor ($350 then $150) or Wix ($300 then $125), optional care plan never in the total; livestream starts at 2 hours ($350)', async ({ page }, info) => {
   test.skip(info.project.name !== 'phone-390', 'one size');
   await page.route('**/api/feed/services**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(FEED) }));
   await page.route('**/script.google.com/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(FEED) }));
   await page.goto('/services/');
   const web = page.locator('.nrn-card[data-id="web"]'), live = page.locator('.nrn-card[data-id="live"]');
-  await expect(web).toContainText('$350+'); await expect(live).toContainText('$350+');
+  await expect(web).toContainText('$300+'); await expect(live).toContainText('$350+');
   await web.click();
   await expect(page.locator('#nrn-pages-web')).toHaveValue('1');
   await expect(web.locator('.nrn-config-total')).toHaveText('Total: $350');
   await page.fill('#nrn-pages-web', '3'); await page.locator('#nrn-pages-web').dispatchEvent('change');
   await expect(web.locator('.nrn-config-total')).toHaveText('Total: $650');
   await expect(web).toContainText('2 more page(s) @ $150/page: $300');
+  // a Wix site instead: $300 + $125 a page; the care plan is monthly and never added to the total
+  await web.locator('[data-field="siteKind"][data-value="wix"]').click();
+  await expect(web.locator('.nrn-config-total')).toHaveText('Total: $550');
+  await web.locator('[data-field="carePlan"]').click();
+  await expect(web.locator('.nrn-config-total')).toHaveText('Total: $550');
+  await expect(web).toContainText('Care plan: $75/month, billed monthly (not in this total)');
+  await web.locator('[data-field="siteKind"][data-value="custom"]').click();
+  await expect(web.locator('.nrn-config-total')).toHaveText('Total: $650'); await expect(web).toContainText('editor included');
 });
 
 test('each kind of video has its own price; the $50 deposit is part of the total, never added on top', async ({ page }, info) => {

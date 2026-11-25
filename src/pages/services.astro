@@ -90,6 +90,8 @@ const SCRIPT_URL = SERVICES_API_URL;
           <p>Video: the shoot fee after the last shoot day, and the edit fee 5 business days after the final draft. Photography, livestream and interviews: before the session. Websites: at launch. Admin packages: as stated in each package.</p></details>
         <details><summary>How many changes are included?</summary>
           <p>Two rounds of changes on video, interviews, websites and graphic design. More rounds are $75 each for video and interviews, and $50 for websites and design.</p></details>
+        <details><summary>Can I edit my website myself?</summary>
+          <p>Yes. A custom site comes with a simple editor (included, no extra charge) for your text, photos, prices and posts, and a Wix site can be changed in Wix itself. Your domain and accounts are in your name, so the site is yours. If you would rather we make the edits, there is an optional care plan for $75 a month that you can cancel any time.</p></details>
         <details><summary>How fast will I get it?</summary>
           <p>Photos within 10 business days of full payment (48-hour rush available). Websites within 15 business days of getting your files. Video and design dates are set in your quote. Raw video footage is kept for 30 days after the shoot.</p></details>
       </div>
@@ -256,10 +258,20 @@ const SCRIPT_URL = SERVICES_API_URL;
   var INTERVIEW_REVISION_FEE = 75;
   // Video shoot and edit prices per kind of video live in VIDEO_PLANS below; a new video starts at 2 shoot hours.
   var VIDEO_BASE_HOURS = 2;
-  // Web design (Nick, Nov 25, 2026): the first page (a landing page, which includes the design itself) is $350; each extra page is
-  // the sheet's PageRate ($150). The sheet's MinHours column is still the minimum number of pages (1).
+  // Web design (Nick, Nov 25, 2026), two kinds of site:
+  //   custom: a custom site with a simple editor the client uses themselves (editor INCLUDED, no extra charge): the first page
+  //           (a landing page, design included) is $350, each extra page is the sheet's PageRate ($150);
+  //   wix:    a Wix site in the client's own Wix account: $300 first page, $125 each extra page (the client pays Wix's plan).
+  // The optional care plan (we make the edits) is monthly and never added to the build total. Sheet MinHours = minimum pages (1).
   var WEB_FIRST_PAGE = 350;
-  function webPrice(s, pages) { return WEB_FIRST_PAGE + s.pageRate * Math.max(0, pages - 1); }
+  var WIX_FIRST_PAGE = 300, WIX_EXTRA_PAGE = 125;
+  var CARE_PLAN_MONTHLY = 75;
+  var WEB_KINDS = [
+    { value: 'custom', label: 'Custom site + editor', note: 'A fast custom site. You update text, photos and posts yourself with a simple editor (included).' },
+    { value: 'wix', label: 'Wix site', note: 'Built in your own Wix account, so you can redesign and add pages yourself. Wix charges its own monthly plan.' }
+  ];
+  function webRates(s, kind) { return kind === 'wix' ? { first: WIX_FIRST_PAGE, extra: WIX_EXTRA_PAGE } : { first: WEB_FIRST_PAGE, extra: s.pageRate }; }
+  function webPrice(s, pages, kind) { var r = webRates(s, kind); return r.first + r.extra * Math.max(0, pages - 1); }
   var RAISE_THE_BAR_PRICE = 150;   // one mic performance series (Nick, Nov 25, 2026; edited with luoh)
   var RAISE_THE_BAR_VERTICAL_FEE = 50;   // add-on: a vertical cut for Reels / TikTok
   var RAISE_THE_BAR_DEPOSIT = 50;  // $50 to book, the rest due at the shoot
@@ -328,7 +340,7 @@ const SCRIPT_URL = SERVICES_API_URL;
     if (s.id === 'photography') return PHOTO_ON_LOCATION_RATE * s.minHours;
     if (s.pricingModel === 'hourly') return s.hourlyRate * s.minHours;
     // Web design: the sheet's MinHours column is the minimum number of pages (Nov 25, 2026: 3 pages).
-    if (s.pricingModel === 'per_page') return webPrice(s, minPages(s));
+    if (s.pricingModel === 'per_page') return Math.min(webPrice(s, minPages(s), 'custom'), webPrice(s, minPages(s), 'wix'));
     if (s.id === 'video') {
       var cheapest = Infinity;
       VIDEO_TYPES.forEach(function (v) {
@@ -351,7 +363,7 @@ const SCRIPT_URL = SERVICES_API_URL;
       return { hours: s.minHours };
     }
     if (s.pricingModel === 'hourly_plus_edit') return { hours: VIDEO_BASE_HOURS, studio: 'standard', videoType: 'promo', tierIndex: 0, interviewTier: 0, revisions: 0, extraLocations: 0, whiteLabel: false, talent: false, facility: false, interviewRevisions: 0, interviewLocations: 0 };
-    if (s.pricingModel === 'per_page') return { pages: minPages(s), revisions: 0 };
+    if (s.pricingModel === 'per_page') return { pages: minPages(s), revisions: 0, siteKind: 'custom', carePlan: false };
     return {};
   }
 
@@ -493,22 +505,26 @@ const SCRIPT_URL = SERVICES_API_URL;
     }
     if (s.pricingModel === 'per_page') {
       if (cfg.pages < minPages(s)) cfg.pages = minPages(s);
-      var subtotal = webPrice(s, cfg.pages);
+      var kind = cfg.siteKind === 'wix' ? 'wix' : 'custom', rates = webRates(s, kind);
+      var subtotal = webPrice(s, cfg.pages, kind);
       var wTotal = subtotal;
-      var wBreakdown = ['📄 First page (landing page): $' + WEB_FIRST_PAGE];
-      if (cfg.pages > 1) wBreakdown.push('➕ ' + (cfg.pages - 1) + ' more page(s) @ $' + s.pageRate + '/page: $' + (s.pageRate * (cfg.pages - 1)));
+      var wBreakdown = [(kind === 'wix' ? '🧩 Wix site' : '💻 Custom site + editor (editor included)'), '📄 First page (landing page): $' + rates.first];
+      if (cfg.pages > 1) wBreakdown.push('➕ ' + (cfg.pages - 1) + ' more page(s) @ $' + rates.extra + '/page: $' + (rates.extra * (cfg.pages - 1)));
       if (cfg.revisions > 0) {
         var wRevFee = cfg.revisions * REVISION_FEE.web;
         wTotal += wRevFee;
         wBreakdown.push('🔁 ' + cfg.revisions + ' extra revision round(s): $' + wRevFee);
       }
       wBreakdown.push('💳 $' + STANDARD_DEPOSIT + ' deposit to book (part of this total)');
+      if (cfg.carePlan) wBreakdown.push('🛠️ Care plan: $' + CARE_PLAN_MONTHLY + '/month, billed monthly (not in this total)');
+      else if (kind === 'wix') wBreakdown.push('ℹ️ Wix bills its own plan (about $17–36/month) and your domain directly to you.');
+      else wBreakdown.push('ℹ️ Hosting is free; you only pay for your domain (about $10–20/year).');
       return {
         total: wTotal,
         deposit: STANDARD_DEPOSIT,
         depositCredited: true,
         breakdown: wBreakdown,
-        label: cfg.pages + ' page(s)'
+        label: (cfg.siteKind === 'wix' ? 'Wix site, ' : 'Custom site + editor, ') + cfg.pages + ' page(s)' + (cfg.carePlan ? ', care plan $' + CARE_PLAN_MONTHLY + '/month' : '')
       };
     }
     if (s.pricingModel === 'quote_only') {
@@ -756,10 +772,22 @@ const SCRIPT_URL = SERVICES_API_URL;
     }
 
     if (s.pricingModel === 'per_page') {
-      html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-pages-' + s.id + '">📄 Pages ($' + WEB_FIRST_PAGE + ' for the first, $' + s.pageRate + ' each after)' + (minPages(s) > 1 ? ', at least ' + minPages(s) : '') + '</label>' +
+      var wk = cfg.siteKind === 'wix' ? 'wix' : 'custom', wr = webRates(s, wk);
+      html += '<span class="nrn-config-row"><span class="nrn-config-label">🌐 What kind of site?</span><span class="nrn-tiers-stack">' +
+        WEB_KINDS.map(function (k) {
+          var on = wk === k.value, r = webRates(s, k.value);
+          return '<button type="button" class="nrn-tier' + (on ? ' active' : '') + '" data-service="' + s.id + '" data-field="siteKind" data-value="' + k.value + '" aria-pressed="' + on + '">' +
+            k.label + ' ($' + r.first + ' first page, $' + r.extra + ' each after)<span class="nrn-tier-sub">' + k.note + '</span></button>';
+        }).join('') + '</span></span>';
+      html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-pages-' + s.id + '">📄 Pages ($' + wr.first + ' for the first, $' + wr.extra + ' each after)' + (minPages(s) > 1 ? ', at least ' + minPages(s) : '') + '</label>' +
         '<input type="number" id="nrn-pages-' + s.id + '" min="' + minPages(s) + '" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="pages" value="' + cfg.pages + '" /></span>';
       html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-webrevisions-' + s.id + '">🔁 Extra revision rounds beyond the 2 free ($' + REVISION_FEE.web + '/round)</label>' +
         '<input type="number" id="nrn-webrevisions-' + s.id + '" min="0" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="revisions" value="' + cfg.revisions + '" /></span>';
+      html += '<span class="nrn-config-row"><span class="nrn-config-label">➕ Optional</span>' +
+        '<span class="nrn-toggle-row">' +
+          '<button type="button" class="nrn-toggle' + (cfg.carePlan ? ' active' : '') + '" data-service="' + s.id + '" data-field="carePlan" data-value="toggle" aria-pressed="' + !!cfg.carePlan + '">🛠️ Care plan: we make your edits ($' + CARE_PLAN_MONTHLY + '/month)</button>' +
+        '</span></span>' +
+        '<span class="nrn-help-text" style="margin:0 0 8px;">Only if you would rather not edit it yourself: checks, updates and up to 1 hour of edits a month. Cancel any time. You own your site either way.</span>';
     }
 
     html += '<span class="nrn-breakdown">' + price.breakdown.join('<br>') + '</span>';
@@ -806,7 +834,8 @@ const SCRIPT_URL = SERVICES_API_URL;
           if (value === 'recap') cfg.studio = 'standard';
         }
         else if (field === 'studio') cfg.studio = value;
-        else if (field === 'talent' || field === 'facility' || field === 'whiteLabel' || field === 'rushDelivery' || field === 'vertical') cfg[field] = !cfg[field];
+        else if (field === 'siteKind') cfg.siteKind = value === 'wix' ? 'wix' : 'custom';
+        else if (field === 'talent' || field === 'facility' || field === 'whiteLabel' || field === 'rushDelivery' || field === 'vertical' || field === 'carePlan') cfg[field] = !cfg[field];
         saveSelection();
         renderGrid();
         renderLoadout();

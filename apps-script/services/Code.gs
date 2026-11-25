@@ -562,7 +562,7 @@ function buildQuoteInvoiceEmail(name, summary, total, timeLabel) {
     addIncluded('\uD83C\uDFA8 Graphic design:', 'Full fee due upfront. Includes 2 free revision rounds; additional rounds are $50/round.');
   }
   if (hasWeb) {
-    addIncluded('\uD83D\uDCBB Web design:', 'Site build completed within 15 business days of receiving all required assets. Includes one 1-hour review session and 2 free revision rounds after that (extra rounds $50/round; meeting time beyond the 1-hour session is $25/hr). Any domain or hosting costs are listed in your quote.');
+    addIncluded('\uD83D\uDCBB Web design:', 'Site build completed within 15 business days of receiving all required assets. Includes one 1-hour review session and 2 free revision rounds after that (extra rounds $50/round; meeting time beyond the 1-hour session is $25/hr). A custom site comes with a simple editor you use yourself (included); a Wix site is built in your own Wix account (Wix bills its plan to you). Your domain and accounts are in your name. Optional care plan: $75/month if you would rather we make the edits.');
   }
   if (hasLivestream) {
     addIncluded('\uD83D\uDCE1 Livestream:', 'Covers the live broadcast only — highlight reels and clips are billed separately. Stream archive access is immediate after the broadcast; high-quality backup files are available on request within 14 days.');
