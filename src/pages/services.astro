@@ -288,6 +288,8 @@ const SCRIPT_URL = SERVICES_API_URL;
   // reflects old photography/video rates, so those two are computed here.
   function displayStartingPrice(s) {
     if (s.id === 'photography') return PHOTO_ON_LOCATION_RATE * s.minHours + STANDARD_DEPOSIT;
+    // Web design: the sheet's MinHours column is the minimum number of pages (Nov 25, 2026: 3 pages).
+    if (s.pricingModel === 'per_page') return s.pageRate * minPages(s) + STANDARD_DEPOSIT;
     if (s.id === 'video') {
       var cheapest = Infinity;
       VIDEO_TYPES.forEach(function (v) {
@@ -301,6 +303,8 @@ const SCRIPT_URL = SERVICES_API_URL;
     return s.startingPrice;
   }
 
+  function minPages(s) { return Math.max(1, Number(s.minHours) || 1); }
+
   function defaultConfig(s) {
     if (s.pricingModel === 'package') return { tierIndices: [0], consultHours: 1, dfRevisions: 0, revisions: 0, rushDelivery: false };
     if (s.pricingModel === 'hourly') {
@@ -308,7 +312,7 @@ const SCRIPT_URL = SERVICES_API_URL;
       return { hours: s.minHours };
     }
     if (s.pricingModel === 'hourly_plus_edit') return { hours: VIDEO_BASE_HOURS, studio: 'standard', videoType: 'promo', tierIndex: 0, interviewTier: 0, revisions: 0, extraLocations: 0, whiteLabel: false, talent: false, facility: false, interviewRevisions: 0, interviewLocations: 0 };
-    if (s.pricingModel === 'per_page') return { pages: 1, revisions: 0 };
+    if (s.pricingModel === 'per_page') return { pages: minPages(s), revisions: 0 };
     return {};
   }
 
@@ -362,6 +366,8 @@ const SCRIPT_URL = SERVICES_API_URL;
     }
     if (s.pricingModel === 'hourly') {
       var rate = s.id === 'photography' ? (cfg.studio === 'facility' ? PHOTO_STUDIO_RATE : PHOTO_ON_LOCATION_RATE) : s.hourlyRate;
+      // A choice saved on this phone before a minimum went up still counts at least the minimum.
+      if (cfg.hours < s.minHours) cfg.hours = s.minHours;
       var prod = rate * cfg.hours;
       var whereLabel = (s.id === 'photography' && cfg.studio === 'facility') ? ' (in-studio)' : (s.id === 'photography' ? ' (on-location)' : '');
       var hTotal = prod;
@@ -451,6 +457,7 @@ const SCRIPT_URL = SERVICES_API_URL;
       };
     }
     if (s.pricingModel === 'per_page') {
+      if (cfg.pages < minPages(s)) cfg.pages = minPages(s);
       var subtotal = s.pageRate * cfg.pages;
       var wTotal = subtotal;
       var wBreakdown = ['📄 ' + cfg.pages + ' page(s) @ $' + s.pageRate + '/page: $' + subtotal];
@@ -705,8 +712,8 @@ const SCRIPT_URL = SERVICES_API_URL;
     }
 
     if (s.pricingModel === 'per_page') {
-      html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-pages-' + s.id + '">📄 Pages</label>' +
-        '<input type="number" id="nrn-pages-' + s.id + '" min="1" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="pages" value="' + cfg.pages + '" /></span>';
+      html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-pages-' + s.id + '">📄 Pages' + (minPages(s) > 1 ? ' (at least ' + minPages(s) + ')' : '') + '</label>' +
+        '<input type="number" id="nrn-pages-' + s.id + '" min="' + minPages(s) + '" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="pages" value="' + cfg.pages + '" /></span>';
       html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-webrevisions-' + s.id + '">🔁 Extra revision rounds beyond the 2 free ($' + REVISION_FEE.web + '/round)</label>' +
         '<input type="number" id="nrn-webrevisions-' + s.id + '" min="0" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="revisions" value="' + cfg.revisions + '" /></span>';
     }
