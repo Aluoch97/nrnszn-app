@@ -20,7 +20,7 @@ const inApp = e.video && parseYouTube(e.video);   // a YouTube recap plays right
 ---
 <Site
   title={`${e.title} | NuRenaissance`}
-  description={`${e.title}: ${e.when}${e.where ? ', ' + e.where : ''}. ${String(e.text || '').slice(0, 110)}`.trim()}
+  description={(() => { const d = `${e.title}: ${e.when}${e.where ? ', ' + e.where : ''}. ${String(e.text || '')}`.trim(); return d.length <= 158 ? d : d.slice(0, 157).replace(/\s+\S*$/, '') + '…'; })()}
   canonicalPath={`/events/${slug}`}
   image={image}
   back={{ href: '/events', label: 'Events' }}

@@ -9,6 +9,6 @@ export default defineConfig({
   build: { inlineStylesheets: 'always' },
   integrations: [
     // The admin page and the version history are for the owner, not for search results.
-    sitemap({ filter: (page) => !/\/(admin|whats-new|account)\/?$/.test(page) }),
+    sitemap({ filter: (page) => !/\/(admin|whats-new|account|event-live)\/?$/.test(page) }),
   ],
 });
