@@ -14,7 +14,7 @@ interface Props {
 }
 const { title, description, image = '/img/share.jpg', canonicalPath, noindex = false } = Astro.props;
 // Shared links (iMessage, Instagram, etc.) show the wide NuRenaissance card (1200x630) with the same line on every page.
-const shareText = 'The NuRenaissance is a Nashville-based media company empowering creatives & celebrating bold individuality.';
+const shareText = 'NuRenaissance is an independent media company empowering creatives & celebrating bold individuality.';
 const canonical = new URL(canonicalPath ?? Astro.url.pathname, Astro.site);
 const ogImage = new URL(image, Astro.site);
 ---

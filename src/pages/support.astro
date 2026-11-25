@@ -7,15 +7,14 @@ import AboutSupport from '../components/AboutSupport.astro';
 import PageHero from '../components/PageHero.astro';
 ---
 <Site
-  title="About & Support | NuRenaissance"
-  description="About NuRenaissance Media: our story and services, ways to pay or support us, and how to get in touch."
-  canonicalPath="/about/"
+  title="Pay or support | NuRenaissance"
+  description="Pay for a NuRenaissance Media project, ticket or merch, or support independent art: card, Apple Pay, PayPal, Cash App, Venmo or Zelle."
 >
   <PageHero
     page="support"
-    title="About"
-    kicker="Est. 2017"
-    text="A home for bold, independent art. Our story, ways to support us, and how to reach us."
+    title="Pay or support"
+    kicker="NuRenaissance Media"
+    text="Pay for a project, a ticket or merch, or support independent art."
     images={[
       { src: '/img/portal-poster-640.webp', srcset: '/img/portal-poster-640.webp 640w, /img/portal-poster.webp 1280w' },
       { src: '/img/home-hero-640.webp', srcset: '/img/home-hero-640.webp 640w, /img/home-hero.webp 1280w' },
@@ -23,7 +22,7 @@ import PageHero from '../components/PageHero.astro';
     mascot
     accent="#8520cc"
   />
-  <AboutSupport />
+  <AboutSupport mode="support" />
 </Site>
 
 <script>

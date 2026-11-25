@@ -161,10 +161,11 @@ import Site from '../layouts/Site.astro';
             <label for="cl-status">Status</label>
             <select id="cl-status"><option value="requested">Quote requested</option><option value="quote">Quote sent</option><option value="booked" selected>Booked</option><option value="in-progress">In progress</option><option value="review">Ready for review</option><option value="done">Done</option><option value="paused">Paused</option><option value="cancelled">Cancelled</option></select>
             <label for="cl-total">Total in dollars</label><input id="cl-total" type="text" inputmode="decimal" maxlength="14" autocomplete="off" required />
-            <label for="cl-due">Due date <span class="hint">(optional)</span></label><input id="cl-due" type="date" />
+            <label for="cl-due">Target date <span class="hint">(optional: the shoot date, or when it should be finished; the client sees it)</span></label><input id="cl-due" type="date" />
             <label for="cl-note">Note for the client <span class="hint">(optional, they see it)</span></label><textarea id="cl-note" rows="3" maxlength="2000"></textarea>
             <label for="cl-link">Files link <span class="hint">(optional, starts with https://, they see it)</span></label><input id="cl-link" type="url" maxlength="500" autocomplete="off" />
             <p id="cl-error" class="error" role="alert"></p>
+            <label class="check"><input id="cl-notify" type="checkbox" checked /> E-mail the client when the status changes <span class="hint">(what it means, the target date, your note and a link to their account)</span></label>
             <div class="actions"><button type="submit" class="btn primary" id="cl-save">Save project</button><button type="button" class="btn" id="cl-cancel">Cancel</button><button type="button" class="btn danger" id="cl-delete" hidden>Delete project</button></div>
           </form>
           <form id="cp-form" class="evform" hidden>
@@ -623,7 +624,7 @@ import Site from '../layouts/Site.astro';
       if (res.status === 401) { signedOut('Please sign in again.'); return false; }
       const j = await res.json().catch(() => ({}));
       if (!j.ok) { $(errId).textContent = j.message || 'Could not save.'; return false; }
-      await loadClients(); return true;
+      await loadClients(); return j;
     } catch { $(errId).textContent = 'Could not reach the site. Try again.'; return false; }
   }
   function openProj(p: Proj | null) {
@@ -631,7 +632,7 @@ import Site from '../layouts/Site.astro';
     $('cl-form-title').textContent = p ? 'Edit project' : 'New project'; $('cl-delete').hidden = !p;
     fld('cl-email').value = p ? p.email : ''; fld('cl-name').value = p ? p.clientName : ''; fld('cl-title').value = p ? p.title : ''; fld('cl-service').value = p ? p.service : '';
     fld<HTMLSelectElement>('cl-status').value = p ? p.status : 'booked'; fld('cl-total').value = p ? String(p.total / 100) : ''; fld('cl-due').value = p ? p.due : '';
-    fld<HTMLTextAreaElement>('cl-note').value = p ? p.note : ''; fld('cl-link').value = p ? p.link : '';
+    fld<HTMLTextAreaElement>('cl-note').value = p ? p.note : ''; fld('cl-link').value = p ? p.link : ''; fld('cl-notify').checked = true;
     fld('cl-email').focus();
   }
   const closeProj = () => { $('cl-form').hidden = true; $('cl-add').hidden = false; editingP = null; };
@@ -646,8 +647,9 @@ import Site from '../layouts/Site.astro';
   $('cl-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const project = { id: editingP ? editingP.id : undefined, email: fld('cl-email').value, clientName: fld('cl-name').value, title: fld('cl-title').value, service: fld('cl-service').value,
-      status: fld<HTMLSelectElement>('cl-status').value, total: fld('cl-total').value, due: fld('cl-due').value, note: fld<HTMLTextAreaElement>('cl-note').value, link: fld('cl-link').value };
-    if (await clientPost({ action: 'client-save', project }, 'cl-error')) { closeProj(); $('cl-msg').textContent = 'Saved. The client sees it at nrnszn.com/account.'; }
+      status: fld<HTMLSelectElement>('cl-status').value, total: fld('cl-total').value, due: fld('cl-due').value, note: fld<HTMLTextAreaElement>('cl-note').value, link: fld('cl-link').value, notify: fld('cl-notify').checked };
+    const j: any = await clientPost({ action: 'client-save', project }, 'cl-error');
+    if (j) { closeProj(); $('cl-msg').textContent = j.emailed ? 'Saved, and the client was e-mailed about it.' : j.emailNote === 'daily-limit' ? 'Saved. The e-mail was not sent: today\'s e-mail limit is reached.' : j.emailNote === 'no-key' ? 'Saved. (E-mail is not set up, so the client was not e-mailed.)' : 'Saved. The client sees it at nrnszn.com/account.'; }
   });
   $('cl-delete').addEventListener('click', async () => {
     if (!editingP || !confirm(`Delete "${editingP.title}" and its payments? This cannot be undone.`)) return;

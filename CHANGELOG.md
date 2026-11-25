@@ -4,6 +4,16 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.28 · Nov 25, 2026
+A more professional site, and clearer service requests.
+- **Home** now says what we do up front: "Video, photo and creative services for artists and brands", with **Book a service** and **See our work** buttons, a short at-a-glance strip (since 2017, showcases hosted, press features) and a **What we do** section. The press section no longer repeats the same album review three times.
+- **About** is now the business page: our story, what we do, **how a project works** step by step, delivery and payment answers, and our contact details in plain sight. The payment options moved to their own page, **Pay or support** (/support).
+- **Footer**: our e-mail address on every page.
+- **Less tied to one city**: the headline, descriptions, footer and e-mails no longer say "Nashville" (the studio is moving to Atlanta in April 2027). Our story still says where we started, and the legal pages keep our current address until the move.
+- **Services**: clean icons instead of emoji, a **See our work** section, and **Good to know** answers (what happens after you send a request, deposits, when you pay, changes included, delivery times).
+- **After you send a service request** you get a confirmation e-mail with what happens next, and we get your request right away.
+- **Clients get an e-mail when their project's status changes** (booked, started, ready for review, done), with the target date and a link to their account.
+
 ## 3.27 · Nov 25, 2026
 - **Video prices by kind of video** on the Services page: music video from $900, podcast from $500 per episode (priced by episode length), event recap from $750, promo from $700, interview from $600.
 - **Raise the Bar** (the one-mic performance series) is $150, with a new **vertical cut for Reels/TikTok** add-on for $50.

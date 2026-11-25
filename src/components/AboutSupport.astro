@@ -1,57 +1,89 @@
 ---
-// About + Support on one page. Shown at /about, and at /support (opens
-// scrolled to the payment section) so invoice emails, ticket buttons and
-// old links keep working.
+// About (/about) and Pay or support (/support). Nov 25, 2026 (Nick, "high ethos"): About is the business page (story, what we do,
+// how a project works, contact in plain sight) and no longer asks for donations; the payment options live on /support, which
+// invoice e-mails, the Events ticket buttons (?for=...) and /shop link to.
 import WidgetFrame from './WidgetFrame.astro';
+import { pastEvents } from '../data/events.js';
+interface Props { mode?: 'about' | 'support' }
+const { mode = 'about' } = Astro.props;
+const EMAIL = 'nurrenaissance@gmail.com';
+const since = 2017, years = new Date().getFullYear() - since;
 ---
 <div class="page">
-    <section aria-labelledby="faq-h">
-      <h2 id="faq-h" class="title">FAQs</h2>
-      <p class="lede">A legacy of authentic storytelling and creative empowerment.</p>
-      <div class="faqs">
-        <details open>
-          <summary>What is the story behind NuRenaissance?</summary>
-          <p>
-            Founded in 2017 by Nicolas Soul and whyshiki, NuRenaissance began as a grassroots record label fueled by
-            a passion for pure artistry. Inspired by the cultural explosion of the Harlem Renaissance, the founders
-            sought to create a modern-day equivalent—a sanctuary for artists to innovate and collaborate without
-            boundaries. Over time, the label naturally expanded into a full-scale media company to meet the growing
-            need for high-quality, soulful storytelling in the digital age.
-          </p>
-        </details>
-        <details>
-          <summary>What services does NuRenaissance offer today?</summary>
-          <p>We empower artists, entrepreneurs, and brands through professional digital services, including:</p>
-          <ul>
-            <li><strong>Video &amp; Photo Editing:</strong> Professional production to ensure your visuals meet industry standards.</li>
-            <li><strong>Web Design:</strong> Building digital homes that reflect your brand's unique aesthetic and purpose.</li>
-            <li><strong>Admin Services:</strong> Strategy and execution to grow your community and maintain a consistent voice.</li>
-            <li><strong>Consultations:</strong> One-on-one sessions to refine your creative direction and brand strategy.</li>
-          </ul>
-        </details>
-        <details>
-          <summary>How do I get started or get a quote?</summary>
-          <p>
-            For all service inquiries, project scopes, and rate cards, please reach out to us via email at
-            <a href="mailto:nurrenaissance@gmail.com">nurrenaissance@gmail.com</a>. Please provide a brief description
-            of your needs so we can best assist you.
-          </p>
-        </details>
-      </div>
-    </section>
+  {mode === 'about' && (
+    <>
+      <section aria-labelledby="story-h">
+        <h2 id="story-h" class="title">Our story</h2>
+        <p class="body">
+          NuRenaissance was founded in Nashville in {since} by Nicolas Soul and whyshiki as an independent record label, inspired by
+          the Harlem Renaissance: a home where artists could create and work together without limits. It grew into{' '}
+          <strong>NuRenaissance Media</strong>, a creative studio that films, photographs, streams and builds for artists, brands and
+          events, and runs the Renaissance Certified showcase series.
+        </p>
+        <ul class="facts" aria-label="At a glance">
+          <li><b>{years}+ years</b><span>of independent work</span></li>
+          <li><b>{pastEvents.length}</b><span>showcases and screenings hosted</span></li>
+          <li><b>4</b><span>press features</span></li>
+        </ul>
+      </section>
 
-    <section id="support" class="support" aria-label="Support NuRenaissance">
+      <section aria-labelledby="do-h">
+        <h2 id="do-h" class="title">What we do</h2>
+        <ul class="do">
+          <li><strong>Video production</strong><span>Music videos, podcasts, event recaps, promos and interviews, shot and edited.</span></li>
+          <li><strong>Photography</strong><span>Events, artists and brands, on location or in the studio.</span></li>
+          <li><strong>Livestream</strong><span>Multi-camera live shows to YouTube or Twitch.</span></li>
+          <li><strong>Web and graphic design</strong><span>Custom websites, cover art, flyers, logos and social graphics.</span></li>
+          <li><strong>Artist management and admin</strong><span>Streaming and royalty setup, playlist pitching, social media and creative consultations.</span></li>
+        </ul>
+        <a class="cbtn cbtn-main" href="/services">See prices and book</a>
+      </section>
+
+      <section aria-labelledby="how-h">
+        <h2 id="how-h" class="title">How a project works</h2>
+        <ol class="steps">
+          <li><b>Tell us what you need.</b> Pick services on the Services page and see the price as you go, or e-mail us. You get a confirmation right away, and we reply within 2 business days.</li>
+          <li><b>A 30-minute call.</b> Book it yourself on the Services page. We go over your idea, dates and budget.</li>
+          <li><b>Your written quote.</b> The final price, what is included and the payment schedule. A $50 deposit books your date and counts toward the total.</li>
+          <li><b>We make it, and you can follow along.</b> We e-mail you when work starts, when it is ready for your review (two rounds of changes are included) and when it is done. Sign in at nrnszn.com/account to see the status, dates and balance any time.</li>
+        </ol>
+      </section>
+
+      <section aria-labelledby="faq-h">
+        <h2 id="faq-h" class="title">Questions</h2>
+        <div class="faqs">
+          <details>
+            <summary>How fast is delivery?</summary>
+            <p>Photos within 10 business days. Websites within 15 business days of getting your files. Video edit dates are set in your quote, since they depend on length. Rush delivery is available for some services.</p>
+          </details>
+          <details>
+            <summary>How do I pay?</summary>
+            <p>By card or Apple Pay (through Stripe), or with PayPal, Cash App, Venmo or Zelle. Clients can pay a balance from their account page. <a href="/support">See all payment options</a>.</p>
+          </details>
+        </div>
+      </section>
+    </>
+  )}
+
+  {mode === 'support' && (
+    <section id="support" class="support" aria-labelledby="pay-h">
+      <h2 id="pay-h" class="title">Pay or support</h2>
+      <p class="lede">Paying for a project, a ticket or merch, or supporting independent art: every option is below. Clients can also pay a balance by card from their <a href="/account">account</a>.</p>
       <WidgetFrame src="/widgets/support.html" title="NuRenaissance payment options" passParams />
     </section>
+  )}
 
-    <section aria-labelledby="connect-h">
-      <h2 id="connect-h" class="title">Connect</h2>
-      <div class="connect">
-        <p>Questions, bookings or press? We read every message.</p>
-        <a class="cbtn cbtn-main" href="mailto:nurrenaissance@gmail.com?subject=Contact%20-%20Website">Email us</a>
-      </div>
-    </section>
-  </div>
+  <section aria-labelledby="connect-h">
+    <h2 id="connect-h" class="title">Contact</h2>
+    <div class="connect card">
+      <p class="who"><strong>NuRenaissance Media</strong><br />Working with clients in person and online</p>
+      <p><a class="mail" href={`mailto:${EMAIL}?subject=Contact%20-%20Website`}>{EMAIL}</a></p>
+      <p>Bookings, quotes, press and anything else. We reply within 2 business days.</p>
+      <a class="cbtn cbtn-main" href={`mailto:${EMAIL}?subject=Contact%20-%20Website`}>Email us</a>
+      {mode === 'about' && <a class="cbtn" href="/support">Payment options</a>}
+    </div>
+  </section>
+</div>
 
 <style>
   /* Support: the payment widget sits in the page's column, no extra side padding */
@@ -88,6 +120,23 @@ import WidgetFrame from './WidgetFrame.astro';
   details a { color: var(--gold-300); }
 
   .connect { display: grid; gap: var(--space-3); }
+  .card { padding: var(--space-4); border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238; }
+  .connect .who { color: #f3f0fa; font-size: 16px; line-height: 1.5; }
+  .mail { color: var(--gold-300); font-size: 17px; font-weight: 700; overflow-wrap: anywhere; }
+  .body { margin: 0 0 var(--space-4); color: #d9d2e9; font-size: 16px; line-height: 1.7; }
+  .body strong { color: #f3f0fa; }
+  .lede a { color: var(--gold-300); }
+  .facts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+  .facts li { min-width: 0; padding: var(--space-3); border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238; display: grid; gap: 2px; }
+  .facts b { font-family: var(--font-poster); font-size: clamp(22px, 6vw, 30px); color: var(--gold-300); line-height: 1.1; }
+  .facts span { font-size: 14px; color: #b9b0cf; line-height: 1.35; }
+  .do { list-style: none; margin: 0 0 var(--space-4); padding: 0; display: grid; gap: var(--space-2); }
+  .do li { display: grid; gap: 2px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238; min-width: 0; }
+  .do strong { color: #f3f0fa; font-size: 16px; } .do span { color: #b9b0cf; font-size: 15px; line-height: 1.5; }
+  .steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: var(--space-3); }
+  .steps li { counter-increment: s; position: relative; padding: var(--space-3) var(--space-4) var(--space-3) 60px; border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238; color: #d9d2e9; font-size: 15px; line-height: 1.6; }
+  .steps li::before { content: counter(s); position: absolute; left: var(--space-4); top: var(--space-3); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--gold-300); color: var(--purple-900); font-weight: 800; }
+  .steps b { color: #f3f0fa; }
   .connect p { margin: 0 0 var(--space-1); color: #a99fc6; font-size: 15px; }
   .cbtn {
     display: grid; place-items: center; min-height: 56px; border-radius: var(--radius-pill);
