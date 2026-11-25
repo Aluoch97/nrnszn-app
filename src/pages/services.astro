@@ -223,14 +223,11 @@ const SCRIPT_URL = SERVICES_API_URL;
   var INTERVIEW_FACILITY_FEE = 60;
   var INTERVIEW_LOCATION_FEE = 50;
   var INTERVIEW_REVISION_FEE = 75;
-  // Video shoot pricing (every video type except Raise the Bar): $500 covers
-  // the first 2 hours, then $100 for each additional hour. Edit is added on
-  // top. Hardcoded so the old per-hour rates in the Sheet can't override it.
-  var VIDEO_BASE_SHOOT = 500;
+  // Video shoot and edit prices per kind of video live in VIDEO_PLANS below; a new video starts at 2 shoot hours.
   var VIDEO_BASE_HOURS = 2;
-  var VIDEO_EXTRA_HOUR_RATE = 100;
-  var RAISE_THE_BAR_PRICE = 100;   // one mic performance series
-  var RAISE_THE_BAR_DEPOSIT = 50;  // $50 to book, remaining $50 due at the shoot
+  var RAISE_THE_BAR_PRICE = 150;   // one mic performance series (Nick, Nov 25, 2026; edited with luoh)
+  var RAISE_THE_BAR_VERTICAL_FEE = 50;   // add-on: a vertical cut for Reels / TikTok
+  var RAISE_THE_BAR_DEPOSIT = 50;  // $50 to book, the rest due at the shoot
   var PHOTOGRAPHY_EXAMPLE_URL = '/gallery';
   var VIDEO_TYPE_EXAMPLES = {
     music: 'https://www.youtube.com/playlist?list=PLVprhlbgSo1sfS02MFZbi3t7pCJkoy9rd',
@@ -264,20 +261,25 @@ const SCRIPT_URL = SERVICES_API_URL;
     { value: 'raisethebar', label: '🎤 Raise the Bar' }
   ];
 
-  // Edit-length pricing for EVERY video type, Interview included. Hardcoded
-  // so old tier rows left in the Sheet can't override it.
-  var VIDEO_EDIT_TIERS = [
-    { name: 'Up to 5 min', price: 300 },
-    { name: 'Over 5 min', price: 600 }
-  ];
+  // Prices for each kind of video (Nick, Nov 25, 2026): what the shoot covers and the edit lengths. Hardcoded so old tier rows left
+  // in the Sheet can't override them. `base` covers the first `baseHours`, then `extra` per hour; Interview is one fixed hour.
+  var VIDEO_PLANS = {
+    music: { base: 500, baseHours: 2, extra: 100, edits: [{ name: 'Up to 5 min', price: 400 }, { name: 'Over 5 min', price: 600 }] },
+    podcast: { base: 300, baseHours: 2, extra: 100, perEpisode: true, edits: [{ name: 'Up to 30 min', price: 200 }, { name: 'Up to 60 min', price: 300 }, { name: 'Over 60 min', price: 400 }] },
+    recap: { base: 500, baseHours: 2, extra: 100, edits: [{ name: '1–3 min recap', price: 250 }, { name: 'Up to 10 min', price: 400 }] },
+    promo: { base: 500, baseHours: 2, extra: 100, edits: [{ name: 'Up to 60 sec', price: 200 }, { name: 'Up to 3 min', price: 300 }] },
+    interview: { base: 350, baseHours: 1, extra: 0, edits: [{ name: 'Up to 10 min', price: 250 }, { name: 'Over 10 min', price: 400 }] }
+  };
+  function videoPlan(type) { return VIDEO_PLANS[type] || VIDEO_PLANS.promo; }
+  function videoEdit(plan, i) { return plan.edits[Math.min(Math.max(0, i || 0), plan.edits.length - 1)]; }
 
-  // Shoot cost = $500 base (first 2 hours) + $100 per extra hour.
-  function videoShootCost(hours, breakdown) {
-    var extra = Math.max(0, hours - VIDEO_BASE_HOURS);
-    var extraCost = Math.round(extra * VIDEO_EXTRA_HOUR_RATE * 100) / 100;
-    breakdown.push('🎬 Shoot, first ' + VIDEO_BASE_HOURS + ' hrs: $' + VIDEO_BASE_SHOOT);
-    if (extra > 0) breakdown.push('🕒 ' + extra + ' extra hr(s) @ $' + VIDEO_EXTRA_HOUR_RATE + '/hr: $' + extraCost);
-    return VIDEO_BASE_SHOOT + extraCost;
+  // Shoot cost = the plan's base (first hours) + its rate per extra hour.
+  function videoShootCost(plan, hours, breakdown) {
+    var extra = Math.max(0, hours - plan.baseHours);
+    var extraCost = Math.round(extra * plan.extra * 100) / 100;
+    breakdown.push('🎬 Shoot, first ' + plan.baseHours + ' hrs: $' + plan.base);
+    if (extra > 0) breakdown.push('🕒 ' + extra + ' extra hr(s) @ $' + plan.extra + '/hr: $' + extraCost);
+    return plan.base + extraCost;
   }
 
   function photoFacilityRate(s) {
@@ -287,9 +289,11 @@ const SCRIPT_URL = SERVICES_API_URL;
   // The "starting at" teaser comes from the Sheet via Code.gs, which still
   // reflects old photography/video rates, so those two are computed here.
   function displayStartingPrice(s) {
-    if (s.id === 'photography') return PHOTO_ON_LOCATION_RATE * s.minHours + STANDARD_DEPOSIT;
+    // The $50 deposit is part of these totals (credited), never added on top.
+    if (s.id === 'photography') return PHOTO_ON_LOCATION_RATE * s.minHours;
+    if (s.pricingModel === 'hourly') return s.hourlyRate * s.minHours;
     // Web design: the sheet's MinHours column is the minimum number of pages (Nov 25, 2026: 3 pages).
-    if (s.pricingModel === 'per_page') return s.pageRate * minPages(s) + STANDARD_DEPOSIT;
+    if (s.pricingModel === 'per_page') return s.pageRate * minPages(s);
     if (s.id === 'video') {
       var cheapest = Infinity;
       VIDEO_TYPES.forEach(function (v) {
@@ -383,8 +387,7 @@ const SCRIPT_URL = SERVICES_API_URL;
           hBreakdown.push('⚡ Rush delivery (48hr): $' + PHOTO_RUSH_FEE);
         }
       }
-      hTotal += STANDARD_DEPOSIT;
-      hBreakdown.push('💳 Deposit: $' + STANDARD_DEPOSIT);
+      hBreakdown.push('💳 $' + STANDARD_DEPOSIT + ' deposit to book (part of this total)');
       return {
         total: hTotal,
         deposit: STANDARD_DEPOSIT,
@@ -395,9 +398,9 @@ const SCRIPT_URL = SERVICES_API_URL;
     }
     if (s.pricingModel === 'hourly_plus_edit') {
       if (cfg.videoType === 'interview') {
-        var it = VIDEO_EDIT_TIERS[cfg.interviewTier || 0] || VIDEO_EDIT_TIERS[0];
-        var itBreakdown = ['🎙 Interview shoot: $' + VIDEO_BASE_SHOOT, '✂️ Edit, ' + it.name + ': $' + it.price];
-        var itTotal = VIDEO_BASE_SHOOT + it.price;
+        var ip = VIDEO_PLANS.interview, it = videoEdit(ip, cfg.interviewTier);
+        var itBreakdown = ['🎙 Interview shoot (' + ip.baseHours + ' hr): $' + ip.base, '✂️ Edit, ' + it.name + ': $' + it.price];
+        var itTotal = ip.base + it.price;
         if (cfg.talent) { itTotal += INTERVIEW_TALENT_FEE; itBreakdown.push('🎤 On-screen talent: $' + INTERVIEW_TALENT_FEE); }
         if (cfg.facility) { itTotal += INTERVIEW_FACILITY_FEE; itBreakdown.push('🏠 Production facility: $' + INTERVIEW_FACILITY_FEE); }
         if (cfg.interviewLocations > 0) {
@@ -410,25 +413,23 @@ const SCRIPT_URL = SERVICES_API_URL;
           itTotal += itRevFee;
           itBreakdown.push('🔁 ' + cfg.interviewRevisions + ' extra revision round(s): $' + itRevFee);
         }
-        itTotal += STANDARD_DEPOSIT;
-        itBreakdown.push('💳 Deposit: $' + STANDARD_DEPOSIT);
+        itBreakdown.push('💳 $' + STANDARD_DEPOSIT + ' deposit to book (part of this total)');
         return { total: itTotal, deposit: STANDARD_DEPOSIT, depositCredited: true, breakdown: itBreakdown, label: 'Interview: ' + it.name };
       }
       if (cfg.videoType === 'raisethebar') {
-        return {
-          total: RAISE_THE_BAR_PRICE,
-          deposit: RAISE_THE_BAR_DEPOSIT,
-          depositCredited: true,
-          breakdown: ['🎤 Raise the Bar performance: $' + RAISE_THE_BAR_PRICE, '💳 Deposit: $' + RAISE_THE_BAR_DEPOSIT],
-          label: 'Raise the Bar'
-        };
+        var rtb = RAISE_THE_BAR_PRICE + (cfg.vertical ? RAISE_THE_BAR_VERTICAL_FEE : 0);
+        var rtbBreakdown = ['🎤 Raise the Bar performance: $' + RAISE_THE_BAR_PRICE];
+        if (cfg.vertical) rtbBreakdown.push('📱 Vertical cut for Reels/TikTok: $' + RAISE_THE_BAR_VERTICAL_FEE);
+        rtbBreakdown.push('💳 $' + RAISE_THE_BAR_DEPOSIT + ' deposit to book (part of this total)');
+        return { total: rtb, deposit: RAISE_THE_BAR_DEPOSIT, depositCredited: true, breakdown: rtbBreakdown, label: 'Raise the Bar' + (cfg.vertical ? ' + vertical cut' : '') };
       }
-      var editTier = VIDEO_EDIT_TIERS[cfg.tierIndex] || VIDEO_EDIT_TIERS[0];
+      var plan = videoPlan(cfg.videoType), editTier = videoEdit(plan, cfg.tierIndex);
       var deposit = STANDARD_DEPOSIT;
       var depositCredited = true;
       var videoTypeLabel = (VIDEO_TYPES.find(function (v) { return v.value === cfg.videoType; }) || VIDEO_TYPES[3]).label;
       var vBreakdown = [videoTypeLabel];
-      var shootCost = videoShootCost(cfg.hours, vBreakdown);
+      if (cfg.hours < plan.baseHours) cfg.hours = plan.baseHours;
+      var shootCost = videoShootCost(plan, cfg.hours, vBreakdown);
       var vTotal = shootCost + editTier.price;
       vBreakdown.push('✂️ Edit, ' + editTier.name + ': $' + editTier.price);
       if (cfg.extraLocations > 0) {
@@ -446,8 +447,7 @@ const SCRIPT_URL = SERVICES_API_URL;
         vTotal += wlFee;
         vBreakdown.push('🏷️ White-label (remove branding): $' + wlFee);
       }
-      vTotal += deposit;
-      vBreakdown.push('💳 Deposit: $' + deposit);
+      vBreakdown.push('💳 $' + deposit + ' deposit to book (part of this total)');
       return {
         total: vTotal,
         deposit: deposit,
@@ -466,8 +466,7 @@ const SCRIPT_URL = SERVICES_API_URL;
         wTotal += wRevFee;
         wBreakdown.push('🔁 ' + cfg.revisions + ' extra revision round(s): $' + wRevFee);
       }
-      wTotal += STANDARD_DEPOSIT;
-      wBreakdown.push('💳 Deposit: $' + STANDARD_DEPOSIT);
+      wBreakdown.push('💳 $' + STANDARD_DEPOSIT + ' deposit to book (part of this total)');
       return {
         total: wTotal,
         deposit: STANDARD_DEPOSIT,
@@ -651,10 +650,10 @@ const SCRIPT_URL = SERVICES_API_URL;
       if (cfg.videoType === 'interview') {
         html += renderVideoExampleLink(cfg.videoType);
         html += '<span class="nrn-config-row"><span class="nrn-config-label">✂️ Edit length</span><span class="nrn-tiers-stack">' +
-          VIDEO_EDIT_TIERS.map(function (t, i) {
+          VIDEO_PLANS.interview.edits.map(function (t, i) {
             var isActive = (cfg.interviewTier || 0) === i;
             return '<button type="button" class="nrn-tier' + (isActive ? ' active' : '') +
-              '" data-service="' + s.id + '" data-field="interviewTier" data-value="' + i + '" aria-pressed="' + isActive + '">' + t.name + '</button>';
+              '" data-service="' + s.id + '" data-field="interviewTier" data-value="' + i + '" aria-pressed="' + isActive + '">' + t.name + ' ($' + t.price + ')</button>';
           }).join('') + '</span></span>';
 
         html += '<span class="nrn-help-text" style="margin:0 0 8px;">By default, questions are asked by someone off-screen — they’re never shown on camera. Add on-screen talent below if you want a professional interviewer to appear on camera with you instead.</span>';
@@ -669,15 +668,20 @@ const SCRIPT_URL = SERVICES_API_URL;
           '<input type="number" id="nrn-ivrevisions-' + s.id + '" min="0" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="interviewRevisions" value="' + cfg.interviewRevisions + '" /></span>';
       } else if (cfg.videoType === 'raisethebar') {
         html += renderVideoExampleLink(cfg.videoType);
+        html += '<span class="nrn-config-row"><span class="nrn-config-label">➕ Add-ons</span>' +
+          '<span class="nrn-toggle-row">' +
+            '<button type="button" class="nrn-toggle' + (cfg.vertical ? ' active' : '') + '" data-service="' + s.id + '" data-field="vertical" data-value="toggle" aria-pressed="' + !!cfg.vertical + '">📱 Vertical cut for Reels/TikTok (+$' + RAISE_THE_BAR_VERTICAL_FEE + ')</button>' +
+          '</span></span>';
       } else {
         html += renderVideoExampleLink(cfg.videoType);
-        html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-hours-' + s.id + '">🕒 Shoot hours ($' + VIDEO_BASE_SHOOT + ' covers the first ' + VIDEO_BASE_HOURS + ', then $' + VIDEO_EXTRA_HOUR_RATE + '/hr)</label>' +
-          '<input type="number" id="nrn-hours-' + s.id + '" min="' + VIDEO_BASE_HOURS + '" step="0.5" class="nrn-hours-input" data-service="' + s.id + '" data-field="hours" value="' + cfg.hours + '" /></span>';
-        html += '<span class="nrn-config-row"><span class="nrn-config-label">✂️ Edit length</span><span class="nrn-tiers">' +
-          VIDEO_EDIT_TIERS.map(function (t, i) {
-            return '<button type="button" class="nrn-tier' + (i === cfg.tierIndex ? ' active' : '') +
-              '" data-service="' + s.id + '" data-field="tierIndex" data-value="' + i + '" aria-pressed="' + (i === cfg.tierIndex) + '">' +
-              t.name + '</button>';
+        var vp = videoPlan(cfg.videoType), vEditI = Math.min(cfg.tierIndex || 0, vp.edits.length - 1);
+        html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-hours-' + s.id + '">🕒 Shoot hours ($' + vp.base + ' covers the first ' + vp.baseHours + ', then $' + vp.extra + '/hr)</label>' +
+          '<input type="number" id="nrn-hours-' + s.id + '" min="' + vp.baseHours + '" step="0.5" class="nrn-hours-input" data-service="' + s.id + '" data-field="hours" value="' + Math.max(cfg.hours, vp.baseHours) + '" /></span>';
+        html += '<span class="nrn-config-row"><span class="nrn-config-label">✂️ ' + (vp.perEpisode ? 'Episode length' : 'Edit length') + '</span><span class="nrn-tiers">' +
+          vp.edits.map(function (t, i) {
+            return '<button type="button" class="nrn-tier' + (i === vEditI ? ' active' : '') +
+              '" data-service="' + s.id + '" data-field="tierIndex" data-value="' + i + '" aria-pressed="' + (i === vEditI) + '">' +
+              t.name + ' ($' + t.price + ')</button>';
           }).join('') + '</span></span>';
         html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-vidlocations-' + s.id + '">📍 Extra locations beyond primary ($' + VIDEO_LOCATION_FEE + ' each)</label>' +
           '<input type="number" id="nrn-vidlocations-' + s.id + '" min="0" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="extraLocations" value="' + cfg.extraLocations + '" /></span>';
@@ -722,10 +726,11 @@ const SCRIPT_URL = SERVICES_API_URL;
     if (s.pricingModel !== 'quote_only') {
       html += '<span class="nrn-config-total">Total: $' + price.total + '</span>';
       if (s.pricingModel === 'hourly_plus_edit' && cfg.videoType !== 'raisethebar') {
-        html += '<span class="nrn-help-text" style="margin:8px 0 0;">📌 Shoots start at $' + VIDEO_BASE_SHOOT + ' for ' + VIDEO_BASE_HOURS + ' hours, then $' + VIDEO_EXTRA_HOUR_RATE + '/hr, plus edit. Final price may vary based on decisions made in your consultation.</span>';
+        var hp = videoPlan(cfg.videoType);
+        html += '<span class="nrn-help-text" style="margin:8px 0 0;">📌 ' + (cfg.videoType === 'interview' ? 'Interviews are a 1-hour shoot ($' + hp.base + ')' : 'Shoots start at $' + hp.base + ' for ' + hp.baseHours + ' hours, then $' + hp.extra + '/hr') + ', plus edit' + (hp.perEpisode ? ', per episode' : '') + '. Final price may vary based on decisions made in your consultation.</span>';
       }
       if (price.deposit > 0) {
-        html += '<span class="nrn-deposit-note">💳 Deposit ' + (price.depositCredited ? 'credited toward this total' : 'in addition to the total above') + ', non-refundable</span>';
+        html += '<span class="nrn-deposit-note">💳 ' + (price.depositCredited ? '$' + price.deposit + ' deposit to book, part of this total' : 'Deposit in addition to the total above') + ', non-refundable</span>';
       }
     }
     html += '</span>';
@@ -756,11 +761,12 @@ const SCRIPT_URL = SERVICES_API_URL;
         }
         else if (field === 'videoType') {
           cfg.videoType = value;
+          cfg.tierIndex = 0; cfg.hours = videoPlan(value).baseHours;
           // Event recaps always happen at the event — no in-studio option.
           if (value === 'recap') cfg.studio = 'standard';
         }
         else if (field === 'studio') cfg.studio = value;
-        else if (field === 'talent' || field === 'facility' || field === 'whiteLabel' || field === 'rushDelivery') cfg[field] = !cfg[field];
+        else if (field === 'talent' || field === 'facility' || field === 'whiteLabel' || field === 'rushDelivery' || field === 'vertical') cfg[field] = !cfg[field];
         saveSelection();
         renderGrid();
         renderLoadout();
