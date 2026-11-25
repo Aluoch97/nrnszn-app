@@ -13,18 +13,18 @@
   },
   "author": "",
   "dependencies": {
-    "@astrojs/sitemap": "^3.7.4",
+    "@astrojs/sitemap": "^3.7.6",
     "@fontsource-variable/fraunces": "^5.3.0",
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource/big-shoulders-display": "^5.3.0",
-    "astro": "^7.4.1",
+    "astro": "^7.4.13",
     "mediabunny": "^1.66.2",
-    "simple-icons": "^16.35.0"
+    "simple-icons": "^16.38.1"
   },
   "private": true,
   "type": "module",
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
-    "@playwright/test": "^1.65.0"
+    "@playwright/test": "^1.65.1"
   }
 }
