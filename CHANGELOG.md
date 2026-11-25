@@ -7,6 +7,7 @@ To release: add a new `## x.y · date` block at the top of this file in the same
 ## 3.30 · Nov 25, 2026
 - **Two kinds of website** on the Services page: a **custom site with a simple editor** you use yourself ($350 first page, $150 each after; the editor is included at no extra charge), or a **Wix site** in your own Wix account ($300 first page, $125 each after). Either way the site and accounts are yours.
 - An **optional care plan** ($75 a month) for anyone who would rather we make the edits. It is never added to the build price, and you can cancel any time.
+- **A new header**: the NuRenaissance Media name in two lines, the menu in a rounded strip with the current page highlighted, an account button and a **Book a service** button (just **Book** on phones). A thin purple-to-gold line runs underneath, and the bar tightens a little as you scroll.
 - **Home**: fixed the Renaissance Certified line (the series began in 2023, not 2017) and removed the Links section at the bottom. The footer shows just our e-mail address.
 
 ## 3.29 · Nov 25, 2026
