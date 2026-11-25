@@ -256,6 +256,10 @@ const SCRIPT_URL = SERVICES_API_URL;
   var INTERVIEW_REVISION_FEE = 75;
   // Video shoot and edit prices per kind of video live in VIDEO_PLANS below; a new video starts at 2 shoot hours.
   var VIDEO_BASE_HOURS = 2;
+  // Web design (Nick, Nov 25, 2026): the first page (a landing page, which includes the design itself) is $350; each extra page is
+  // the sheet's PageRate ($150). The sheet's MinHours column is still the minimum number of pages (1).
+  var WEB_FIRST_PAGE = 350;
+  function webPrice(s, pages) { return WEB_FIRST_PAGE + s.pageRate * Math.max(0, pages - 1); }
   var RAISE_THE_BAR_PRICE = 150;   // one mic performance series (Nick, Nov 25, 2026; edited with luoh)
   var RAISE_THE_BAR_VERTICAL_FEE = 50;   // add-on: a vertical cut for Reels / TikTok
   var RAISE_THE_BAR_DEPOSIT = 50;  // $50 to book, the rest due at the shoot
@@ -324,7 +328,7 @@ const SCRIPT_URL = SERVICES_API_URL;
     if (s.id === 'photography') return PHOTO_ON_LOCATION_RATE * s.minHours;
     if (s.pricingModel === 'hourly') return s.hourlyRate * s.minHours;
     // Web design: the sheet's MinHours column is the minimum number of pages (Nov 25, 2026: 3 pages).
-    if (s.pricingModel === 'per_page') return s.pageRate * minPages(s);
+    if (s.pricingModel === 'per_page') return webPrice(s, minPages(s));
     if (s.id === 'video') {
       var cheapest = Infinity;
       VIDEO_TYPES.forEach(function (v) {
@@ -489,9 +493,10 @@ const SCRIPT_URL = SERVICES_API_URL;
     }
     if (s.pricingModel === 'per_page') {
       if (cfg.pages < minPages(s)) cfg.pages = minPages(s);
-      var subtotal = s.pageRate * cfg.pages;
+      var subtotal = webPrice(s, cfg.pages);
       var wTotal = subtotal;
-      var wBreakdown = ['📄 ' + cfg.pages + ' page(s) @ $' + s.pageRate + '/page: $' + subtotal];
+      var wBreakdown = ['📄 First page (landing page): $' + WEB_FIRST_PAGE];
+      if (cfg.pages > 1) wBreakdown.push('➕ ' + (cfg.pages - 1) + ' more page(s) @ $' + s.pageRate + '/page: $' + (s.pageRate * (cfg.pages - 1)));
       if (cfg.revisions > 0) {
         var wRevFee = cfg.revisions * REVISION_FEE.web;
         wTotal += wRevFee;
@@ -751,7 +756,7 @@ const SCRIPT_URL = SERVICES_API_URL;
     }
 
     if (s.pricingModel === 'per_page') {
-      html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-pages-' + s.id + '">📄 Pages' + (minPages(s) > 1 ? ' (at least ' + minPages(s) + ')' : '') + '</label>' +
+      html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-pages-' + s.id + '">📄 Pages ($' + WEB_FIRST_PAGE + ' for the first, $' + s.pageRate + ' each after)' + (minPages(s) > 1 ? ', at least ' + minPages(s) : '') + '</label>' +
         '<input type="number" id="nrn-pages-' + s.id + '" min="' + minPages(s) + '" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="pages" value="' + cfg.pages + '" /></span>';
       html += '<span class="nrn-config-row"><label class="nrn-config-label" for="nrn-webrevisions-' + s.id + '">🔁 Extra revision rounds beyond the 2 free ($' + REVISION_FEE.web + '/round)</label>' +
         '<input type="number" id="nrn-webrevisions-' + s.id + '" min="0" step="1" class="nrn-hours-input" data-service="' + s.id + '" data-field="revisions" value="' + cfg.revisions + '" /></span>';

@@ -4,6 +4,9 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.29 · Nov 25, 2026
+- **Web design**: a one-page landing page is now possible: $350 for the first page, $150 for each page after that (a 3-page site is $650). The 3-page minimum is gone.
+
 ## 3.28 · Nov 25, 2026
 A more professional site, and clearer service requests.
 - **Home** now says what we do up front: "Video, photo and creative services for artists and brands", with **Book a service** and **See our work** buttons, a short at-a-glance strip (since 2017, showcases hosted, press features) and a **What we do** section. The press section no longer repeats the same album review three times.

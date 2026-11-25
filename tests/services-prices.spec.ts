@@ -4,23 +4,24 @@ import { test, expect } from '@playwright/test';
 
 const svc = (o: Record<string, unknown>) => ({ icon: 'code', tag: '', description: '', clicks: 1, hourlyRate: 0, facilityHourlyRate: 0, minHours: 1, pageRate: 0, deposit: 50, depositCredited: true, musicVideoDeposit: 0, tiers: [], startingPrice: 0, mostBooked: false, ...o });
 const FEED = { source: 'sheet', bundles: [], services: [
-  svc({ id: 'web', name: 'Web design', pricingModel: 'per_page', pageRate: 200, minHours: 3, startingPrice: 250 }),
+  svc({ id: 'web', name: 'Web design', pricingModel: 'per_page', pageRate: 150, minHours: 1, startingPrice: 200 }),
   svc({ id: 'live', name: 'Livestream', icon: 'broadcast', pricingModel: 'hourly', hourlyRate: 175, minHours: 2, startingPrice: 400 }),
   svc({ id: 'video', name: 'Video production', icon: 'video', pricingModel: 'hourly_plus_edit', hourlyRate: 60, minHours: 2, startingPrice: 270 }),
 ] };
 
-test('web design starts at 3 pages ($600, the deposit is part of it) and livestream at 2 hours ($350)', async ({ page }, info) => {
+test('web design: a landing page is $350, each extra page $150; livestream starts at 2 hours ($350)', async ({ page }, info) => {
   test.skip(info.project.name !== 'phone-390', 'one size');
   await page.route('**/api/feed/services**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(FEED) }));
   await page.route('**/script.google.com/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(FEED) }));
   await page.goto('/services/');
   const web = page.locator('.nrn-card[data-id="web"]'), live = page.locator('.nrn-card[data-id="live"]');
-  await expect(web).toContainText('$600+'); await expect(live).toContainText('$350+');
+  await expect(web).toContainText('$350+'); await expect(live).toContainText('$350+');
   await web.click();
-  await expect(page.locator('#nrn-pages-web')).toHaveValue('3'); await expect(page.locator('#nrn-pages-web')).toHaveAttribute('min', '3');
-  await expect(web).toContainText('3 page(s) @ $200/page: $600');
-  await page.fill('#nrn-pages-web', '1'); await page.locator('#nrn-pages-web').dispatchEvent('change');
-  await expect(page.locator('#nrn-pages-web')).toHaveValue('3');   // cannot go under the minimum
+  await expect(page.locator('#nrn-pages-web')).toHaveValue('1');
+  await expect(web.locator('.nrn-config-total')).toHaveText('Total: $350');
+  await page.fill('#nrn-pages-web', '3'); await page.locator('#nrn-pages-web').dispatchEvent('change');
+  await expect(web.locator('.nrn-config-total')).toHaveText('Total: $650');
+  await expect(web).toContainText('2 more page(s) @ $150/page: $300');
 });
 
 test('each kind of video has its own price; the $50 deposit is part of the total, never added on top', async ({ page }, info) => {
