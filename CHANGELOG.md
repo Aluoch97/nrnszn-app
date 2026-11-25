@@ -4,6 +4,9 @@ Short version numbers: 3.0, 3.1, 3.2 ... A small change goes up by one step (3.2
 The newest version is on top, and it is the number shown in /admin (Account). The public footer no longer shows it. Write each entry in plain words for visitors and for Nick.
 To release: add a new `## x.y · date` block at the top of this file in the same pull request. The site picks it up by itself.
 
+## 3.26 · Nov 25, 2026
+- **Services**: web design now starts at 3 pages. The calculator starts there and says so.
+
 ## 3.25 · Nov 23, 2026
 The Cinema and Gallery widget pages now have a short description for search engines. Nothing looks different.
 
