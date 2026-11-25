@@ -30,5 +30,9 @@
 /fonts/*
   Cache-Control: public, max-age=31536000
 
-/media/*
+# Only the two video files: a plain /media/* also matched the Media PAGE (/media/), so browsers kept an old copy of it for a week.
+/media/portal-480.mp4
+  Cache-Control: public, max-age=604800
+
+/media/portal-720.mp4
   Cache-Control: public, max-age=604800
