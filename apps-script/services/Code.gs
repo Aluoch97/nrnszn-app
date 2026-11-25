@@ -322,7 +322,7 @@ function buildBookingConfirmationEmail(name, summary, timeLabel, meetLink) {
   ];
   if (meetLink) lines.push('Google Meet: ' + meetLink);
   lines.push('');
-  lines.push('Quotes shared on this page are estimates. Deposits are non-refundable once work is booked — full terms are in your service agreement, which we\'ll send ahead of the shoot/session.');
+  lines.push('Prices on the site are estimates; your written quote after the call has the final price. A $50 deposit books your date and counts toward the total (non-refundable once work is booked).');
   lines.push('');
   lines.push('Best,');
   lines.push('NuRenaissance Team');
@@ -365,7 +365,7 @@ function buildBookingConfirmationHtml(name, summary, timeLabel, meetLink) {
       '<div style="font-size:22px;font-weight:bold;color:#4a2f7a;margin-top:6px;">' + escapeHtml(timeLabel) + '</div>' +
     '</div>' +
     meetButton +
-    '<p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#6b5b8a;">Quotes shared on this page are estimates. Deposits are non-refundable once work is booked \u2014 full terms are in your service agreement, which we\u2019ll send ahead of the shoot/session.</p>' +
+    '<p style="margin:24px 0 0;font-size:14px;line-height:1.6;color:#6b5b8a;">Prices on the site are estimates; your written quote after the call has the final price. A $50 deposit books your date and counts toward the total (non-refundable once work is booked).</p>' +
     '<p style="margin:28px 0 0;font-size:15px;color:#3d2e57;">Best,<br>NuRenaissance Team</p>' +
   '</div>' +
   '<div style="background:#f7f3ff;padding:16px 32px;text-align:center;font-size:12px;color:#6b5b8a;">NuRenaissance Media</div>' +
@@ -374,8 +374,8 @@ function buildBookingConfirmationHtml(name, summary, timeLabel, meetLink) {
 
 // ---------------------------------------------------------------------
 // Automatic invoicing — 1 hour after a consultation's actual scheduled
-// start time, sends the itemized quote/invoice directly to the client.
-// No draft, no review step. Two parts:
+// start time, puts the itemized quote/invoice in Gmail DRAFTS for Nick to check and send (Nov 25, 2026; it used to send by
+// itself). Two parts:
 //   1. logQuoteReminder — called from bookSlot, writes a row to the
 //      Reminders sheet with the meeting's real start time and Calendar
 //      event ID.
@@ -392,13 +392,9 @@ function logQuoteReminder(consultationStart, name, email, summary, timeLabel, to
   sheet.appendRow([reminderDate, name, email, summary || '', timeLabel, '', Number(total) || 0, eventId || '', consultationStart]);
 }
 
-// Auto-sends the itemized quote/invoice directly to the client — no
-// draft, no review step, per explicit request. Fires once the meeting's
-// actual scheduled start time (not "the day after") plus one hour has
-// passed. Because there's no human review step anymore, this also
-// verifies the Calendar event wasn't cancelled or deleted after booking
-// before sending anything — auto-emailing an invoice for a meeting that
-// never happened would be a real, avoidable mistake.
+// Drafts the itemized quote/invoice for the client in Gmail; Nick checks it against the call and presses Send (Nov 25, 2026).
+// Fires once the meeting's actual scheduled start time plus one hour has passed, and first checks the Calendar event wasn't
+// cancelled or deleted, so no draft is made for a meeting that never happened.
 function sendDueInvoices() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_REMINDERS);
   if (!sheet) return;
@@ -455,13 +451,15 @@ function sendDueInvoices() {
         }
       }
 
+      // Nov 25, 2026 (Nick): the quote is a DRAFT for you to check and send, because the call may have changed the scope
+      // or the price. Nothing goes to the client until you press Send in Gmail.
       var quoteEmail = buildQuoteInvoiceEmail(clientName, summary, total, bookingTime);
-      GmailApp.sendEmail(clientEmail, quoteEmail.subject, quoteEmail.plainBody, { htmlBody: quoteEmail.htmlBody, inlineImages: { nrnlogo: getLogoBlob() } });
+      GmailApp.createDraft(clientEmail, quoteEmail.subject, quoteEmail.plainBody, { htmlBody: quoteEmail.htmlBody, inlineImages: { nrnlogo: getLogoBlob() } });
 
-      // Informational only — no action needed, just visibility into
-      // what went out automatically on your behalf.
       var fyiBody = [
-        'The quote/invoice below was sent automatically to ' + clientName + ', 1 hour after their consultation.',
+        'A quote for ' + clientName + ' is waiting in your Gmail Drafts (made 1 hour after their consultation).',
+        'Check the services and total against what you agreed on the call, edit if needed, then press Send.',
+        'Tip: after sending, add or update the project in nrnszn.com/admin > Clients & projects (status "Quote sent") so they can follow it.',
         '',
         'Consultation was: ' + bookingTime,
         'Total: $' + total,
@@ -471,7 +469,7 @@ function sendDueInvoices() {
         '',
         'Client email: ' + clientEmail
       ].join('\n');
-      GmailApp.sendEmail(myEmail, 'Invoice auto-sent: ' + clientName, fyiBody);
+      GmailApp.sendEmail(myEmail, 'Quote draft ready: ' + clientName, fyiBody);
 
       sheet.getRange(i + 2, sentCol + 1).setValue(new Date());
     } catch (err) {
@@ -503,13 +501,13 @@ function buildQuoteInvoiceEmail(name, summary, total, timeLabel) {
   var hasPhotography = s.indexOf('Photography') !== -1;
   var hasLivestream = s.indexOf('Livestream') !== -1;
   var hasWeb = s.indexOf('Web design') !== -1;
-  var hasAdmin = s.indexOf('Admin services') !== -1;
+  var hasAdmin = s.indexOf('Admin services') !== -1 || s.indexOf('Artist management') !== -1;
   var hasGraphicDesign = s.indexOf('Graphic design') !== -1;
 
   var paymentLines = [];
   var hasStandardDeposit = hasVideo || hasInterview || hasRaiseTheBar || hasPhotography || hasLivestream || hasWeb;
   if (hasStandardDeposit) {
-    paymentLines.push('A deposit is required to book your date, due right after this consultation — see your service agreement for the exact amount and whether it\'s credited toward this total.');
+    paymentLines.push('A $50 deposit books your date, due right after this consultation. It counts toward this total and is non-refundable.');
   }
 
   if (hasVideo) {
@@ -518,7 +516,7 @@ function buildQuoteInvoiceEmail(name, summary, total, timeLabel) {
   }
   if (hasRaiseTheBar) {
     paymentLines.push('');
-    paymentLines.push('For the Raise the Bar performance: $50 is due to book your slot, credited toward the $100 total. The remaining $50 is due at the shoot.');
+    paymentLines.push('For the Raise the Bar performance: $50 books your slot and counts toward the $150 total (plus $50 if you added the vertical cut). The rest is due at the shoot.');
   }
   if (hasPhotography || hasLivestream || hasInterview) {
     var sessionLabel = [hasPhotography ? 'photography' : null, hasLivestream ? 'livestream' : null, hasInterview ? 'interview' : null].filter(Boolean).join(', ');
@@ -552,19 +550,19 @@ function buildQuoteInvoiceEmail(name, summary, total, timeLabel) {
     addIncluded('\uD83C\uDF99 Interview:', '2 free creative revision rounds included (extra rounds $75/round). Includes high-res promotional stills and a social media promo cadence after the shoot. Raw footage and stills held for 30 days post-shoot, delivered via Google Drive after full payment.');
   }
   if (hasRaiseTheBar) {
-    addIncluded('\uD83C\uDFA4 Raise the Bar:', 'One mic performance slot filmed at City Limit Studios in Mt. Juliet, TN, produced with the Underground Music Collective. $50 to book, $50 due at the shoot.');
+    addIncluded('\uD83C\uDFA4 Raise the Bar:', 'One mic performance slot filmed at City Limit Studios in Mt. Juliet, TN, produced with the Underground Music Collective. $150: $50 to book, the rest due at the shoot. Optional vertical cut for Reels/TikTok: $50.');
   }
   if (hasVideo) {
     addIncluded('\uD83C\uDFA5 Video production:', '2 free creative revision rounds included (extra rounds $75/round). Raw footage transferred at no extra cost after final payment, held for 30 days post-shoot — request early. Additional locations are $50 each ($5/mile beyond 25 miles of the primary shoot). Want your branding removed entirely? White-label buyout is 25% of the total project cost.');
   }
   if (hasPhotography) {
-    addIncluded('\uD83D\uDCF7 Photography:', 'All session photos delivered in full; you select 10\u201315 for professional light retouching. Extra edited photos beyond that are $10 each (or 5 for $40). Rush delivery within 48 hours is available for $40. Photos delivered via private Google Drive within 10 business days of full payment.');
+    addIncluded('\uD83D\uDCF7 Photography:', 'All session photos delivered in full; you select 10\u201315 for professional light retouching. Extra edited photos beyond that are $10 each (or 5 for $40). Rush delivery within 48 hours is available for $75. Photos delivered via private Google Drive within 10 business days of full payment.');
   }
   if (hasGraphicDesign) {
     addIncluded('\uD83C\uDFA8 Graphic design:', 'Full fee due upfront. Includes 2 free revision rounds; additional rounds are $50/round.');
   }
   if (hasWeb) {
-    addIncluded('\uD83D\uDCBB Web design:', 'Site build completed within 15 business days of receiving all required assets. Includes one 1-hour review session and 2 free revision rounds after that (extra rounds $50/round; meeting time beyond the 1-hour session is $25/hr). You\u2019re responsible for the Wix Premium Plan and Domain Registration costs directly through Wix.');
+    addIncluded('\uD83D\uDCBB Web design:', 'Site build completed within 15 business days of receiving all required assets. Includes one 1-hour review session and 2 free revision rounds after that (extra rounds $50/round; meeting time beyond the 1-hour session is $25/hr). Any domain or hosting costs are listed in your quote.');
   }
   if (hasLivestream) {
     addIncluded('\uD83D\uDCE1 Livestream:', 'Covers the live broadcast only — highlight reels and clips are billed separately. Stream archive access is immediate after the broadcast; high-quality backup files are available on request within 14 days.');
@@ -799,6 +797,7 @@ function emailEstimate(email, summary, total) {
   if (!isValidEmail(email)) {
     return { success: false, error: 'Invalid email' };
   }
+  var bookUrl = 'https://www.nrnszn.com/services';
   var body = [
     'Hi,',
     '',
@@ -808,13 +807,38 @@ function emailEstimate(email, summary, total) {
     '',
     'Estimated total: $' + (total || 0),
     '',
-    "This is a starting estimate based on our published rates. It includes the deposit required to book — deposits are non-refundable, and for some services they're credited toward your final balance, for others they're not. Full terms are spelled out in the service agreement for whichever service you book. When you're ready, you can book a consultation any time from the same page.",
+    'This is an estimate from our published prices. Your written quote after a short call has the final price, dates and what is included. A $50 deposit books your date and counts toward the total.',
+    '',
+    'Book a 30-minute call: ' + bookUrl,
     '',
     'Best,',
-    'NuRenaissance Team'
+    'NuRenaissance Media, Nashville, Tennessee'
   ].join('\n');
-
-  GmailApp.sendEmail(email, 'Your NuRenaissance Media estimate', body);
+  var items = splitSummaryItems(summary);
+  var itemsHtml = items.length ? items.map(function (item) {
+    return '<tr><td style="padding:8px 0;border-bottom:1px solid #eee4fb;color:#3d2e57;font-size:15px;">' + escapeHtml(item) + '</td></tr>';
+  }).join('') : '<tr><td style="padding:8px 0;color:#3d2e57;font-size:15px;">(no services selected)</td></tr>';
+  var html = '<meta charset="utf-8">' +
+    '<div style="max-width:600px;margin:0 auto;font-family:Helvetica,Arial,sans-serif;background:#ffffff;">' +
+      '<div style="background:#2b1650;padding:28px 32px;text-align:center;">' +
+        '<img src="cid:nrnlogo" width="60" height="60" style="display:block;margin:0 auto 12px;border:0;" alt="NuRenaissance Media">' +
+        '<div style="color:#ffd54a;font-size:22px;font-weight:bold;letter-spacing:1px;">NuRenaissance Media</div>' +
+        '<div style="color:#c9a6ff;font-size:13px;letter-spacing:2px;text-transform:uppercase;margin-top:4px;">Your estimate</div>' +
+      '</div>' +
+      '<div style="padding:32px;">' +
+        '<p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3d2e57;">Here\u2019s the estimate for what you picked on nrnszn.com:</p>' +
+        '<table style="width:100%;border-collapse:collapse;margin-bottom:24px;">' + itemsHtml + '</table>' +
+        '<div style="text-align:center;background:#f7f3ff;border-radius:6px;padding:20px;margin-bottom:8px;">' +
+          '<div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#6b5b8a;">Estimated total</div>' +
+          '<div style="font-size:26px;font-weight:bold;color:#4a2f7a;margin-top:6px;">$' + escapeHtml(String(total || 0)) + '</div>' +
+        '</div>' +
+        '<p style="margin:20px 0 0;font-size:14px;line-height:1.6;color:#6b5b8a;">This is an estimate from our published prices. Your written quote after a short call has the final price, dates and what is included. A $50 deposit books your date and counts toward the total.</p>' +
+        '<div style="text-align:center;margin:26px 0 6px;"><a href="' + bookUrl + '" style="display:inline-block;background:#c8175f;color:#ffffff;font-weight:bold;font-size:15px;padding:14px 34px;border-radius:999px;text-decoration:none;">Book a 30-minute call</a></div>' +
+        '<p style="margin:24px 0 0;font-size:15px;color:#3d2e57;">Questions? Just reply to this e-mail.<br>NuRenaissance Media</p>' +
+      '</div>' +
+      '<div style="background:#f7f3ff;padding:16px 32px;text-align:center;font-size:12px;color:#6b5b8a;">NuRenaissance Media \u00b7 Nashville, Tennessee \u00b7 nrnszn.com</div>' +
+    '</div>';
+  GmailApp.sendEmail(email, 'Your NuRenaissance Media estimate', body, { htmlBody: html, inlineImages: { nrnlogo: getLogoBlob() } });
   return { success: true };
 }
 

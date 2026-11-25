@@ -6,37 +6,38 @@ import Site from '../layouts/Site.astro';
 import VideoCard from '../components/VideoCard.astro';
 import { playlists, playlistUrl } from '../data/portal.js';
 import { getLatestVideos, API_URL } from '../lib/api.js';
+import { pastEvents } from '../data/events.js';
 
 const latest = await getLatestVideos();
+// Press (Nov 25, 2026): the three reviews of the same album are one card, so the section isn't the same story three times.
 const press = [
   {
-    title: 'NuRenaissance – REDD & bluu',
+    title: 'REDD & bluu, reviewed',
     excerpt: 'Featuring impeccable bars, breathless in some cases, spoken-word style in others, the album manages to be artistically free yet focused.',
-    source: 'Stereo Stickman · Rebecca Cullen',
+    source: 'Stereo Stickman',
     href: 'https://stereostickman.com/music/nurenaissance-redd-bluu/',
     img: '/img/press-redd-bluu.webp',
+    more: [
+      { name: 'The Ark of Music', href: 'https://thearkofmusic.com/nurenaissance-redd-bluu/' },
+      { name: 'Indie Band Guru', href: 'https://indiebandguru.com/nurenaissance-redd-bluu/' },
+    ],
   },
   {
-    title: 'NuRenaissance – REDD & bluu',
-    excerpt: 'Most artists strive to tell a story with their work, but the collective that is NuRenaissance has taken it to the next level with their latest release.',
-    source: 'The Ark of Music',
-    href: 'https://thearkofmusic.com/nurenaissance-redd-bluu/',
-    img: '/img/press-redd-bluu.webp',
-  },
-  {
-    title: 'Decide to go with REDD or bluu in the NuRenaissance',
-    excerpt: 'For their new project REDD & bluu, the beliefs and thoughts of NuRenaissance are laid out there for all to take in within the music.',
-    source: 'Indie Band Guru · Keith Pro · Aug 4, 2020',
-    href: 'https://indiebandguru.com/nurenaissance-redd-bluu/',
-    img: '/img/press-redd-bluu.webp',
-  },
-  {
-    title: "PHOTOS: NuRenaissance Media's Certified Lounge Podcast",
+    title: "NuRenaissance Media's Certified Lounge Podcast",
     excerpt: 'Inspired performances and insightful, forward-thinking conversations are on their way to you!',
-    source: 'Underground Music Collective · Gerard Longo',
+    source: 'Underground Music Collective',
     href: 'https://umcworldwide.com/author/gerardlongo/',
     img: '/img/press-umc.webp',
+    more: [],
   },
+];
+// What we do: the short version of the Services page, so a first-time visitor knows within a screen.
+const offer = [
+  { name: 'Video production', text: 'Music videos, podcasts, recaps, promos, interviews.' },
+  { name: 'Photography', text: 'Events, artists and brands.' },
+  { name: 'Livestream', text: 'Multi-camera live shows.' },
+  { name: 'Web and design', text: 'Websites, cover art, flyers, logos.' },
+  { name: 'Artist management', text: 'Royalties, playlists, social media.' },
 ];
 const links = [
   { label: 'I have a service request', href: '/services' },
@@ -45,8 +46,8 @@ const links = [
 ];
 ---
 <Site
-  title="NuRenaissance | Empowering creatives"
-  description="Welcome to the NuRenaissance. Stream the newest visuals, experience Renaissance Certified, and book your next creative session with NuRenaissance Media in Nashville."
+  title="NuRenaissance Media | Creative studio in Nashville"
+  description="NuRenaissance Media: video production, photography, livestreams, web and graphic design and artist management in Nashville since 2017. Home of Renaissance Certified."
 >
   <section class="hero">
     <video class="hero-bg" autoplay muted loop playsinline preload="metadata" aria-hidden="true"
@@ -56,12 +57,30 @@ const links = [
     </video>
     <div class="hero-inner">
       <img class="hero-mascot" src="/img/mascot.webp" alt="" width="132" height="132" />
-      <h1 class="sr-only">NuRenaissance</h1>
-      <p class="hero-text">Welcome to the NuRenaissance. Stream the newest visuals, experience Renaissance Certified, and book your next creative session with us.</p>
+      <h1 class="hero-title">Video, photo and creative services in Nashville</h1>
+      <p class="hero-text">NuRenaissance Media films, photographs, streams and builds for artists, brands and events. Home of Renaissance Certified since 2017.</p>
+      <div class="hero-cta">
+        <a class="cta cta-main" href="/services">Book a service</a>
+        <a class="cta" href="/media">See our work</a>
+      </div>
     </div>
   </section>
 
+  <ul class="trust" aria-label="At a glance">
+    <li><b>Since 2017</b><span>in Nashville</span></li>
+    <li><b>{pastEvents.length} showcases</b><span>and screenings hosted</span></li>
+    <li><b>4 features</b><span>in the press</span></li>
+  </ul>
+
   <div class="page">
+    <section aria-labelledby="offer-h">
+      <h2 id="offer-h" class="band-title">What we do</h2>
+      <ul class="offer">
+        {offer.map((o) => (<li><a href="/services"><b>{o.name}</b><span>{o.text}</span></a></li>))}
+      </ul>
+      <a class="more" href="/services">Prices and booking →</a>
+    </section>
+
     <section class="videos" aria-label="Latest videos">
       <div class="vid">
         <h2 class="band-title">Latest interview</h2>
@@ -89,6 +108,7 @@ const links = [
                 <span class="press-source">{p.source} <span aria-hidden="true">↗</span></span>
               </span>
             </a>
+            {p.more.length > 0 && (<p class="press-more">Also reviewed by {p.more.map((m, i) => (<>{i > 0 && ' and '}<a href={m.href} target="_blank" rel="noopener">{m.name}</a></>))}.</p>)}
           </li>
         ))}
       </ul>
@@ -164,6 +184,29 @@ const links = [
   }
   .hero-inner { width: 100%; max-width: 640px; display: grid; justify-items: center; gap: var(--space-3); text-align: center; }
   .hero-mascot { width: 96px; height: 96px; filter: drop-shadow(0 0 18px rgba(155, 93, 229, 0.6)); animation: float 5s ease-in-out infinite; }
+  .hero-title {
+    margin: 0; max-width: 18ch; font-family: var(--font-poster); font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em;
+    font-size: clamp(30px, 8.4vw, 54px); line-height: 1.02; color: #fff; text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
+  }
+  .hero-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-2); }
+  .cta {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 24px; border-radius: var(--radius-pill);
+    font-weight: 700; font-size: 16px; text-decoration: none; color: #fff; border: 1.5px solid rgba(255, 255, 255, 0.7); background: rgba(14, 11, 22, 0.45);
+  }
+  .cta-main { background: #c8175f; border-color: #c8175f; }
+  .cta:hover { filter: brightness(1.1); }
+  .cta:focus-visible { outline: 3px solid var(--gold-300); outline-offset: 2px; }
+  .trust { list-style: none; margin: 0 auto; padding: var(--space-3) var(--space-4) 0; max-width: 1040px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+  .trust li { min-width: 0; display: grid; gap: 2px; padding: var(--space-3); border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238; text-align: center; }
+  .trust b { color: var(--gold-300); font-size: 15px; } .trust span { color: #b9b0cf; font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
+  .offer { list-style: none; margin: 0 0 var(--space-3); padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  @media (min-width: 760px) { .offer { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+  .offer li { min-width: 0; }
+  .offer a { display: grid; gap: 4px; height: 100%; box-sizing: border-box; padding: var(--space-3); border-radius: var(--radius-md); background: #1a1526; border: 1px solid #2a2238; text-decoration: none; min-height: 88px; }
+  .offer a:hover { border-color: var(--gold-500); }
+  .offer b { color: #f3f0fa; font-size: 16px; } .offer span { color: #b9b0cf; font-size: 14px; line-height: 1.4; }
+  .press-more { margin: 6px 4px 0; font-size: 14px; color: #b9b0cf; }
+  .press-more a { color: var(--gold-300); }
   .hero-text {
     margin: 0; max-width: 36ch; font-size: clamp(16px, 4.2vw, 19px); line-height: 1.5;
     color: #f3f0fa; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.9);

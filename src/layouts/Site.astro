@@ -52,6 +52,7 @@ const tabLinks = tabs.map((t) => nav.find((n) => n.href === t)!).filter(Boolean)
         {footer.filter((f) => f.main).map((f) => (<a href={f.href}>{f.label}</a>))}
       </nav>
       <p class="tools">{footer.filter((f) => !f.main).map((f) => (<a class="ver" href={f.href}>{f.label}</a>))}<a class="ver" href="/admin">Admin</a></p>
+      <p class="contact">NuRenaissance Media · Nashville, Tennessee<br /><a href="mailto:nurrenaissance@gmail.com">nurrenaissance@gmail.com</a></p>
       <p class="copy">© {new Date().getFullYear()} NuRenaissance Media</p>
     </footer>
 
@@ -201,7 +202,9 @@ const tabLinks = tabs.map((t) => nav.find((n) => n.href === t)!).filter(Boolean)
   }
   .socials a:hover { background: #241d34; }
   /* Footer, top to bottom: social icons, the page links, a quiet row of tools, then the copyright on its own line. */
-  .links, .tools, .copy { margin: 0; }
+  .links, .tools, .copy, .contact { margin: 0; }
+  .contact { font-size: 14px; line-height: 1.6; color: var(--shell-muted); text-align: center; }
+  .contact a { color: var(--gold-300); display: inline-flex; align-items: center; min-height: 32px; }
   .links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 var(--space-5); font-size: 15px; }
   .tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0; max-width: 440px; }
   .tools .ver, .tools .refresh { padding: 0 6px; }

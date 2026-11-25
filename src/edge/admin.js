@@ -20,6 +20,7 @@
 import { sameToken } from './survey-recap-api.js';
 import { runBackup, backupStatus } from './backup.js';
 import { hasDb } from './db.js';
+import { sendMail, statusEmail } from './client-mail.js';
 import { listAll, saveEvent, deleteEvent } from './events.js';
 import { summary } from './analytics.js';
 import { pushStatus, pushSend } from './push.js';
@@ -175,7 +176,17 @@ export async function adminPost({ request, env, waitUntil }) {
     if (!hasAccountsDb(env)) return reply({ ok: false, result: 'no-db', message: 'The accounts database is not connected yet (see docs/accounts-setup.md).' }, 503);
     try {
       const db = await accountsDb(env), a = body.action;
+      const before = a === 'client-save' && body.project && body.project.id ? await db.prepare('SELECT status FROM client_projects WHERE id = ?').bind(String(body.project.id)).first() : null;
       const out = a === 'client-save' ? await saveProject(db, body.project) : a === 'client-delete' ? await deleteProject(db, body.id) : a === 'client-pay' ? await addPayment(db, body.payment) : await deletePayment(db, body.id);
+      // A new project, or a status change, e-mails the client what it means (unless "E-mail the client" was turned off).
+      if (a === 'client-save' && out.ok && body.project.notify !== false && (!before || before.status !== body.project.status)) {
+        const row = await db.prepare('SELECT * FROM client_projects WHERE id = ?').bind(out.id).first();
+        const paid = await db.prepare('SELECT COALESCE(SUM(amount_cents), 0) AS n FROM client_payments WHERE project_id = ?').bind(out.id).first();
+        if (row) {
+          const r = await sendMail(env, row.email, statusEmail({ status: row.status, title: row.title, clientName: row.client_name, due: row.due, note: row.note, link: row.link, totalCents: row.total_cents, balanceCents: Math.max(0, row.total_cents - Number(paid && paid.n || 0)) }));
+          out.emailed = r.sent; if (!r.sent) out.emailNote = r.reason;
+        }
+      }
       return reply(out, out.ok ? 200 : 400);
     } catch (e) { console.error('admin client', e); return reply({ ok: false, message: 'The database did not answer. Try again in a minute.' }, 502); }
   }
