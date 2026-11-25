@@ -36,11 +36,11 @@ export function branded({ subject, preheader = '', heading, paragraphs = [], row
     ${footnote ? `<tr><td style="padding:16px 30px;background:#faf8fd;border-top:1px solid #eee8f5;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#6f6585;">${esc(footnote)}</td></tr>` : ''}
   </table>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;"><tr><td align="center" style="padding:18px 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#8a8199;">
-    NuRenaissance Media · Nashville, Tennessee · Reply to this e-mail to reach us<br><a href="${SITE}" style="color:#8a8199;">nrnszn.com</a> · <a href="${SITE}/terms" style="color:#8a8199;">Terms</a> · <a href="${SITE}/privacy-policy" style="color:#8a8199;">Privacy policy</a>
+    NuRenaissance Media · Reply to this e-mail to reach us<br><a href="${SITE}" style="color:#8a8199;">nrnszn.com</a> · <a href="${SITE}/terms" style="color:#8a8199;">Terms</a> · <a href="${SITE}/privacy-policy" style="color:#8a8199;">Privacy policy</a>
   </td></tr></table>
 </td></tr></table></body></html>`;
   const text = [heading, '', ...paragraphs.flatMap((t) => [t, '']), ...rows.map(([k, v]) => `${k}: ${v}`), ...(rows.length ? [''] : []),
-    ...(button ? [`${button.label}: ${button.url}`, ''] : []), ...(footnote ? [footnote, ''] : []), 'NuRenaissance Media, Nashville, Tennessee', 'nrnszn.com'].join('\n');
+    ...(button ? [`${button.label}: ${button.url}`, ''] : []), ...(footnote ? [footnote, ''] : []), 'NuRenaissance Media', 'nrnszn.com'].join('\n');
   return { subject: one(subject, 150), html, text };
 }
 

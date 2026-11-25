@@ -297,7 +297,7 @@ test('the sign-in e-mail: branded, the link in the button and written out (escap
   assert.equal(m.subject, 'Sign in to NuRenaissance');
   assert.ok(m.html.includes('https://www.nrnszn.com/email/mascot.png'), 'the logo is a PNG on the site');
   assert.ok(!m.html.includes('<b>"'), 'the link is escaped'); assert.equal((m.html.match(/verify\?t=abc&amp;x=&lt;b&gt;&quot;/g) || []).length, 3, 'button href, written-out href and text');
-  assert.match(m.text, /verify\?t=abc/); assert.match(m.text, /30 minutes/); assert.match(m.html, /NuRenaissance Media · Nashville/);
+  assert.match(m.text, /verify\?t=abc/); assert.match(m.text, /30 minutes/); assert.match(m.html, /NuRenaissance Media<br>/);
   assert.equal(signInEmail('x', 'javascript:alert(1)').html.includes('javascript:'), false, 'a strange origin is never used');
 });
 

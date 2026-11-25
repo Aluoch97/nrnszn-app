@@ -812,7 +812,7 @@ function emailEstimate(email, summary, total) {
     'Book a 30-minute call: ' + bookUrl,
     '',
     'Best,',
-    'NuRenaissance Media, Nashville, Tennessee'
+    'NuRenaissance Media'
   ].join('\n');
   var items = splitSummaryItems(summary);
   var itemsHtml = items.length ? items.map(function (item) {
@@ -836,7 +836,7 @@ function emailEstimate(email, summary, total) {
         '<div style="text-align:center;margin:26px 0 6px;"><a href="' + bookUrl + '" style="display:inline-block;background:#c8175f;color:#ffffff;font-weight:bold;font-size:15px;padding:14px 34px;border-radius:999px;text-decoration:none;">Book a 30-minute call</a></div>' +
         '<p style="margin:24px 0 0;font-size:15px;color:#3d2e57;">Questions? Just reply to this e-mail.<br>NuRenaissance Media</p>' +
       '</div>' +
-      '<div style="background:#f7f3ff;padding:16px 32px;text-align:center;font-size:12px;color:#6b5b8a;">NuRenaissance Media \u00b7 Nashville, Tennessee \u00b7 nrnszn.com</div>' +
+      '<div style="background:#f7f3ff;padding:16px 32px;text-align:center;font-size:12px;color:#6b5b8a;">NuRenaissance Media \u00b7 nrnszn.com</div>' +
     '</div>';
   GmailApp.sendEmail(email, 'Your NuRenaissance Media estimate', body, { htmlBody: html, inlineImages: { nrnlogo: getLogoBlob() } });
   return { success: true };

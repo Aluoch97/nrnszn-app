@@ -52,7 +52,7 @@ const tabLinks = tabs.map((t) => nav.find((n) => n.href === t)!).filter(Boolean)
         {footer.filter((f) => f.main).map((f) => (<a href={f.href}>{f.label}</a>))}
       </nav>
       <p class="tools">{footer.filter((f) => !f.main).map((f) => (<a class="ver" href={f.href}>{f.label}</a>))}<a class="ver" href="/admin">Admin</a></p>
-      <p class="contact">NuRenaissance Media · Nashville, Tennessee<br /><a href="mailto:nurrenaissance@gmail.com">nurrenaissance@gmail.com</a></p>
+      <p class="contact">NuRenaissance Media<br /><a href="mailto:nurrenaissance@gmail.com">nurrenaissance@gmail.com</a></p>
       <p class="copy">© {new Date().getFullYear()} NuRenaissance Media</p>
     </footer>
 

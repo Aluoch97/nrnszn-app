@@ -197,7 +197,7 @@ export function signInEmail(link, origin = 'https://www.nrnszn.com') {
   const site = /^https:\/\/[\w.-]+$/.test(origin) ? origin : 'https://www.nrnszn.com';
   const L = escHtml(link), apps = 'Certified, NuDirectory, luoh and Soul Vault';
   const subject = 'Sign in to NuRenaissance';
-  const text = `Sign in to NuRenaissance\n\nUse this link to sign in:\n${link}\n\nIt works once, for the next ${LINK_MINUTES} minutes, and signs you in to every NuRenaissance app (${apps}).\n\nDidn't ask for this? Ignore this e-mail: nobody can sign in without the link.\n\nNuRenaissance Media, Nashville, Tennessee\n${site.replace('https://', '')}`;
+  const text = `Sign in to NuRenaissance\n\nUse this link to sign in:\n${link}\n\nIt works once, for the next ${LINK_MINUTES} minutes, and signs you in to every NuRenaissance app (${apps}).\n\nDidn't ask for this? Ignore this e-mail: nobody can sign in without the link.\n\nNuRenaissance Media\n${site.replace('https://', '')}`;
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>${subject}</title></head>
 <body style="margin:0;padding:0;background:#f3f0f8;">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#f3f0f8;">Your one-time link to sign in. It works for ${LINK_MINUTES} minutes.&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;&#8199;&#847;</div>
@@ -225,7 +225,7 @@ export function signInEmail(link, origin = 'https://www.nrnszn.com') {
     </td></tr>
   </table>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;"><tr><td align="center" style="padding:18px 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#8a8199;">
-    NuRenaissance Media · Nashville, Tennessee<br><a href="${site}" style="color:#8a8199;">${site.replace('https://', '')}</a> · <a href="${site}/privacy-policy" style="color:#8a8199;">Privacy policy</a>
+    NuRenaissance Media<br><a href="${site}" style="color:#8a8199;">${site.replace('https://', '')}</a> · <a href="${site}/privacy-policy" style="color:#8a8199;">Privacy policy</a>
   </td></tr></table>
 </td></tr></table>
 </body></html>`;
