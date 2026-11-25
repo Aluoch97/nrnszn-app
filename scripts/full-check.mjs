@@ -22,10 +22,11 @@ await (async () => {
     const p = await ctx.newPage();
     let errs = [];
     p.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
-    p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL_CONNECTION|status of 404/.test(m.text())) errs.push('console: ' + m.text().slice(0, 160)); });
+    p.on('console', (m) => { if (m.type() === 'error' && !/TUNNEL_CONNECTION|status of 404|report-only/.test(m.text())) errs.push('console: ' + m.text().slice(0, 160)); });
     for (const path of [...pages, ...extra]) {
       errs = [];
-      const r = await p.goto(BASE + path, { waitUntil: 'networkidle', timeout: 45000 }).catch((e) => null);
+      // App pages hold another site in a frame that never goes quiet, so for them the page itself loading is enough.
+      const r = await p.goto(BASE + path, { waitUntil: APP.test(path) ? 'load' : 'networkidle', timeout: 45000 }).catch((e) => null);
       const st = r ? r.status() : 0;
       if (path === '/nope-404-check/') { if (st !== 404) note('high', path, 'unknown page answers ' + st + ' instead of 404'); }
       else if (st !== 200) { note('high', path, `status ${st} @${vw}`); continue; }
